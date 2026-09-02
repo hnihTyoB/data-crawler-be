@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+*.log
+storage/exports/*
+!storage/exports/.gitkeep
+.DS_Store
+nopush/
+coverage/
+frontend-data-crawler-be/

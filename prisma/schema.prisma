@@ -1,0 +1,387 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  ADMIN
+  CRAWLER_USER
+  VIEWER
+}
+
+enum CrawlJobStatus {
+  PENDING
+  QUEUED
+  RUNNING
+  PROCESSING_EXPORT
+  COMPLETED
+  FAILED
+  CANCELED
+  EXPIRED
+}
+
+enum CrawlMode {
+  SCRAPE
+  CRAWL
+  SITEMAP
+  URL_LIST
+}
+
+enum CrawlPageStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  BLOCKED
+  REQUIRES_LOGIN
+  CAPTCHA_DETECTED
+  PAYWALL_DETECTED
+  TIMEOUT
+  SKIPPED
+}
+
+enum ExportType {
+  JSON
+  CSV
+  XLSX
+  MARKDOWN
+  ZIP
+}
+
+enum ExportStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum AssetType {
+  IMAGE
+  LINK
+  PDF
+  FILE
+  VIDEO
+  OTHER
+}
+
+enum LogLevel {
+  INFO
+  WARNING
+  ERROR
+}
+
+enum ScheduleFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  CUSTOM
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  fullName     String?  @map("full_name")
+  role         UserRole @default(CRAWLER_USER)
+  isActive     Boolean  @default(true) @map("is_active")
+
+  maxPagesLimit          Int @default(100) @map("max_pages_limit")
+  maxJobsPerDayLimit     Int @default(10) @map("max_jobs_per_day_limit")
+  maxConcurrentJobsLimit Int @default(3) @map("max_concurrent_jobs_limit")
+
+  crawlJobs           CrawlJob[]
+  crawlSchedules      CrawlSchedule[]
+  extractionTemplates ExtractionTemplate[]
+  deletedAt           DateTime?      @map("deleted_at")
+  deletedBy           String?        @map("deleted_by") @db.Uuid
+
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+  apiKeys        ApiKey[]
+  webhookConfigs WebhookConfig[]
+
+  @@map("users")
+}
+
+model CrawlJob {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+
+  startUrl String         @map("start_url")
+  domain   String?
+  mode     CrawlMode      @default(SCRAPE)
+  status   CrawlJobStatus @default(PENDING)
+
+  maxPages Int @default(20) @map("max_pages")
+  maxDepth Int @default(1) @map("max_depth")
+  urls     String[] @default([])
+  totalPages       Int     @default(0) @map("total_pages")
+  successPages     Int     @default(0) @map("success_pages")
+  failedPages      Int     @default(0) @map("failed_pages")
+  timeoutMs        Int     @default(30000) @map("timeout_ms")
+  retryCount       Int     @default(3) @map("retry_count")
+  respectRobotsTxt Boolean @default(true) @map("respect_robots_txt")
+  userAgent        String? @map("user_agent")
+  delayMs          Int     @default(1000) @map("delay_ms")
+
+  errorMessage   String?   @map("error_message")
+  firecrawlJobId String?   @map("firecrawl_job_id")
+  scheduleId     String?   @map("schedule_id") @db.Uuid
+  diffReportPath String?   @map("diff_report_path")
+  diffSummary    Json?     @map("diff_summary")
+  startedAt      DateTime? @map("started_at")
+  finishedAt     DateTime? @map("finished_at")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  user         User           @relation(fields: [userId], references: [id])
+  schedule     CrawlSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+  pages        CrawlPage[]
+  exports      CrawlExport[]
+  assets       CrawlAsset[]
+  crawlJobLogs CrawlJobLog[]
+
+  @@index([domain])
+  @@index([status])
+  @@index([createdAt])
+  @@index([userId, status])
+  @@index([scheduleId])
+  @@map("crawl_jobs")
+}
+
+model CrawlPage {
+  id    String @id @default(uuid()) @db.Uuid
+  jobId String @map("job_id") @db.Uuid
+
+  url             String
+  title           String?
+  description     String?
+  markdownContent String? @map("markdown_content")
+  htmlContentPath String? @map("html_content_path")
+  content         String?
+
+  status       CrawlPageStatus @default(PENDING)
+  statusCode   Int?            @map("status_code")
+  errorMessage String?         @map("error_message")
+  hasSensitiveData Boolean @default(false) @map("has_sensitive_data")
+  crawledAt DateTime? @map("crawled_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+
+  normalizedUrl    String   @default("") @map("normalized_url")
+  contentHash      String?  @map("content_hash")
+  wordCount        Int      @default(0) @map("word_count")
+  dataQualityScore Int?     @map("data_quality_score")
+  warnings         String[] @default([])
+  structuredData      Json?    @map("structured_data")
+  job    CrawlJob     @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  assets CrawlAsset[]
+
+  @@unique([jobId, url])
+  @@index([jobId])
+  @@index([status])
+  @@map("crawl_pages")
+}
+
+model CrawlAsset {
+  id     String  @id @default(uuid()) @db.Uuid
+  pageId String? @map("page_id") @db.Uuid
+
+  assetType   AssetType @map("asset_type")
+  url         String
+  sourceUrl   String?   @map("source_url")
+  altText     String?   @map("alt_text")
+  mimeType    String?   @map("mime_type")
+  orderIndex  Int?      @map("order_index")
+  cssSelector String?   @map("css_selector")
+  domPath     String?   @map("dom_path")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  page       CrawlPage? @relation(fields: [pageId], references: [id], onDelete: SetNull)
+  crawlJob   CrawlJob?  @relation(fields: [crawlJobId], references: [id])
+  crawlJobId String?    @map("crawl_job_id") @db.Uuid
+
+  @@index([pageId])
+  @@index([assetType])
+  @@map("crawl_assets")
+}
+
+model CrawlExport {
+  id    String @id @default(uuid()) @db.Uuid
+  jobId String @map("job_id") @db.Uuid
+
+  exportType ExportType   @map("export_type")
+  status     ExportStatus @default(PENDING)
+
+  fileName String  @map("file_name")
+  filePath String  @map("file_path")
+  fileSize Int?    @map("file_size")
+  mimeType String? @map("mime_type")
+  checksum String? @map("checksum")
+
+  errorMessage String? @map("error_message")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  expiredAt DateTime? @map("expired_at")
+
+  job CrawlJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([exportType])
+  @@map("crawl_exports")
+}
+
+model CrawlJobLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  jobId     String   @map("job_id") @db.Uuid
+  level     LogLevel
+  step      String
+  message   String
+  createdAt DateTime @default(now()) @map("created_at")
+
+  job CrawlJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  token     String   @unique
+  userId    String   @map("user_id") @db.Uuid
+  userAgent String?  @map("user_agent")
+  ipAddress String?  @map("ip_address")
+  createdAt DateTime @default(now()) @map("created_at")
+  expiresAt DateTime @map("expires_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  action    String
+  details   Json?
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+}
+
+model ApiKey {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  name       String
+  keyHash    String    @unique @map("key_hash")
+  keyPrefix  String    @map("key_prefix")
+  isActive   Boolean   @default(true) @map("is_active")
+  expiresAt  DateTime? @map("expires_at")
+  lastUsedAt DateTime? @map("last_used_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([keyHash])
+  @@index([userId])
+  @@map("api_keys")
+}
+
+model WebhookConfig {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  url             String
+  encryptedSecret String   @map("encrypted_secret")
+  isActive        Boolean  @default(true) @map("is_active")
+  events          String[] @default([])
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deliveries WebhookDelivery[]
+
+  @@index([userId])
+  @@map("webhook_configs")
+}
+
+model WebhookDelivery {
+  id              String    @id @default(uuid()) @db.Uuid
+  webhookConfigId String    @map("webhook_config_id") @db.Uuid
+  crawlJobId      String    @map("crawl_job_id") @db.Uuid
+  event           String
+  payload         Json
+  status          String    @default("PENDING")
+  statusCode      Int?      @map("status_code")
+  attempt         Int       @default(1)
+  responseBody    String?   @map("response_body")
+  errorMessage    String?   @map("error_message")
+  deliveredAt     DateTime? @map("delivered_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  webhookConfig WebhookConfig @relation(fields: [webhookConfigId], references: [id], onDelete: Cascade)
+
+  @@index([webhookConfigId])
+  @@index([crawlJobId])
+  @@map("webhook_deliveries")
+}
+
+model ExtractionTemplate {
+  id     String @id @default(uuid()) @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  name   String
+  domain String
+  fields Json   @default("[]")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, domain])
+  @@index([domain])
+  @@map("extraction_templates")
+}
+
+model CrawlSchedule {
+  id             String            @id @default(uuid()) @db.Uuid
+  userId         String            @map("user_id") @db.Uuid
+  name           String
+  startUrl       String            @map("start_url")
+  domain         String?
+  mode           CrawlMode         @default(SCRAPE)
+  frequency      ScheduleFrequency @default(DAILY)
+  cronExpression String?           @map("cron_expression")
+  hour           Int               @default(0)
+  minute         Int               @default(0)
+  dayOfWeek      Int?              @map("day_of_week")
+  dayOfMonth     Int?              @map("day_of_month")
+  timezone       String            @default("Asia/Ho_Chi_Minh")
+  maxPages       Int               @default(20) @map("max_pages")
+  maxDepth       Int               @default(1) @map("max_depth")
+  urls           String[]          @default([])
+  isActive       Boolean           @default(true) @map("is_active")
+  autoDiff       Boolean           @default(true) @map("auto_diff")
+  lastRunAt      DateTime?         @map("last_run_at")
+  nextRunAt      DateTime?         @map("next_run_at")
+  createdAt      DateTime          @default(now()) @map("created_at")
+  updatedAt      DateTime          @updatedAt @map("updated_at")
+
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  crawlJobs CrawlJob[]
+
+  @@index([userId])
+  @@index([isActive, nextRunAt])
+  @@map("crawl_schedules")
+}
+

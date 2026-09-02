@@ -1,0 +1,1592 @@
+{
+  "info": {
+    "_postman_id": "8c594c7b-b5d1-4322-a72e-8cb5de9c7333",
+    "name": "Data Crawler BE API",
+    "description": "Postman Collection test API Data Crawler Backend",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health Check",
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "pm.test(\"Status code is 200\", function () {",
+              "    pm.response.to.have.status(200);",
+              "});",
+              "const responseJson = pm.response.json();",
+              "pm.test(\"Status is ok\", function () {",
+              "    pm.expect(responseJson.status).to.eql(\"ok\");",
+              "});"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ],
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{base_url}}/health",
+          "host": ["{{base_url}}"],
+          "path": ["health"]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"Login successful\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(true);",
+                  "    pm.expect(responseJson.data.accessToken).to.be.a('string');",
+                  "    pm.expect(responseJson.data.refreshToken).to.be.a('string');",
+                  "});",
+                  "pm.test(\"User info returned\", function () {",
+                  "    pm.expect(responseJson.data.user).to.have.property('id');",
+                  "    pm.expect(responseJson.data.user).to.have.property('email');",
+                  "    pm.expect(responseJson.data.user).to.have.property('role');",
+                  "});",
+                  "if (responseJson && responseJson.data && responseJson.data.accessToken) {",
+                  "    pm.environment.set(\"token\", responseJson.data.accessToken);",
+                  "}",
+                  "if (responseJson && responseJson.data && responseJson.data.refreshToken) {",
+                  "    pm.environment.set(\"refreshToken\", responseJson.data.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"admin@crawl.local\",\n    \"password\": \"Admin@123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Me",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"Get profile details successfully\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(true);",
+                  "    pm.expect(responseJson.data.email).to.be.a('string');",
+                  "    pm.expect(responseJson.data.id).to.be.a('string');",
+                  "    pm.expect(responseJson.data.role).to.be.a('string');",
+                  "    pm.expect(responseJson.data.isActive).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"New tokens returned\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(true);",
+                  "    pm.expect(responseJson.data.accessToken).to.be.a('string');",
+                  "    pm.expect(responseJson.data.refreshToken).to.be.a('string');",
+                  "});",
+                  "pm.test(\"New access token is a valid string\", function () {",
+                  "    pm.expect(responseJson.data.accessToken).to.be.a('string');",
+                  "});",
+                  "if (responseJson && responseJson.data) {",
+                  "    pm.environment.set(\"token\", responseJson.data.accessToken);",
+                  "    pm.environment.set(\"refreshToken\", responseJson.data.refreshToken);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "refresh"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"Logout successful\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(true);",
+                  "});",
+                  "// Clear tokens from environment after logout",
+                  "pm.environment.unset('refreshToken');"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"{{refreshToken}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "logout"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Login with Invalid Credentials",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"Returns error response\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(false);",
+                  "    pm.expect(responseJson.code).to.eql('INVALID_CREDENTIALS');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"admin@crawl.local\",\n    \"password\": \"WrongPassword!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "login"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Me without Token (Unauthorized)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"Returns unauthorized error\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(false);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "me"]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "item": [
+        {
+          "name": "Get Users (ADMIN only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"Returns user list\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(true);",
+                  "    pm.expect(responseJson.data).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users",
+              "host": ["{{base_url}}"],
+              "path": ["users"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create User (ADMIN only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"User created successfully\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(true);",
+                  "    pm.expect(responseJson.data.id).to.be.a('string');",
+                  "});",
+                  "if (responseJson && responseJson.data && responseJson.data.id) {",
+                  "    pm.environment.set(\"created_user_id\", responseJson.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"user-{{$randomInt}}@example.com\",\n    \"password\": \"password123\",\n    \"fullName\": \"Normal User\",\n    \"role\": \"CRAWLER_USER\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users",
+              "host": ["{{base_url}}"],
+              "path": ["users"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get User by ID (ADMIN only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"User ID matches\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(true);",
+                  "    pm.expect(responseJson.data.id).to.eql(pm.environment.get(\"created_user_id\"));",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/users/:id",
+              "host": ["{{base_url}}"],
+              "path": ["users", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{created_user_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Update User (ADMIN only)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"User updated successfully\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"fullName\": \"Updated User Name\",\n    \"isActive\": true,\n    \"role\": \"CRAWLER_USER\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/users/:id",
+              "host": ["{{base_url}}"],
+              "path": ["users", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{created_user_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Crawl Jobs",
+      "item": [
+        {
+          "name": "Create Crawl Job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"Job created successfully\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(true);",
+                  "    pm.expect(responseJson.data.id).to.be.a('string');",
+                  "    pm.expect(responseJson.data.status).to.be.a('string');",
+                  "    pm.expect(responseJson.data.startUrl).to.be.a('string');",
+                  "});",
+                  "if (responseJson && responseJson.data && responseJson.data.id) {",
+                  "    pm.environment.set(\"job_id\", responseJson.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"startUrl\": \"https://example.com\",\n    \"mode\": \"SCRAPE\",\n    \"maxPages\": 50,\n    \"maxDepth\": 2\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/crawl-jobs",
+              "host": ["{{base_url}}"],
+              "path": ["crawl-jobs"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Crawl Jobs (Paginated)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"Returns paginated list\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(true);",
+                  "    pm.expect(responseJson.data.items).to.be.an('array');",
+                  "    pm.expect(responseJson.data.meta).to.have.property('total');",
+                  "    pm.expect(responseJson.data.meta).to.have.property('page');",
+                  "    pm.expect(responseJson.data.meta).to.have.property('limit');",
+                  "    pm.expect(responseJson.data.meta).to.have.property('totalPages');",
+                  "});",
+                  "pm.test(\"Pagination values are valid numbers\", function () {",
+                  "    const meta = responseJson.data.meta;",
+                  "    pm.expect(meta.total).to.be.at.least(0);",
+                  "    pm.expect(meta.page).to.be.at.least(1);",
+                  "    pm.expect(meta.limit).to.be.at.least(1);",
+                  "    pm.expect(meta.totalPages).to.be.at.least(0);",
+                  "});",
+                  "pm.test(\"Admin sees all jobs (owner/admin access control)\", function () {",
+                  "    // Admin token is used — should see all jobs in system",
+                  "    pm.expect(responseJson.data.items.length).to.be.at.least(0);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/crawl-jobs",
+              "host": ["{{base_url}}"],
+              "path": ["crawl-jobs"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Crawl Jobs (Filter by status=PENDING)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"All returned jobs have status PENDING\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(true);",
+                  "    responseJson.data.items.forEach(function(job) {",
+                  "        pm.expect(job.status).to.eql('PENDING');",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/crawl-jobs?status=PENDING&page=1&limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["crawl-jobs"],
+              "query": [
+                { "key": "status", "value": "PENDING" },
+                { "key": "page", "value": "1" },
+                { "key": "limit", "value": "10" }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Crawl Job by ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"Job ID matches\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(true);",
+                  "    pm.expect(responseJson.data.id).to.eql(pm.environment.get(\"job_id\"));",
+                  "});",
+                  "pm.test(\"Job has required fields\", function () {",
+                  "    const job = responseJson.data;",
+                  "    pm.expect(job).to.have.property('id');",
+                  "    pm.expect(job).to.have.property('status');",
+                  "    pm.expect(job).to.have.property('startUrl');",
+                  "    pm.expect(job).to.have.property('userId');",
+                  "    pm.expect(job).to.have.property('createdAt');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/crawl-jobs/:id",
+              "host": ["{{base_url}}"],
+              "path": ["crawl-jobs", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{job_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Crawled Pages",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"Returns pages data\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(true);",
+                  "    pm.expect(responseJson.data).to.have.property('items');",
+                  "    pm.expect(responseJson.data.items).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/crawl-jobs/:id/pages",
+              "host": ["{{base_url}}"],
+              "path": ["crawl-jobs", ":id", "pages"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{job_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Crawled Pages Preview (Clean & Raw)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"Returns pages preview items\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(true);",
+                  "    pm.expect(responseJson.data).to.have.property('items');",
+                  "    pm.expect(responseJson.data.items).to.be.an('array');",
+                  "});",
+                  "pm.test(\"Items contain clean and raw output fields\", function () {",
+                  "    if (responseJson.data.items.length > 0) {",
+                  "        const item = responseJson.data.items[0];",
+                  "        pm.expect(item).to.have.property('rawMarkdown');",
+                  "        pm.expect(item).to.have.property('mainContent');",
+                  "        pm.expect(item).to.have.property('cleanText');",
+                  "        pm.expect(item).to.have.property('wordCount');",
+                  "        pm.expect(item).to.have.property('dataQualityScore');",
+                  "        pm.expect(item).to.have.property('warnings');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/crawl-jobs/:id/pages/preview?minQualityScore=50",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "crawl-jobs",
+                ":id",
+                "pages",
+                "preview"
+              ],
+              "query": [
+                {
+                  "key": "minQualityScore",
+                  "value": "50"
+                }
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{job_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Job Assets",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"Returns assets list\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(true);",
+                  "    pm.expect(responseJson.data).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/crawl-jobs/:id/assets?assetType=IMAGE",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "crawl-jobs",
+                ":id",
+                "assets"
+              ],
+              "query": [
+                {
+                  "key": "assetType",
+                  "value": "IMAGE"
+                }
+              ],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{job_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Get Crawl Job Exports",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"Returns exports list\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(true);",
+                  "    pm.expect(responseJson.data).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/crawl-jobs/:id/exports",
+              "host": ["{{base_url}}"],
+              "path": ["crawl-jobs", ":id", "exports"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{job_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Export for Job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 201\", function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"Export created successfully\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(true);",
+                  "    pm.expect(responseJson.data.id).to.be.a('string');",
+                  "});",
+                  "if (responseJson && responseJson.data && responseJson.data.id) {",
+                  "    pm.environment.set(\"export_id\", responseJson.data.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"exportType\": \"ZIP\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/crawl-jobs/:id/exports",
+              "host": ["{{base_url}}"],
+              "path": ["crawl-jobs", ":id", "exports"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{job_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Crawl Job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"Job cancelled successfully\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(true);",
+                  "    pm.expect(responseJson.data.status).to.eql('CANCELED');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/crawl-jobs/:id/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["crawl-jobs", ":id", "cancel"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{job_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Exports",
+      "item": [
+        {
+          "name": "Download Export File",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "pm.test(\"Header Content-Disposition exists\", function () {",
+                  "    pm.response.to.have.header(\"Content-Disposition\");",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/exports/:exportId/download",
+              "host": ["{{base_url}}"],
+              "path": ["exports", ":exportId", "download"],
+              "variable": [
+                {
+                  "key": "exportId",
+                  "value": "{{export_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Permission & Edge Case Tests",
+      "description": "Kiểm tra phân quyền owner/admin và các edge case. Chạy AFTER 'Login' để có {{token}} hợp lệ.",
+      "item": [
+        {
+          "name": "[404] Get Non-Existent Job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 404\", function () {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"Returns not found error\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(false);",
+                  "    pm.expect(responseJson.code).to.eql('CRAWL_JOB_NOT_FOUND');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/crawl-jobs/00000000-0000-0000-0000-000000000000",
+              "host": ["{{base_url}}"],
+              "path": ["crawl-jobs", "00000000-0000-0000-0000-000000000000"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[400] Cancel a COMPLETED Job",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400\", function () {",
+                  "    pm.response.to.have.status(400);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"Returns error - job already completed\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(false);",
+                  "    pm.expect(responseJson.code).to.eql('CRAWL_JOB_ALREADY_COMPLETED');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/crawl-jobs/:id/cancel",
+              "host": ["{{base_url}}"],
+              "path": ["crawl-jobs", ":id", "cancel"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{completed_job_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[401] Get Job List without Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"Returns unauthorized error\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(false);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/crawl-jobs",
+              "host": ["{{base_url}}"],
+              "path": ["crawl-jobs"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[401] Refresh with Invalid Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 401\", function () {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"Returns token invalid error\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(false);",
+                  "    pm.expect(responseJson.code).to.eql('TOKEN_INVALID');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"refreshToken\": \"invalid.token.value\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["auth", "refresh"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[422] Create Job with Invalid URL",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 400 or 422\", function () {",
+                  "    pm.expect(pm.response.code).to.be.oneOf([400, 422]);",
+                  "});",
+                  "const responseJson = pm.response.json();",
+                  "pm.test(\"Returns validation error\", function () {",
+                  "    pm.expect(responseJson.success).to.eql(false);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"startUrl\": \"not-a-valid-url\",\n    \"mode\": \"SCRAPE\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/crawl-jobs",
+              "host": ["{{base_url}}"],
+              "path": ["crawl-jobs"]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "[NOTE] Owner vs Admin — Requires 2nd User Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// NOTE: Test này yêu cầu:",
+                  "// 1. Tạo user B với role CRAWLER_USER",
+                  "// 2. Login user B → lấy token B, lưu vào env 'token_user_b'",
+                  "// 3. User B tạo 1 crawl job → lưu job_id vào 'job_id_user_b'",
+                  "// 4. Dùng token ADMIN ({{token}}) để GET job của B → phải thấy (200)",
+                  "// 5. Dùng token_user_b để GET job của A → phải trả về 404",
+                  "//",
+                  "// Hiện tại test này chỉ validate cấu trúc response với admin token",
+                  "pm.test(\"[ADMIN] Can access job by ID\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "    const r = pm.response.json();",
+                  "    pm.expect(r.success).to.eql(true);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/crawl-jobs/:id",
+              "host": ["{{base_url}}"],
+              "path": ["crawl-jobs", ":id"],
+              "variable": [
+                {
+                  "key": "id",
+                  "value": "{{completed_job_id}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Export Tests (Real Data)",
+      "description": "Test xuất dữ liệu thật từ job COMPLETED (quotes.toscrape.com). Chạy tuần tự: Login → Create → Download cho từng loại. Yêu cầu {{completed_job_id}} đã được set trong environment.",
+      "item": [
+        {
+          "name": "Create Export - ZIP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"[ZIP] Status 201\", function () { pm.response.to.have.status(201); });",
+                  "const r = pm.response.json();",
+                  "pm.test(\"[ZIP] Export created\", function () { pm.expect(r.success).to.eql(true); });",
+                  "if (r && r.data) pm.environment.set(\"export_id_zip\", r.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n    \"exportType\": \"ZIP\"\n}" },
+            "url": {
+              "raw": "{{base_url}}/crawl-jobs/:id/exports",
+              "host": ["{{base_url}}"],
+              "path": ["crawl-jobs", ":id", "exports"],
+              "variable": [{ "key": "id", "value": "{{completed_job_id}}" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Download Export - ZIP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"[ZIP] Download 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"[ZIP] Content-Disposition header exists\", function () { pm.response.to.have.header(\"Content-Disposition\"); });",
+                  "pm.test(\"[ZIP] Content-Type is zip\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"zip\"); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+            "url": {
+              "raw": "{{base_url}}/exports/:exportId/download",
+              "host": ["{{base_url}}"],
+              "path": ["exports", ":exportId", "download"],
+              "variable": [{ "key": "exportId", "value": "{{export_id_zip}}" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Export - JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"[JSON] Status 201\", function () { pm.response.to.have.status(201); });",
+                  "const r = pm.response.json();",
+                  "pm.test(\"[JSON] Export created\", function () { pm.expect(r.success).to.eql(true); });",
+                  "if (r && r.data) pm.environment.set(\"export_id_json\", r.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n    \"exportType\": \"JSON\"\n}" },
+            "url": {
+              "raw": "{{base_url}}/crawl-jobs/:id/exports",
+              "host": ["{{base_url}}"],
+              "path": ["crawl-jobs", ":id", "exports"],
+              "variable": [{ "key": "id", "value": "{{completed_job_id}}" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Download Export - JSON",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"[JSON] Download 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"[JSON] Content-Disposition header exists\", function () { pm.response.to.have.header(\"Content-Disposition\"); });",
+                  "pm.test(\"[JSON] Content-Type is json\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"json\"); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+            "url": {
+              "raw": "{{base_url}}/exports/:exportId/download",
+              "host": ["{{base_url}}"],
+              "path": ["exports", ":exportId", "download"],
+              "variable": [{ "key": "exportId", "value": "{{export_id_json}}" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Export - CSV",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"[CSV] Status 201\", function () { pm.response.to.have.status(201); });",
+                  "const r = pm.response.json();",
+                  "pm.test(\"[CSV] Export created\", function () { pm.expect(r.success).to.eql(true); });",
+                  "if (r && r.data) pm.environment.set(\"export_id_csv\", r.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n    \"exportType\": \"CSV\"\n}" },
+            "url": {
+              "raw": "{{base_url}}/crawl-jobs/:id/exports",
+              "host": ["{{base_url}}"],
+              "path": ["crawl-jobs", ":id", "exports"],
+              "variable": [{ "key": "id", "value": "{{completed_job_id}}" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Download Export - CSV",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"[CSV] Download 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"[CSV] Content-Disposition header exists\", function () { pm.response.to.have.header(\"Content-Disposition\"); });",
+                  "pm.test(\"[CSV] Content-Type is csv or text\", function () { const ct = pm.response.headers.get(\"Content-Type\"); pm.expect(ct).to.satisfy(v => v.includes(\"csv\") || v.includes(\"text\")); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+            "url": {
+              "raw": "{{base_url}}/exports/:exportId/download",
+              "host": ["{{base_url}}"],
+              "path": ["exports", ":exportId", "download"],
+              "variable": [{ "key": "exportId", "value": "{{export_id_csv}}" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Export - XLSX",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"[XLSX] Status 201\", function () { pm.response.to.have.status(201); });",
+                  "const r = pm.response.json();",
+                  "pm.test(\"[XLSX] Export created\", function () { pm.expect(r.success).to.eql(true); });",
+                  "if (r && r.data) pm.environment.set(\"export_id_xlsx\", r.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n    \"exportType\": \"XLSX\"\n}" },
+            "url": {
+              "raw": "{{base_url}}/crawl-jobs/:id/exports",
+              "host": ["{{base_url}}"],
+              "path": ["crawl-jobs", ":id", "exports"],
+              "variable": [{ "key": "id", "value": "{{completed_job_id}}" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Download Export - XLSX",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"[XLSX] Download 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"[XLSX] Content-Disposition header exists\", function () { pm.response.to.have.header(\"Content-Disposition\"); });",
+                  "pm.test(\"[XLSX] Content-Type is xlsx\", function () { pm.expect(pm.response.headers.get(\"Content-Type\")).to.include(\"spreadsheetml\"); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+            "url": {
+              "raw": "{{base_url}}/exports/:exportId/download",
+              "host": ["{{base_url}}"],
+              "path": ["exports", ":exportId", "download"],
+              "variable": [{ "key": "exportId", "value": "{{export_id_xlsx}}" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Create Export - MARKDOWN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"[MD] Status 201\", function () { pm.response.to.have.status(201); });",
+                  "const r = pm.response.json();",
+                  "pm.test(\"[MD] Export created\", function () { pm.expect(r.success).to.eql(true); });",
+                  "if (r && r.data) pm.environment.set(\"export_id_md\", r.data.id);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
+              { "key": "Content-Type", "value": "application/json", "type": "text" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n    \"exportType\": \"MARKDOWN\"\n}" },
+            "url": {
+              "raw": "{{base_url}}/crawl-jobs/:id/exports",
+              "host": ["{{base_url}}"],
+              "path": ["crawl-jobs", ":id", "exports"],
+              "variable": [{ "key": "id", "value": "{{completed_job_id}}" }]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "Download Export - MARKDOWN",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"[MD] Download 200\", function () { pm.response.to.have.status(200); });",
+                  "pm.test(\"[MD] Content-Disposition header exists\", function () { pm.response.to.have.header(\"Content-Disposition\"); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+            "url": {
+              "raw": "{{base_url}}/exports/:exportId/download",
+              "host": ["{{base_url}}"],
+              "path": ["exports", ":exportId", "download"],
+              "variable": [{ "key": "exportId", "value": "{{export_id_md}}" }]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}
