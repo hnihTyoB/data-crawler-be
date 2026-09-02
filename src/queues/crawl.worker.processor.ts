@@ -108,6 +108,7 @@ export async function scanAndFlagPage(pageId: string, ...texts: (string | undefi
 export async function persistBatchResults(
   jobId: string,
   result: CrawlStatusResult,
+  userId?: string,
 ): Promise<{ successCount: number; failedCount: number; saveErrors: number; totalPages: number }> {
   let successCount = 0;
   let failedCount = 0;
@@ -123,7 +124,7 @@ export async function persistBatchResults(
       const page = await getPageRepository().upsert(normalized);
       await savePageAssets(jobId, page.id, item);
       await scanAndFlagPage(page.id, normalized.markdownContent, normalized.title, normalized.description);
-      await runExtractionIfTemplate(jobId, page.id, item.url, item);
+      await runExtractionIfTemplate(jobId, page.id, item.url, item, userId);
       if (item.success) successCount++;
       else failedCount++;
     } catch (err: any) {
@@ -233,7 +234,7 @@ export async function processCrawlJob(job: Job<{ jobId: string }>) {
         const page = await getPageRepository().upsert(normalized);
         await savePageAssets(jobId, page.id, result);
         await scanAndFlagPage(page.id, normalized.markdownContent, normalized.title, normalized.description);
-        await runExtractionIfTemplate(jobId, page.id, crawlJob.startUrl, result);
+        await runExtractionIfTemplate(jobId, page.id, crawlJob.startUrl, result, crawlJob.userId);
         await getJobRepository().updateStatus(jobId, 'COMPLETED', {
           finishedAt: new Date(),
           totalPages: 1,
@@ -307,7 +308,7 @@ export async function processCrawlJob(job: Job<{ jobId: string }>) {
           return;
         }
 
-        const { successCount, failedCount, saveErrors, totalPages } = await persistBatchResults(jobId, result);
+        const { successCount, failedCount, saveErrors, totalPages } = await persistBatchResults(jobId, result, crawlJob.userId);
         console.log(`[Worker] Job ${jobId} completed: ${successCount} success, ${failedCount} failed, ${saveErrors} save errors, ${totalPages} total`);
         await getJobRepository().updateStatus(jobId, 'COMPLETED', {
           finishedAt: new Date(),
@@ -362,7 +363,7 @@ export async function processCrawlJob(job: Job<{ jobId: string }>) {
           return;
         }
 
-        const { successCount, failedCount, saveErrors, totalPages } = await persistBatchResults(jobId, result);
+        const { successCount, failedCount, saveErrors, totalPages } = await persistBatchResults(jobId, result, crawlJob.userId);
         console.log(`[Worker] Job ${jobId} completed: ${successCount} success, ${failedCount} failed, ${saveErrors} save errors, ${totalPages} total`);
         await getJobRepository().updateStatus(jobId, 'COMPLETED', {
           finishedAt: new Date(),
@@ -424,7 +425,7 @@ export async function processCrawlJob(job: Job<{ jobId: string }>) {
           return;
         }
 
-        const { successCount, failedCount, saveErrors, totalPages } = await persistBatchResults(jobId, result);
+        const { successCount, failedCount, saveErrors, totalPages } = await persistBatchResults(jobId, result, crawlJob.userId);
         console.log(`[Worker] Job ${jobId} completed: ${successCount} success, ${failedCount} failed, ${saveErrors} save errors, ${totalPages} total`);
         await getJobRepository().updateStatus(jobId, 'COMPLETED', {
           finishedAt: new Date(),

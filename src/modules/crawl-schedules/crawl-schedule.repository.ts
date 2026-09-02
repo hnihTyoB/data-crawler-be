@@ -176,4 +176,19 @@ export class CrawlScheduleRepository {
       },
     });
   }
+
+  async claimDueSchedule(id: string, now: Date, nextRunAt: Date): Promise<boolean> {
+    const result = await prisma.crawlSchedule.updateMany({
+      where: {
+        id,
+        isActive: true,
+        nextRunAt: { lte: now },
+      },
+      data: {
+        lastRunAt: now,
+        nextRunAt,
+      },
+    });
+    return result.count > 0;
+  }
 }

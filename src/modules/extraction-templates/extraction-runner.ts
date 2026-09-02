@@ -53,18 +53,21 @@ export async function runExtractionIfTemplate(
   pageId: string,
   pageUrl: string,
   item: FirecrawlPageResult,
+  userId?: string,
 ): Promise<void> {
   // Extraction requires raw HTML — Firecrawl returns it via the html field
   // which is not currently surfaced in FirecrawlPageResult. We fall back to
-  // markdownContent if html is unavailable. A future task should add html
-  // to FirecrawlPageResult and pass it through normalizePage().
+  // markdownContent if html is unavailable.
   const html = (item as any).html ?? item.markdown ?? '';
   if (!html) return;
 
   const domain = extractDomainFromUrl(pageUrl);
   if (!domain) return;
 
-  const template = await getTemplateRepository().findByDomain(domain);
+  const repository = getTemplateRepository();
+  const template = userId
+    ? await repository.findByUserAndDomain(userId, domain)
+    : await repository.findByDomain(domain);
   if (!template) return;
 
   const fields = template.fields as unknown as ExtractionFieldDto[];

@@ -251,12 +251,17 @@ const rawSchemas = {
   },
   CreateCrawlJobRequest: {
     type: 'object',
-    required: ['startUrl'],
     properties: {
       startUrl: { type: 'string', format: 'uri', example: 'https://example.com' },
       mode: { type: 'string', enum: ['SCRAPE', 'CRAWL', 'SITEMAP', 'URL_LIST'], example: 'CRAWL' },
       maxPages: { type: 'integer', minimum: 1, maximum: 1000, example: 100 },
-      maxDepth: { type: 'integer', minimum: 1, maximum: 10, example: 3 }
+      maxDepth: { type: 'integer', minimum: 1, maximum: 10, example: 3 },
+      urls: {
+        type: 'array',
+        items: { type: 'string', format: 'uri' },
+        example: ['https://example.com/1', 'https://example.com/2'],
+        description: 'Bắt buộc khi mode là URL_LIST'
+      }
     }
   },
   CreateExportRequest: {

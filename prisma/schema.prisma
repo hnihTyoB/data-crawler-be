@@ -209,6 +209,7 @@ model CrawlAsset {
 
   @@index([pageId])
   @@index([assetType])
+  @@index([crawlJobId])
   @@map("crawl_assets")
 }
 
@@ -275,6 +276,9 @@ model AuditLog {
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  @@index([userId, createdAt])
+  @@index([action])
+  @@index([createdAt])
   @@map("audit_logs")
 }
 

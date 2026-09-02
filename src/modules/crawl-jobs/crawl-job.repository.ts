@@ -239,4 +239,23 @@ export class CrawlJobRepository {
       prisma.crawlJob.count({ where: { scheduleId } }),
     ]);
   }
+
+  countJobsSince(userId: string, sinceDate: Date): Promise<number> {
+    return prisma.crawlJob.count({
+      where: {
+        userId,
+        createdAt: { gte: sinceDate },
+      },
+    });
+  }
+
+  countConcurrentJobs(userId: string, activeStatuses: CrawlJobStatus[], sinceDate?: Date): Promise<number> {
+    return prisma.crawlJob.count({
+      where: {
+        userId,
+        status: { in: activeStatuses },
+        ...(sinceDate ? { createdAt: { gte: sinceDate } } : {}),
+      },
+    });
+  }
 }

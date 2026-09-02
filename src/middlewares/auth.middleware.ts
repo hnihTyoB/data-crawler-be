@@ -3,8 +3,10 @@ import jwt from 'jsonwebtoken';
 import { jwtConfig } from '../config/jwt.config';
 import { AppError } from '../common/errors/app-error';
 import { ERROR_CODE } from '../common/errors/error-code';
-import { prisma } from '../database/prisma.client';
+import { UserRepository } from '../modules/users/user.repository';
 import { UserRole } from '@prisma/client';
+
+const userRepository = new UserRepository();
 
 export async function authMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
   let token: string | undefined = req.cookies?.accessToken;
@@ -28,10 +30,7 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
       role: string;
     };
 
-    const user = await prisma.user.findFirst({
-      where: { id: payload.id, deletedAt: null },
-      select: { isActive: true },
-    });
+    const user = await userRepository.findById(payload.id);
 
     if (!user) {
       next(new AppError("User not found", 401, ERROR_CODE.UNAUTHORIZED));

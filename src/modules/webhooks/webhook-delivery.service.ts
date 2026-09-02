@@ -1,21 +1,15 @@
-import { prisma } from '../../database/prisma.client';
-import { WebhookDelivery, WebhookConfig } from '@prisma/client';
+import { WebhookDelivery } from '@prisma/client';
+import { WebhookRepository } from './webhook.repository';
 import { decrypt, signPayload } from './webhook-crypto.helper';
 import { webhookQueue } from '../../queues/webhook.queue';
-import axios from 'axios';
+import { getSecureAxios } from '../../common/helpers/url.helper';
 
 export class WebhookDeliveryService {
+  private readonly repository = new WebhookRepository();
+
   async dispatch(crawlJobId: string, userId: string, event: string, jobData: any): Promise<void> {
     try {
-      const configs = await prisma.webhookConfig.findMany({
-        where: {
-          userId,
-          isActive: true,
-          events: {
-            has: event,
-          },
-        },
-      });
+      const configs = await this.repository.findActiveConfigsByEvent(userId, event);
 
       if (configs.length === 0) {
         return;
@@ -29,15 +23,13 @@ export class WebhookDeliveryService {
       };
 
       for (const config of configs) {
-        const delivery = await prisma.webhookDelivery.create({
-          data: {
-            webhookConfigId: config.id,
-            crawlJobId,
-            event,
-            payload: payload as any,
-            status: 'PENDING',
-            attempt: 1,
-          },
+        const delivery = await this.repository.createDelivery({
+          webhookConfigId: config.id,
+          crawlJobId,
+          event,
+          payload: payload as any,
+          status: 'PENDING',
+          attempt: 1,
         });
 
         if (webhookQueue) {
@@ -50,7 +42,7 @@ export class WebhookDeliveryService {
                 type: 'exponential',
                 delay: 5000, // 5s, 25s, 125s
               },
-            }
+            },
           );
         } else {
           console.error('[Webhook] Redis/BullMQ is not initialized. Webhook could not be enqueued.');
@@ -62,18 +54,14 @@ export class WebhookDeliveryService {
   }
 
   async send(deliveryId: string, attemptNumber: number): Promise<void> {
-    const delivery = await prisma.webhookDelivery.findUnique({
-      where: { id: deliveryId },
-      include: { webhookConfig: true },
-    });
+    const delivery = await this.repository.findDeliveryById(deliveryId);
 
     if (!delivery) {
       throw new Error(`WebhookDelivery ${deliveryId} not found`);
     }
 
-    await prisma.webhookDelivery.update({
-      where: { id: deliveryId },
-      data: { attempt: attemptNumber },
+    await this.repository.updateDelivery(deliveryId, {
+      attempt: attemptNumber,
     });
 
     const config = delivery.webhookConfig;
@@ -82,7 +70,7 @@ export class WebhookDeliveryService {
     const signature = signPayload(secret, payloadStr);
 
     try {
-      const response = await axios.post(config.url, payloadStr, {
+      const response = await getSecureAxios().post(config.url, payloadStr, {
         headers: {
           'Content-Type': 'application/json',
           'X-Webhook-Signature': `sha256=${signature}`,
@@ -92,25 +80,22 @@ export class WebhookDeliveryService {
         timeout: 10000, // 10s timeout
       });
 
-      const responseBody = typeof response.data === 'string' 
-        ? response.data 
+      const responseBody = typeof response.data === 'string'
+        ? response.data
         : JSON.stringify(response.data);
 
-      await prisma.webhookDelivery.update({
-        where: { id: deliveryId },
-        data: {
-          status: 'SUCCESS',
-          statusCode: response.status,
-          responseBody: responseBody.substring(0, 2000), // Limit size stored in DB
-          deliveredAt: new Date(),
-          errorMessage: null,
-        },
+      await this.repository.updateDelivery(deliveryId, {
+        status: 'SUCCESS',
+        statusCode: response.status,
+        responseBody: responseBody.substring(0, 2000), // Limit size stored in DB
+        deliveredAt: new Date(),
+        errorMessage: null,
       });
 
     } catch (error: any) {
       let statusCode: number | null = null;
       let responseBody: string | null = null;
-      let errorMessage = error.message || 'Unknown network error';
+      const errorMessage = error.message || 'Unknown network error';
 
       if (error.response) {
         statusCode = error.response.status;
@@ -119,13 +104,10 @@ export class WebhookDeliveryService {
           : JSON.stringify(error.response.data);
       }
 
-      await prisma.webhookDelivery.update({
-        where: { id: deliveryId },
-        data: {
-          statusCode,
-          responseBody: responseBody ? responseBody.substring(0, 2000) : null,
-          errorMessage: errorMessage.substring(0, 1000),
-        },
+      await this.repository.updateDelivery(deliveryId, {
+        statusCode,
+        responseBody: responseBody ? responseBody.substring(0, 2000) : null,
+        errorMessage: errorMessage.substring(0, 1000),
       });
 
       // Throw error to trigger BullMQ retry
@@ -138,45 +120,16 @@ export class WebhookDeliveryService {
    * Called by BullMQ worker when job fails after max attempts.
    */
   async markFailed(deliveryId: string, errorReason: string): Promise<void> {
-    await prisma.webhookDelivery.update({
-      where: { id: deliveryId },
-      data: {
-        status: 'FAILED',
-        errorMessage: `Max attempts exhausted. Last error: ${errorReason}`.substring(0, 1000),
-      },
+    await this.repository.updateDelivery(deliveryId, {
+      status: 'FAILED',
+      errorMessage: `Max attempts exhausted. Last error: ${errorReason}`.substring(0, 1000),
     });
   }
 
   async listDeliveries(
     userId: string,
-    query: { jobId?: string; status?: string }
+    query: { jobId?: string; status?: string },
   ): Promise<WebhookDelivery[]> {
-    const where: any = {
-      webhookConfig: {
-        userId,
-      },
-    };
-
-    if (query.jobId) {
-      where.crawlJobId = query.jobId;
-    }
-
-    if (query.status) {
-      where.status = query.status;
-    }
-
-    return prisma.webhookDelivery.findMany({
-      where,
-      include: {
-        webhookConfig: {
-          select: {
-            url: true,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    return this.repository.listDeliveries(userId, query);
   }
 }
