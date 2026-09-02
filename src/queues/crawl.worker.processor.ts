@@ -6,7 +6,7 @@ import { CrawlAssetRepository } from '../modules/crawl-assets/crawl-asset.reposi
 import { FirecrawlService } from '../modules/firecrawl/firecrawl.service';
 import { CrawlPageProcessorService } from '../modules/crawl-pages/crawl-page-processor.service';
 import { SensitiveScanService } from '../modules/crawl-pages/sensitive-scan.service';
-import { mapCrawlError } from '../common/helpers/error-mapping.helper';
+import { mapCrawlError, getErrorMessage } from '../common/helpers/error-mapping.helper';
 import { validateUrlAsync } from '../common/helpers/url.helper';
 import { AppError } from '../common/errors/app-error';
 import { FirecrawlPageResult, CrawlStatusResult } from '../modules/firecrawl/firecrawl.dto';
@@ -127,8 +127,8 @@ export async function persistBatchResults(
       await runExtractionIfTemplate(jobId, page.id, item.url, item, userId);
       if (item.success) successCount++;
       else failedCount++;
-    } catch (err: any) {
-      console.error(`[Worker] Failed to save page ${item.url}: ${err?.message}`);
+    } catch (err: unknown) {
+      console.error(`[Worker] Failed to save page ${item.url}: ${getErrorMessage(err)}`);
       saveErrors++;
     }
 
@@ -150,8 +150,8 @@ export async function persistBatchResults(
       const normalized = getPageProcessor().normalizeFailedPage(failed, jobId);
       await getPageRepository().upsert(normalized);
       failedCount++;
-    } catch (err: any) {
-      console.error(`[Worker] Failed to save error page ${failed.url}: ${err?.message}`);
+    } catch (err: unknown) {
+      console.error(`[Worker] Failed to save error page ${failed.url}: ${getErrorMessage(err)}`);
       saveErrors++;
     }
   }
@@ -167,8 +167,8 @@ export async function persistBatchResults(
       );
       await getPageRepository().upsert(normalized);
       failedCount++;
-    } catch (err: any) {
-      console.error(`[Worker] Failed to save robots-blocked page ${blockedUrl}: ${err?.message}`);
+    } catch (err: unknown) {
+      console.error(`[Worker] Failed to save robots-blocked page ${blockedUrl}: ${getErrorMessage(err)}`);
       saveErrors++;
     }
   }
@@ -249,15 +249,16 @@ export async function processCrawlJob(job: Job<{ jobId: string }>) {
         let sitemapUrls: string[];
         try {
           sitemapUrls = await getFirecrawlService().parseSitemapUrls(crawlJob.startUrl, crawlJob.maxPages);
-        } catch (err: any) {
+        } catch (err: unknown) {
+          const errorMessage = getErrorMessage(err);
           await getJobRepository().updateStatus(jobId, 'FAILED', {
             finishedAt: new Date(),
-            errorMessage: mapCrawlError(err?.message ?? 'Failed to parse sitemap'),
+            errorMessage: mapCrawlError(errorMessage || 'Failed to parse sitemap'),
             totalPages: 0,
             successPages: 0,
             failedPages: 0,
           });
-          console.error(`[Worker] Job ${jobId} sitemap parse failed: ${err?.message}`);
+          console.error(`[Worker] Job ${jobId} sitemap parse failed: ${errorMessage}`);
           return;
         }
 
@@ -443,13 +444,13 @@ export async function processCrawlJob(job: Job<{ jobId: string }>) {
         console.log(
           `[Worker] Diff report generated for job ${jobId}: ${diffReport.summary.newPagesCount} new, ${diffReport.summary.modifiedPagesCount} modified, ${diffReport.summary.deletedPagesCount} deleted, ${diffReport.summary.unchangedPagesCount} unchanged`,
         );
-      } catch (diffErr: any) {
-        console.error(`[Worker] Failed to generate diff report for job ${jobId}:`, diffErr?.message);
+      } catch (diffErr: unknown) {
+        console.error(`[Worker] Failed to generate diff report for job ${jobId}:`, getErrorMessage(diffErr));
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       await getJobRepository().updateStatus(jobId, 'FAILED', {
         finishedAt: new Date(),
-        errorMessage: mapCrawlError(error?.message ?? 'Unknown error'),
+        errorMessage: mapCrawlError(getErrorMessage(error)),
       });
       throw error;
     }
@@ -461,6 +462,9 @@ export async function processCrawlJob(job: Job<{ jobId: string }>) {
         const webhookDeliveryService = new WebhookDeliveryService();
 
         const event = updatedJob.status === 'COMPLETED' ? 'job.completed' : 'job.failed';
+        const diffSummary = (updatedJob && typeof updatedJob === 'object' && 'diffSummary' in updatedJob)
+          ? (updatedJob as { diffSummary: unknown }).diffSummary ?? null
+          : null;
         const payload = {
           jobId: updatedJob.id,
           status: updatedJob.status,
@@ -470,7 +474,7 @@ export async function processCrawlJob(job: Job<{ jobId: string }>) {
           successPages: updatedJob.successPages,
           failedPages: updatedJob.failedPages,
           errorMessage: updatedJob.errorMessage,
-          diffSummary: (updatedJob as any).diffSummary ?? null,
+          diffSummary,
           startedAt: updatedJob.startedAt,
           finishedAt: updatedJob.finishedAt,
         };

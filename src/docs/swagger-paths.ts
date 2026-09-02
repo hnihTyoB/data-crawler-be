@@ -821,10 +821,12 @@ export const swaggerPaths: Record<string, any> = {
   '/crawl-jobs/{id}/assets': {
     get: {
       tags: ['Crawl Jobs'],
-      summary: 'Lấy danh sách assets của job',
-      description: 'Lấy danh sách các assets (IMAGE, LINK, PDF) đã được thu thập trong job. Hỗ trợ lọc theo loại asset.',
+      summary: 'Lấy danh sách assets của job (có phân trang)',
+      description: 'Lấy danh sách phân trang các assets (IMAGE, LINK, PDF...) đã được thu thập trong job. Hỗ trợ lọc theo loại asset.',
       parameters: [
         { name: 'id', in: 'path', required: true, schema: { type: 'string' }, description: 'ID của crawl job' },
+        { name: 'page', in: 'query', schema: { type: 'integer', default: 1 }, description: 'Số trang cần lấy' },
+        { name: 'limit', in: 'query', schema: { type: 'integer', default: 50 }, description: 'Số lượng bản ghi mỗi trang (tối đa 500)' },
         {
           name: 'assetType',
           in: 'query',
@@ -843,18 +845,30 @@ export const swaggerPaths: Record<string, any> = {
                 properties: {
                   success: { type: 'boolean', example: true },
                   data: {
-                    type: 'array',
-                    items: {
-                      type: 'object',
-                      properties: {
-                        id: { type: 'string' },
-                        pageId: { type: 'string', nullable: true },
-                        crawlJobId: { type: 'string' },
-                        assetType: { type: 'string', enum: ['IMAGE', 'LINK', 'PDF', 'FILE', 'VIDEO', 'OTHER'] },
-                        url: { type: 'string' },
-                        altText: { type: 'string', nullable: true },
-                        mimeType: { type: 'string', nullable: true },
-                        createdAt: { type: 'string', format: 'date-time' }
+                    type: 'object',
+                    properties: {
+                      items: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            id: { type: 'string' },
+                            pageId: { type: 'string', nullable: true },
+                            crawlJobId: { type: 'string' },
+                            assetType: { type: 'string', enum: ['IMAGE', 'LINK', 'PDF', 'FILE', 'VIDEO', 'OTHER'] },
+                            url: { type: 'string' },
+                            altText: { type: 'string', nullable: true },
+                            mimeType: { type: 'string', nullable: true },
+                            createdAt: { type: 'string', format: 'date-time' }
+                          }
+                        }
+                      },
+                      meta: {
+                        type: 'object',
+                        properties: {
+                          page: { type: 'integer' },
+                          limit: { type: 'integer' }
+                        }
                       }
                     }
                   }
@@ -1285,7 +1299,13 @@ export const swaggerPaths: Record<string, any> = {
           description: 'Lấy báo cáo thay đổi thành công',
           content: {
             'application/json': {
-              schema: { $ref: '#/components/schemas/DiffReport' }
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  data: { $ref: '#/components/schemas/DiffReport' }
+                }
+              }
             }
           }
         },

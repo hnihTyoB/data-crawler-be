@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { CrawlScheduleService } from './crawl-schedule.service';
+import { CrawlScheduleQueryDto } from './crawl-schedule.dto';
 
 export class CrawlScheduleController {
   private readonly service = new CrawlScheduleService();
@@ -25,7 +26,7 @@ export class CrawlScheduleController {
       const result = await this.service.findAllByUser(
         req.user!.id,
         req.user!.role,
-        req.query as any,
+        req.query as unknown as CrawlScheduleQueryDto,
       );
       res.json(result);
     } catch (error) {

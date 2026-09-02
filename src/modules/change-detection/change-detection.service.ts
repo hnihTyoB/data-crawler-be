@@ -1,5 +1,5 @@
 import fs from 'fs';
-import { CrawlJob, CrawlPage } from '@prisma/client';
+import { CrawlJob, Prisma } from '@prisma/client';
 import { CrawlJobRepository } from '../crawl-jobs/crawl-job.repository';
 import {
   DiffReportEnvelope,
@@ -15,6 +15,23 @@ import { normalizeUrl } from '../../common/helpers/data-contract.helper';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODE } from '../../common/errors/error-code';
 
+/**
+ * Minimal page shape required for diff comparison.
+ * Matches the `select` fields used by findByIdWithPages / findPreviousCompleted*
+ * to avoid loading full page content into worker memory.
+ */
+type DiffPage = {
+  id: string;
+  url: string;
+  normalizedUrl: string;
+  contentHash: string | null;
+  wordCount: number;
+  status: import('@prisma/client').CrawlPageStatus;
+  statusCode: number | null;
+  title: string | null;
+  crawledAt: Date | null;
+};
+
 export class ChangeDetectionService {
   private readonly jobRepository = new CrawlJobRepository();
 
@@ -22,16 +39,16 @@ export class ChangeDetectionService {
    * Pure comparison algorithm between two jobs and their pages.
    */
   public comparePageSets(
-    currentJob: CrawlJob & { pages: CrawlPage[] },
-    previousJob?: (CrawlJob & { pages: CrawlPage[] }) | null,
+    currentJob: CrawlJob & { pages: DiffPage[] },
+    previousJob?: (CrawlJob & { pages: DiffPage[] }) | null,
   ): DiffReportEnvelope {
-    const currentPagesMap = new Map<string, CrawlPage>();
+    const currentPagesMap = new Map<string, DiffPage>();
     for (const page of currentJob.pages) {
       const key = normalizeUrl(page.url || page.normalizedUrl).toLowerCase();
       currentPagesMap.set(key, page);
     }
 
-    const previousPagesMap = new Map<string, CrawlPage>();
+    const previousPagesMap = new Map<string, DiffPage>();
     if (previousJob) {
       for (const page of previousJob.pages) {
         const key = normalizeUrl(page.url || page.normalizedUrl).toLowerCase();
@@ -149,7 +166,7 @@ export class ChangeDetectionService {
    */
   public async findBaselineJob(
     currentJob: CrawlJob,
-  ): Promise<(CrawlJob & { pages: CrawlPage[] }) | null> {
+  ): Promise<(CrawlJob & { pages: DiffPage[] }) | null> {
     if (currentJob.scheduleId) {
       const prevScheduleJob = await this.jobRepository.findPreviousCompletedJobForSchedule(
         currentJob.scheduleId,
@@ -178,7 +195,7 @@ export class ChangeDetectionService {
       throw new AppError('Crawl job not found', 404, ERROR_CODE.CRAWL_JOB_NOT_FOUND);
     }
 
-    let previousJob: (CrawlJob & { pages: CrawlPage[] }) | null = null;
+    let previousJob: (CrawlJob & { pages: DiffPage[] }) | null = null;
     if (explicitCompareJobId) {
       previousJob = await this.jobRepository.findByIdWithPages(explicitCompareJobId);
       if (!previousJob) {
@@ -195,7 +212,7 @@ export class ChangeDetectionService {
     fs.writeFileSync(filePath, JSON.stringify(diffReport, null, 2), 'utf-8');
 
     // Persist diff summary & path on the crawl job
-    await this.jobRepository.updateDiffReport(currentJobId, filePath, diffReport.summary);
+    await this.jobRepository.updateDiffReport(currentJobId, filePath, diffReport.summary as unknown as Prisma.InputJsonValue);
 
     return diffReport;
   }

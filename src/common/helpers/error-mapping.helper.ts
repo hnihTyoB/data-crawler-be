@@ -88,3 +88,21 @@ export function mapCrawlError(rawError: string | null | undefined): string {
   // Raw error được log ở tầng worker, không expose technical detail lên frontend
   return 'Đã xảy ra lỗi trong quá trình cào dữ liệu. Vui lòng thử lại hoặc kiểm tra URL đích.';
 }
+
+export function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  if (
+    error &&
+    typeof error === 'object' &&
+    'message' in error &&
+    typeof (error as Record<string, unknown>).message === 'string'
+  ) {
+    return (error as { message: string }).message;
+  }
+  return String(error);
+}

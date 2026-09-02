@@ -149,5 +149,50 @@ describe('Webhook Services', () => {
         }),
       );
     });
+
+    it('redelivers a failed webhook and enqueues to queue', async () => {
+      mockWebhookRepo.findDeliveryById.mockResolvedValue({
+        id: 'delivery-1',
+        event: 'job.completed',
+        webhookConfig: {
+          userId: 'user-1',
+        },
+      } as any);
+
+      mockWebhookRepo.updateDelivery.mockResolvedValue({
+        id: 'delivery-1',
+        status: 'PENDING',
+      } as any);
+
+      const result = await deliveryService.redeliver('delivery-1', 'user-1');
+
+      expect(mockWebhookRepo.updateDelivery).toHaveBeenCalledWith(
+        'delivery-1',
+        expect.objectContaining({
+          status: 'PENDING',
+          attempt: 1,
+          errorMessage: null,
+        }),
+      );
+      expect(webhookQueue?.add).toHaveBeenCalledWith(
+        'send-webhook',
+        { deliveryId: 'delivery-1' },
+        expect.any(Object),
+      );
+      expect(result.status).toBe('PENDING');
+    });
+
+    it('throws 404 when redelivering delivery of another user', async () => {
+      mockWebhookRepo.findDeliveryById.mockResolvedValue({
+        id: 'delivery-1',
+        webhookConfig: {
+          userId: 'other-user',
+        },
+      } as any);
+
+      await expect(
+        deliveryService.redeliver('delivery-1', 'user-1'),
+      ).rejects.toThrow('Webhook delivery not found');
+    });
   });
 });

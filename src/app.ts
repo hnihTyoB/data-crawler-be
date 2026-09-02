@@ -7,6 +7,7 @@ import swaggerUi from 'swagger-ui-express';
 import { errorMiddleware, notFoundMiddleware } from './middlewares/error.middleware';
 import routes from './routes';
 import swaggerDocument from './docs/swagger.json';
+import healthRoute from './modules/health/health.route';
 import { rateLimitMiddleware } from './middlewares/rate-limit.middleware';
 import { envConfig } from './config/env.config';
 import { parseTrustProxy } from './common/helpers/proxy.helper';
@@ -22,8 +23,18 @@ app.use(
 );
 app.use(
   cors({
-    origin: envConfig.mail.frontendUrl,
+    origin: (origin, callback) => {
+      if (!origin) return callback(null, true);
+      if (
+        envConfig.cors.allowedOrigins.includes(origin) ||
+        envConfig.cors.allowedOrigins.includes('*')
+      ) {
+        return callback(null, true);
+      }
+      return callback(new Error(`Origin ${origin} not allowed by CORS`));
+    },
     credentials: true,
+    maxAge: 86400,
   }),
 );
 app.use(morgan('dev'));
@@ -31,6 +42,7 @@ app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+app.use('/health', healthRoute);
 app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use('/api/v1', rateLimitMiddleware, routes);
 

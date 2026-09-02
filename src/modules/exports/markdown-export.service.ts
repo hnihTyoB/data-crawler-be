@@ -1,5 +1,4 @@
 import fs from 'fs';
-import path from 'path';
 import archiver from 'archiver';
 import { CrawlJob, CrawlPage } from '@prisma/client';
 import { JOB_EXPORT_SUBDIRS } from '../../common/constants/storage-path.constant';

@@ -19,10 +19,19 @@ export const envConfig = {
     return `postgresql://${encodeURIComponent(this.database.user)}:${encodeURIComponent(this.database.password)}@${this.database.host}:${this.database.port}/${this.database.name}?schema=public${sslParam}`;
   },
   jwt: {
-    accessSecret: process.env.JWT_ACCESS_SECRET || 'default_access_secret',
-    refreshSecret: process.env.JWT_REFRESH_SECRET || 'default_refresh_secret',
+    accessSecret: (() => {
+      const s = process.env.JWT_ACCESS_SECRET;
+      if (!s || s.length < 32) throw new Error('[Startup] JWT_ACCESS_SECRET must be set and at least 32 characters long');
+      return s;
+    })(),
+    refreshSecret: (() => {
+      const s = process.env.JWT_REFRESH_SECRET;
+      if (!s || s.length < 32) throw new Error('[Startup] JWT_REFRESH_SECRET must be set and at least 32 characters long');
+      return s;
+    })(),
     accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN || '1d',
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '7d',
+    emailVerificationSecret: process.env.JWT_EMAIL_VERIFICATION_SECRET || `${process.env.JWT_ACCESS_SECRET || 'default_access_secret'}-email-verify`,
   },
   firecrawl: {
     apiKey: process.env.FIRECRAWL_API_KEY || '',
@@ -64,6 +73,12 @@ export const envConfig = {
     defaultMaxJobsPerDay: parseInt(process.env.USER_MAX_JOBS_PER_DAY || '10', 10),
     defaultMaxConcurrentJobs: parseInt(process.env.USER_MAX_CONCURRENT_JOBS || '3', 10),
   },
+  cors: {
+    allowedOrigins: (process.env.CORS_ALLOWED_ORIGINS || process.env.FRONTEND_URL || 'http://localhost:5173')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean),
+  },
   mail: {
     host: process.env.SMTP_HOST || 'smtp.mailtrap.io',
     port: parseInt(process.env.SMTP_PORT || '2525', 10),
@@ -73,7 +88,13 @@ export const envConfig = {
     frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   },
   webhook: {
-    encryptionKey: process.env.WEBHOOK_ENCRYPTION_KEY || 'a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2',
+    encryptionKey: (() => {
+      const k = process.env.WEBHOOK_ENCRYPTION_KEY;
+      if (!k || !/^[0-9a-fA-F]{64}$/.test(k)) {
+        throw new Error('[Startup] WEBHOOK_ENCRYPTION_KEY must be set as a 64-character hex string');
+      }
+      return k;
+    })(),
     queueName: process.env.WEBHOOK_QUEUE_NAME || 'webhook-delivery',
   },
 };

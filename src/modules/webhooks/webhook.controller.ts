@@ -76,11 +76,38 @@ export class WebhookController {
       const userId = req.user.id;
       const jobId = req.query.jobId as string | undefined;
       const status = req.query.status as string | undefined;
+      const page = req.query.page ? Number(req.query.page) : undefined;
+      const limit = req.query.limit ? Number(req.query.limit) : undefined;
 
-      const result = await this.deliveryService.listDeliveries(userId, { jobId, status });
+      const result = await this.deliveryService.listDeliveries(userId, { jobId, status, page, limit });
 
       res.json({
         success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  redeliver = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.user.id;
+      const deliveryId = req.params.id;
+
+      const result = await this.deliveryService.redeliver(deliveryId, userId);
+
+      await this.auditLogService.log({
+        userId,
+        action: AUDIT_ACTIONS.REDELIVER_WEBHOOK,
+        ipAddress: req.ip,
+        userAgent: req.headers['user-agent'] as string,
+        details: { deliveryId: result.id, event: result.event },
+      });
+
+      res.json({
+        success: true,
+        message: 'Webhook redelivery enqueued successfully',
         data: result,
       });
     } catch (error) {

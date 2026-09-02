@@ -13,6 +13,7 @@ import { ROLES } from '../../common/constants/role.constant';
 import { JOB_STATUS } from '../../common/constants/job-status.constant';
 import { CreateCrawlJobDto, CrawlJobQueryDto } from './crawl-job.dto';
 import { StorageFactory } from '../../common/storage/storage.factory';
+import { getErrorMessage } from '../../common/helpers/error-mapping.helper';
 
 export class CrawlJobService {
   private readonly repository = new CrawlJobRepository();
@@ -48,9 +49,9 @@ export class CrawlJobService {
           chunk.map(async (url) => {
             try {
               await validateUrlAsync(url);
-            } catch (err: any) {
+            } catch (err: unknown) {
               throw new AppError(
-                `Invalid or blocked URL in list: ${url} — ${err?.message}`,
+                `Invalid or blocked URL in list: ${url} — ${getErrorMessage(err)}`,
                 400,
                 ERROR_CODE.INVALID_URL,
               );

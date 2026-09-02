@@ -9,8 +9,8 @@ export class ExtractionTemplateService {
   async create(userId: string, payload: CreateExtractionTemplateDto) {
     try {
       return await this.repository.create(userId, payload);
-    } catch (err: any) {
-      if (err?.code === 'P2002') {
+    } catch (err: unknown) {
+      if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === 'P2002') {
         throw new AppError(
           `A template for domain "${payload.domain}" already exists`,
           409,

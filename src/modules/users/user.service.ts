@@ -2,13 +2,13 @@ import bcrypt from 'bcryptjs';
 import { UserRepository } from './user.repository';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODE } from '../../common/errors/error-code';
-import { UserRole } from '@prisma/client';
+import { UserRole, User } from '@prisma/client';
 import { CreateUserDto, UpdateUserDto, UserResponseDto, UserQueryDto } from './user.dto';
 
 export class UserService {
   private readonly repository = new UserRepository();
 
-  private formatUser(user: any): UserResponseDto {
+  private formatUser(user: User): UserResponseDto {
     return {
       id: user.id,
       email: user.email,

@@ -53,7 +53,7 @@ export class WebhookRepository {
     webhookConfigId: string;
     crawlJobId: string;
     event: string;
-    payload: any;
+    payload: Prisma.InputJsonValue;
     status: string;
     attempt: number;
   }): Promise<WebhookDelivery> {
@@ -83,9 +83,9 @@ export class WebhookRepository {
     });
   }
 
-  listDeliveries(
+  async listDeliveries(
     userId: string,
-    query: { jobId?: string; status?: string },
+    query: { jobId?: string; status?: string; page?: number; limit?: number },
   ) {
     const where: Prisma.WebhookDeliveryWhereInput = {
       webhookConfig: {
@@ -101,18 +101,37 @@ export class WebhookRepository {
       where.status = query.status;
     }
 
-    return prisma.webhookDelivery.findMany({
-      where,
-      include: {
-        webhookConfig: {
-          select: {
-            url: true,
+    const page = Math.max(1, Number(query.page) || 1);
+    const limit = Math.min(Math.max(1, Number(query.limit) || 20), 100);
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await Promise.all([
+      prisma.webhookDelivery.findMany({
+        where,
+        include: {
+          webhookConfig: {
+            select: {
+              url: true,
+            },
           },
         },
+        orderBy: {
+          createdAt: 'desc',
+        },
+        skip,
+        take: limit,
+      }),
+      prisma.webhookDelivery.count({ where }),
+    ]);
+
+    return {
+      items,
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       },
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
+    };
   }
 }

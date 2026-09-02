@@ -386,7 +386,9 @@ export class XlsxExportService extends BaseExportService {
         if (value) {
           let str = '';
           if (typeof value === 'object' && value !== null) {
-            str = (value as any).text || '';
+            str = ('text' in value && typeof (value as { text: unknown }).text === 'string')
+              ? (value as { text: string }).text
+              : JSON.stringify(value);
           } else {
             str = String(value);
           }

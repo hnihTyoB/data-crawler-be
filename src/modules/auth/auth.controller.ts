@@ -260,11 +260,6 @@ export class AuthController {
         });
 
         await this.mailService.sendPasswordResetEmail(forgotPasswordDto.email, result.resetToken);
-
-        if (process.env.NODE_ENV !== 'production') {
-          const { mailConfig } = await import('../../config/mail.config');
-          console.log(`[DEV ONLY] Reset Link: ${mailConfig.frontendUrl}/reset-password?token=${result.resetToken}`);
-        }
       }
 
       res.json({

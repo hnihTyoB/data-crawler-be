@@ -53,6 +53,13 @@ export const changePasswordSchema = z
       message: 'Mật khẩu xác nhận không khớp.',
       path: ["confirmPassword"],
     }
+  )
+  .refine(
+    (data) => data.currentPassword !== data.newPassword,
+    {
+      message: 'Mật khẩu mới phải khác mật khẩu hiện tại.',
+      path: ["newPassword"],
+    }
   );
 
 export const forgotPasswordSchema = z.object({

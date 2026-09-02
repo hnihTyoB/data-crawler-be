@@ -1,5 +1,5 @@
 import { prisma } from '../../database/prisma.client';
-import { CrawlMode, ScheduleFrequency } from '@prisma/client';
+import { CrawlMode, ScheduleFrequency, Prisma } from '@prisma/client';
 import { CrawlScheduleQueryDto } from './crawl-schedule.dto';
 
 export class CrawlScheduleRepository {
@@ -66,8 +66,8 @@ export class CrawlScheduleRepository {
       urls?: string[];
       isActive?: boolean;
       autoDiff?: boolean;
-      nextRunAt?: Date;
-      lastRunAt?: Date;
+      nextRunAt?: Date | null;
+      lastRunAt?: Date | null;
     },
   ) {
     return prisma.crawlSchedule.update({
@@ -88,7 +88,7 @@ export class CrawlScheduleRepository {
     });
   }
 
-  findAllByUser(userId: string, query: CrawlScheduleQueryDto) {
+  findAllByUser(userId: string, query: CrawlScheduleQueryDto = {}) {
     return this.find(query, userId);
   }
 
@@ -97,7 +97,7 @@ export class CrawlScheduleRepository {
   }
 
   private async find(query: CrawlScheduleQueryDto, userId?: string) {
-    const where: any = {};
+    const where: Prisma.CrawlScheduleWhereInput = {};
     if (userId) {
       where.userId = userId;
     }
@@ -116,7 +116,7 @@ export class CrawlScheduleRepository {
     }
 
     const sortBy = query.sortBy || 'createdAt';
-    const order = query.order || 'desc';
+    const order = (query.order || 'desc') as Prisma.SortOrder;
     const allowedSortFields = [
       'createdAt',
       'updatedAt',
@@ -126,7 +126,7 @@ export class CrawlScheduleRepository {
       'lastRunAt',
       'isActive',
     ];
-    const orderBy: any = allowedSortFields.includes(sortBy)
+    const orderBy: Prisma.CrawlScheduleOrderByWithRelationInput = allowedSortFields.includes(sortBy)
       ? { [sortBy]: order }
       : { createdAt: 'desc' };
 

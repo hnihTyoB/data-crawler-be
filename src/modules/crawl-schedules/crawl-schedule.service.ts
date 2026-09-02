@@ -11,6 +11,7 @@ import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODE } from '../../common/errors/error-code';
 import { ROLES } from '../../common/constants/role.constant';
 import { crawlQueue } from '../../queues/crawl.queue';
+import { getErrorMessage } from '../../common/helpers/error-mapping.helper';
 
 export class CrawlScheduleService {
   private readonly repository = new CrawlScheduleRepository();
@@ -32,9 +33,9 @@ export class CrawlScheduleService {
       for (const url of deduplicatedUrls) {
         try {
           await validateUrlAsync(url);
-        } catch (err: any) {
+        } catch (err: unknown) {
           throw new AppError(
-            `Invalid or blocked URL in schedule: ${url} — ${err?.message}`,
+            `Invalid or blocked URL in schedule: ${url} — ${getErrorMessage(err)}`,
             400,
             ERROR_CODE.INVALID_URL,
           );
@@ -63,8 +64,8 @@ export class CrawlScheduleService {
           cronExpression: payload.cronExpression,
           timezone,
         });
-      } catch (err: any) {
-        throw new AppError(err.message || 'Failed to calculate next run date', 400, ERROR_CODE.VALIDATION_ERROR);
+      } catch (err: unknown) {
+        throw new AppError(getErrorMessage(err) || 'Failed to calculate next run date', 400, ERROR_CODE.VALIDATION_ERROR);
       }
     }
 
@@ -154,7 +155,7 @@ export class CrawlScheduleService {
         timezone,
       });
     } else {
-      nextRunAt = null as any;
+      nextRunAt = null;
     }
 
     return this.repository.update(scheduleId, {
@@ -256,7 +257,7 @@ export class CrawlScheduleService {
     for (const schedule of dueSchedules) {
       try {
         // Skip if user is inactive or deleted
-        const user = (schedule as any).user;
+        const user = schedule.user;
         if (user && (!user.isActive || user.deletedAt)) {
           console.warn(`[Schedule Service] Skipping schedule ${schedule.id}: user is inactive or deleted`);
           continue;
@@ -293,8 +294,8 @@ export class CrawlScheduleService {
 
         await crawlQueue.add('crawl-job', { jobId: job.id });
         triggeredCount++;
-      } catch (err: any) {
-        console.error(`[Schedule Service] Failed to trigger due schedule ${schedule.id}: ${err.message}`);
+      } catch (err: unknown) {
+        console.error(`[Schedule Service] Failed to trigger due schedule ${schedule.id}: ${getErrorMessage(err)}`);
       }
     }
 

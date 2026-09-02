@@ -40,14 +40,19 @@ export class CrawlAssetRepository {
     return prisma.crawlAsset.createMany({ data: prismaAssets });
   }
 
-  findByJobId(jobId: string, assetType?: AssetType) {
-  return prisma.crawlAsset.findMany({
-    where: {
-      crawlJobId: jobId,
-      ...(assetType ? { assetType } : {}),
-    },
-    orderBy: { createdAt: 'asc' },
-  });
+  findByJobId(jobId: string, assetType?: AssetType, page = 1, limit = 50) {
+    const safeLimit = Math.min(Math.max(1, limit), 500);
+    const safePage = Math.max(1, page);
+    const skip = (safePage - 1) * safeLimit;
+    return prisma.crawlAsset.findMany({
+      where: {
+        crawlJobId: jobId,
+        ...(assetType ? { assetType } : {}),
+      },
+      orderBy: { createdAt: 'asc' },
+      skip,
+      take: safeLimit,
+    });
   }
 
   findAssetsForJsonExport(jobId: string) {

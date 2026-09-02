@@ -1,11 +1,11 @@
 import { prisma } from '../../database/prisma.client';
-import { UserRole } from '@prisma/client';
+import { UserRole, Prisma, User } from '@prisma/client';
 import { UserQueryDto } from './user.dto';
 import { envConfig } from '../../config/env.config';
 
 export class UserRepository {
   async findAll(query: UserQueryDto = {}) {
-    const where: any = { deletedAt: null };
+    const where: Prisma.UserWhereInput = { deletedAt: null };
     if (query.role) {
       where.role = query.role;
     }
@@ -26,12 +26,12 @@ export class UserRepository {
     const sortBy = query.sortBy || 'createdAt';
     const order = query.order || 'desc';
     const allowedSortFields = ['createdAt', 'updatedAt', 'email', 'fullName', 'role', 'isActive'];
-    const orderBy: any = allowedSortFields.includes(sortBy)
+    const orderBy: Prisma.UserOrderByWithRelationInput = allowedSortFields.includes(sortBy)
       ? { [sortBy]: order }
       : { createdAt: 'desc' };
 
     const page = Math.max(1, Number(query.page) || 1);
-    const limit = Math.min(Math.max(1, Number(query.limit) || 20), 100)
+    const limit = Math.min(Math.max(1, Number(query.limit) || 20), 100);
     const skip = (page - 1) * limit;
 
     const [items, total] = await Promise.all([
@@ -52,13 +52,13 @@ export class UserRepository {
     };
   }
 
-  findById(id: string) {
+  findById(id: string): Promise<User | null> {
     return prisma.user.findFirst({
       where: { id, deletedAt: null },
     });
   }
 
-  findByEmail(email: string) {
+  findByEmail(email: string): Promise<User | null> {
     return prisma.user.findFirst({
       where: { email, deletedAt: null },
     });
@@ -72,7 +72,7 @@ export class UserRepository {
     maxPagesLimit?: number;
     maxJobsPerDayLimit?: number;
     maxConcurrentJobsLimit?: number;
-  }) {
+  }): Promise<User> {
     return prisma.user.create({
       data: {
         email: data.email,
@@ -96,14 +96,14 @@ export class UserRepository {
       maxJobsPerDayLimit?: number;
       maxConcurrentJobsLimit?: number;
     },
-  ) {
+  ): Promise<User> {
     return prisma.user.update({
       where: { id },
       data,
     });
   }
 
-  async delete(id: string, deletedBy: string) {
+  async delete(id: string, deletedBy: string): Promise<User> {
     return prisma.$transaction(async (tx) => {
       const user = await tx.user.update({
         where: { id },

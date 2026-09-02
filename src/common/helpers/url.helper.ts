@@ -158,38 +158,33 @@ export function extractDomain(url: string): string {
 }
 
 // Secure DNS lookup for private IP addresses
-export function secureLookup(
-  hostname: string,
-  options: any,
-  callback: (err: Error | null, address: any, family?: number) => void,
-): void {
-  let actualOptions = options;
-  let actualCallback = callback;
-  if (typeof options === 'function') {
-    actualCallback = options;
-    actualOptions = {};
-  }
+export type LookupFn = NonNullable<http.AgentOptions['lookup']>;
 
-  dns.lookup(hostname, actualOptions, (err, address, family) => {
+export const secureLookup: LookupFn = (
+  hostname: string,
+  options: dns.LookupOptions,
+  callback: (err: NodeJS.ErrnoException | null, address: string | dns.LookupAddress[], family: number) => void,
+): void => {
+  dns.lookup(hostname, options, (err, address, family) => {
     if (err) {
-      return actualCallback(err, address, family);
+      return callback(err, address as string | dns.LookupAddress[], family);
     }
 
     if (Array.isArray(address)) {
       for (const addr of address) {
         if (checkAgainstPrivatePatterns(addr.address)) {
-          return actualCallback(new Error(`Access to private IP ${addr.address} is blocked`), [], 0);
+          return callback(new Error(`Access to private IP ${addr.address} is blocked`) as NodeJS.ErrnoException, [], 0);
         }
       }
-      return actualCallback(null, address, family);
+      return callback(null, address, family);
     } else {
-      if (checkAgainstPrivatePatterns(address)) {
-        return actualCallback(new Error(`Access to private IP ${address} is blocked`), null, 0);
+      if (address && checkAgainstPrivatePatterns(address)) {
+        return callback(new Error(`Access to private IP ${address} is blocked`) as NodeJS.ErrnoException, '', 0);
       }
-      return actualCallback(null, address, family);
+      return callback(null, address, family);
     }
   });
-}
+};
 
 // HTTP agent with secure lookup for DNS resolution
 export const secureHttpAgent = new http.Agent({
@@ -203,7 +198,7 @@ export const secureHttpsAgent = new https.Agent({
   lookup: secureLookup,
 });
 
-let secureAxiosInstance: any = null;
+let secureAxiosInstance: AxiosInstance | null = null;
 
 // Secure Axios instance with interceptors for SSRF and redirect validation
 export function getSecureAxios(): AxiosInstance {
@@ -214,11 +209,11 @@ export function getSecureAxios(): AxiosInstance {
     });
 
     if (!instance || !instance.interceptors) {
-      return (instance || axios) as any;
+      return instance || axios;
     }
 
-    instance.interceptors.request.use((config: any) => {
-      config.beforeRedirect = (options: any) => {
+    instance.interceptors.request.use((config) => {
+      (config as unknown as { beforeRedirect?: (opts: { hostname?: string }) => void }).beforeRedirect = (options: { hostname?: string }) => {
         if (options.hostname && checkAgainstPrivatePatterns(options.hostname)) {
           throw new Error(`Redirect blocked: host ${options.hostname} resolves to or is a private/local IP address`);
         }

@@ -1,4 +1,5 @@
 import { prisma } from '../../database/prisma.client';
+import { Prisma } from '@prisma/client';
 import { AuditLogQueryDto, CreateAuditLogDto } from './audit-log.dto';
 
 export class AuditLogRepository {
@@ -7,7 +8,7 @@ export class AuditLogRepository {
       data: {
         userId: data.userId || null,
         action: data.action,
-        details: data.details || undefined,
+        details: (data.details ?? undefined) as Prisma.InputJsonValue | undefined,
         ipAddress: data.ipAddress || null,
         userAgent: data.userAgent || null,
       },
@@ -15,7 +16,7 @@ export class AuditLogRepository {
   }
 
   async findAll(query: AuditLogQueryDto = {}) {
-    const where: any = {};
+    const where: Prisma.AuditLogWhereInput = {};
 
     if (query.userId) {
       where.userId = query.userId;
@@ -50,9 +51,9 @@ export class AuditLogRepository {
     }
 
     const sortBy = query.sortBy || 'createdAt';
-    const order = query.order || 'desc';
+    const order = (query.order || 'desc') as Prisma.SortOrder;
     const allowedSortFields = ['createdAt', 'action'];
-    const orderBy: any = allowedSortFields.includes(sortBy)
+    const orderBy: Prisma.AuditLogOrderByWithRelationInput = allowedSortFields.includes(sortBy)
       ? { [sortBy]: order }
       : { createdAt: 'desc' };
 

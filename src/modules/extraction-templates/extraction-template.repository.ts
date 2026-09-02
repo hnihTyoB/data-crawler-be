@@ -1,4 +1,5 @@
 import { prisma } from '../../database/prisma.client';
+import { Prisma } from '@prisma/client';
 import { CreateExtractionTemplateDto, UpdateExtractionTemplateDto } from './extraction-template.dto';
 
 export class ExtractionTemplateRepository {
@@ -8,7 +9,7 @@ export class ExtractionTemplateRepository {
         userId,
         name: data.name,
         domain: data.domain,
-        fields: data.fields as any,
+        fields: data.fields as unknown as Prisma.InputJsonValue,
       },
     });
   }
@@ -47,7 +48,7 @@ export class ExtractionTemplateRepository {
       where: { id },
       data: {
         ...(data.name !== undefined && { name: data.name }),
-        ...(data.fields !== undefined && { fields: data.fields as any }),
+        ...(data.fields !== undefined && { fields: data.fields as unknown as Prisma.InputJsonValue }),
       },
     });
   }

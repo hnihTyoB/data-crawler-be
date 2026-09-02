@@ -12,12 +12,32 @@
     }
   ],
   "paths": {
-    "/health": {
+    "/health/liveness": {
       "get": {
         "description": "",
         "responses": {
-          "200": {
-            "description": "OK"
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/health/readiness": {
+      "get": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/health/metrics": {
+      "get": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
           }
         }
       }
@@ -1008,6 +1028,33 @@
         "summary": "Lấy thông tin chi tiết một crawl job"
       }
     },
+    "/crawl-jobs/{id}/events": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "x-api-key",
+            "in": "header",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
     "/crawl-jobs/{id}/cancel": {
       "post": {
         "description": "Hủy một job đang ở trạng thái chờ hoặc đang chạy.",
@@ -1795,7 +1842,7 @@
     },
     "/crawl-jobs/{id}/assets": {
       "get": {
-        "description": "Lấy danh sách các assets (IMAGE, LINK, PDF) đã được thu thập trong job. Hỗ trợ lọc theo loại asset.",
+        "description": "Lấy danh sách phân trang các assets (IMAGE, LINK, PDF...) đã được thu thập trong job. Hỗ trợ lọc theo loại asset.",
         "parameters": [
           {
             "name": "id",
@@ -1805,6 +1852,24 @@
               "type": "string"
             },
             "description": "ID của crawl job"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Số trang cần lấy"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "description": "Số lượng bản ghi mỗi trang (tối đa 500)"
           },
           {
             "name": "assetType",
@@ -1837,45 +1902,61 @@
                       "example": true
                     },
                     "data": {
-                      "type": "array",
-                      "items": {
-                        "type": "object",
-                        "properties": {
-                          "id": {
-                            "type": "string"
-                          },
-                          "pageId": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "crawlJobId": {
-                            "type": "string"
-                          },
-                          "assetType": {
-                            "type": "string",
-                            "enum": [
-                              "IMAGE",
-                              "LINK",
-                              "PDF",
-                              "FILE",
-                              "VIDEO",
-                              "OTHER"
-                            ]
-                          },
-                          "url": {
-                            "type": "string"
-                          },
-                          "altText": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "mimeType": {
-                            "type": "string",
-                            "nullable": true
-                          },
-                          "createdAt": {
-                            "type": "string",
-                            "format": "date-time"
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "type": "string"
+                              },
+                              "pageId": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "crawlJobId": {
+                                "type": "string"
+                              },
+                              "assetType": {
+                                "type": "string",
+                                "enum": [
+                                  "IMAGE",
+                                  "LINK",
+                                  "PDF",
+                                  "FILE",
+                                  "VIDEO",
+                                  "OTHER"
+                                ]
+                              },
+                              "url": {
+                                "type": "string"
+                              },
+                              "altText": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "mimeType": {
+                                "type": "string",
+                                "nullable": true
+                              },
+                              "createdAt": {
+                                "type": "string",
+                                "format": "date-time"
+                              }
+                            }
+                          }
+                        },
+                        "meta": {
+                          "type": "object",
+                          "properties": {
+                            "page": {
+                              "type": "integer"
+                            },
+                            "limit": {
+                              "type": "integer"
+                            }
                           }
                         }
                       }
@@ -1898,7 +1979,7 @@
         "tags": [
           "Crawl Jobs"
         ],
-        "summary": "Lấy danh sách assets của job"
+        "summary": "Lấy danh sách assets của job (có phân trang)"
       }
     },
     "/crawl-jobs/{id}/diff": {
@@ -1929,7 +2010,16 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DiffReport"
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DiffReport"
+                    }
+                  }
                 }
               }
             }
@@ -2946,6 +3036,26 @@
           "Webhooks"
         ],
         "summary": "Xem lịch sử gửi Webhook"
+      }
+    },
+    "/webhooks/deliveries/{id}/redeliver": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
       }
     },
     "/extraction-templates": {

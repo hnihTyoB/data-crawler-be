@@ -56,7 +56,7 @@ export class ApiKeyService {
     return toPublicApiKey(deletedKey);
   }
 
-  async validate(rawKey: string): Promise<ApiKey> {
+  async validate(rawKey: string) {
     if (!rawKey || !rawKey.startsWith('dc_')) {
       throw new AppError('Invalid API Key format', 401, ERROR_CODE.API_KEY_INVALID);
     }

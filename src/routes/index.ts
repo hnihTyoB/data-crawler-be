@@ -8,12 +8,11 @@ import apiKeyRoute from '../modules/api-keys/api-key.route';
 import webhookRoute from '../modules/webhooks/webhook.route';
 import extractionTemplateRoute from '../modules/extraction-templates/extraction-template.route';
 import crawlScheduleRoute from '../modules/crawl-schedules/crawl-schedule.route';
+import healthRoute from '../modules/health/health.route';
+
 const router = Router();
 
-router.get('/health', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
+router.use('/health', healthRoute);
 router.use('/auth', authRoute);
 router.use('/users', userRoute);
 router.use('/crawl-jobs', crawlJobRoute);

@@ -1,5 +1,5 @@
 import { prisma } from '../../database/prisma.client';
-import { CrawlPageStatus } from '@prisma/client';
+import { CrawlPageStatus, Prisma } from '@prisma/client';
 import { CrawlPageQueryDto } from './crawl-page.dto';
 
 export class CrawlPageRepository {
@@ -25,8 +25,8 @@ export class CrawlPageRepository {
   }
 
   async findByJobId(jobId: string, query: CrawlPageQueryDto = {}) {
-    const where: any = { jobId };
-    const andConditions: any[] = [];
+    const where: Prisma.CrawlPageWhereInput = { jobId };
+    const andConditions: Prisma.CrawlPageWhereInput[] = [];
 
     if (query.status) {
       where.status = query.status;
@@ -51,17 +51,15 @@ export class CrawlPageRepository {
     if (exactScore !== undefined && exactScore !== '') {
       where.dataQualityScore = Number(exactScore);
     } else {
+      const scoreFilter: Prisma.IntNullableFilter = {};
       if (minScore !== undefined && minScore !== '') {
-        where.dataQualityScore = {
-          ...(where.dataQualityScore || {}),
-          gte: Number(minScore),
-        };
+        scoreFilter.gte = Number(minScore);
       }
       if (maxScore !== undefined && maxScore !== '') {
-        where.dataQualityScore = {
-          ...(where.dataQualityScore || {}),
-          lte: Number(maxScore),
-        };
+        scoreFilter.lte = Number(maxScore);
+      }
+      if (Object.keys(scoreFilter).length > 0) {
+        where.dataQualityScore = scoreFilter;
       }
     }
 
@@ -85,19 +83,20 @@ export class CrawlPageRepository {
 
     if (query.hasTables !== undefined && query.hasTables !== '') {
       const isTrue = query.hasTables === true || query.hasTables === 'true' || query.hasTables === '1';
-      const tableConditions = [
-        { markdownContent: { contains: '<table', mode: 'insensitive' } },
-        { content: { contains: '<table', mode: 'insensitive' } },
-        { markdownContent: { contains: '|', mode: 'insensitive' } },
+      const insensitiveMode = Prisma.QueryMode.insensitive;
+      const tableConditions: Prisma.CrawlPageWhereInput[] = [
+        { markdownContent: { contains: '<table', mode: insensitiveMode } },
+        { content: { contains: '<table', mode: insensitiveMode } },
+        { markdownContent: { contains: '|', mode: insensitiveMode } },
       ];
       if (isTrue) {
         andConditions.push({ OR: tableConditions });
       } else {
         andConditions.push({
           AND: [
-            { markdownContent: { not: { contains: '<table', mode: 'insensitive' } } },
-            { content: { not: { contains: '<table', mode: 'insensitive' } } },
-            { markdownContent: { not: { contains: '|', mode: 'insensitive' } } },
+            { markdownContent: { not: { contains: '<table' } } },
+            { content: { not: { contains: '<table' } } },
+            { markdownContent: { not: { contains: '|' } } },
           ],
         });
       }
@@ -110,22 +109,21 @@ export class CrawlPageRepository {
     if (exactLength !== undefined && exactLength !== '') {
       where.wordCount = Number(exactLength);
     } else {
+      const countFilter: Prisma.IntFilter = {};
       if (minLength !== undefined && minLength !== '') {
-        where.wordCount = {
-          ...(where.wordCount || {}),
-          gte: Number(minLength),
-        };
+        countFilter.gte = Number(minLength);
       }
       if (maxLength !== undefined && maxLength !== '') {
-        where.wordCount = {
-          ...(where.wordCount || {}),
-          lte: Number(maxLength),
-        };
+        countFilter.lte = Number(maxLength);
+      }
+      if (Object.keys(countFilter).length > 0) {
+        where.wordCount = countFilter;
       }
     }
 
     if (andConditions.length > 0) {
-      where.AND = [...(where.AND || []), ...andConditions];
+      const existingAnd = Array.isArray(where.AND) ? where.AND : (where.AND ? [where.AND] : []);
+      where.AND = [...existingAnd, ...andConditions];
     }
 
     const sortBy = query.sortBy || 'createdAt';
@@ -141,15 +139,15 @@ export class CrawlPageRepository {
       'dataQualityScore',
       'wordCount',
     ];
-    const orderBy: any = allowedSortFields.includes(sortBy)
-      ? { [sortBy]: order }
+    const orderBy: Prisma.CrawlPageOrderByWithRelationInput = allowedSortFields.includes(sortBy)
+      ? { [sortBy]: order as Prisma.SortOrder }
       : { createdAt: 'asc' };
 
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(Math.max(1, Number(query.limit) || 20), 100);
     const skip = (page - 1) * limit;
 
-    const select: any = {
+    const select: Prisma.CrawlPageSelect = {
       id: true,
       jobId: true,
       url: true,
@@ -219,6 +217,7 @@ export class CrawlPageRepository {
     contentHash?: string | null;
     dataQualityScore?: number | null;
     warnings?: string[];
+    extractedData?: Prisma.InputJsonValue;
   }) {
     return prisma.crawlPage.update({
       where: { id },
