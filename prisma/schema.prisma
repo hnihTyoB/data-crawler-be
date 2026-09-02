@@ -248,6 +248,9 @@ model CrawlJobLog {
   createdAt DateTime @default(now()) @map("created_at")
 
   job CrawlJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId, createdAt])
+  @@map("crawl_job_logs")
 }
 
 model RefreshToken {
@@ -279,6 +282,7 @@ model AuditLog {
   @@index([userId, createdAt])
   @@index([action])
   @@index([createdAt])
+  @@index([ipAddress])
   @@map("audit_logs")
 }
 

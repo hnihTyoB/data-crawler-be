@@ -15,7 +15,7 @@ export interface AuditLogQueryDto {
 export interface CreateAuditLogDto {
   userId?: string | null;
   action: AuditAction;
-  details?: any;
+  details?: Record<string, unknown> | null;
   ipAddress?: string;
   userAgent?: string;
 }

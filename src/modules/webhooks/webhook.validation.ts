@@ -12,3 +12,10 @@ export const createWebhookConfigSchema = z.object({
     z.enum(['job.completed', 'job.failed'])
   ).min(1, 'At least one event must be selected for notifications'),
 });
+
+export const listWebhookDeliveriesQuerySchema = z.object({
+  jobId: z.string().uuid().optional(),
+  status: z.enum(['PENDING', 'SUCCESS', 'FAILED']).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});

@@ -11,6 +11,7 @@ import {
   CrawlErrorItem,
 } from './firecrawl.dto';
 import type { FirecrawlDocument } from '@mendable/firecrawl-js';
+import { getErrorMessage } from '../../common/helpers/error-mapping.helper';
 
 const POLL_INTERVAL_MS = 3000;
 
@@ -203,10 +204,10 @@ export class FirecrawlService {
         firecrawlConfig.requestTimeoutMs,
         `cancelCrawl(${firecrawlJobId})`,
       );
-    } catch (err: any) {
+    } catch (err: unknown) {
       // Log but don't throw — DB status is already CANCELED, provider cancel
       // is best-effort. A failed cancel doesn't break the user-facing operation.
-      console.warn(`[FirecrawlService] cancelCrawl(${firecrawlJobId}) failed (best-effort): ${err?.message}`);
+      console.warn(`[FirecrawlService] cancelCrawl(${firecrawlJobId}) failed (best-effort): ${getErrorMessage(err)}`);
     }
   }
 
@@ -225,8 +226,8 @@ export class FirecrawlService {
         `fetchSitemap(${sitemapUrl})`,
       );
       xml = response.data;
-    } catch (err: any) {
-      throw new Error(`Failed to fetch sitemap at ${sitemapUrl}: ${err?.message ?? 'unknown error'}`);
+    } catch (err: unknown) {
+      throw new Error(`Failed to fetch sitemap at ${sitemapUrl}: ${getErrorMessage(err)}`);
     }
 
     // cheerio works on HTML by default; force xml mode so <loc> tags parse correctly
@@ -256,15 +257,18 @@ export class FirecrawlService {
     const client = getFirecrawlClient();
 
     const start = await withTimeout(
-      client.asyncBatchScrapeUrls(urls, { formats: ['markdown', 'html'] } as any),
+      client.asyncBatchScrapeUrls(urls, { formats: ['markdown', 'html'] } as unknown as { formats: ('markdown' | 'html')[] }),
       firecrawlConfig.requestTimeoutMs,
       `asyncBatchScrapeUrls(${urls.length} URLs)`,
     );
 
     if (!start.success || !start.id) {
+      const startError = (start && typeof start === 'object' && 'error' in start && typeof (start as { error: unknown }).error === 'string')
+        ? (start as { error: string }).error
+        : 'Failed to start batch scrape';
       return {
         status: 'failed', completed: 0, total: 0, pages: [], success: false,
-        error: (start as any).error ?? 'Failed to start batch scrape',
+        error: startError,
       };
     }
 
@@ -285,9 +289,12 @@ export class FirecrawlService {
       );
 
       if (!status.success) {
+        const statusError = (status && typeof status === 'object' && 'error' in status && typeof (status as { error: unknown }).error === 'string')
+          ? (status as { error: string }).error
+          : 'Failed to check batch scrape status';
         return {
           status: 'failed', completed: 0, total: 0, pages: [], success: false,
-          error: (status as any).error ?? 'Failed to check batch scrape status',
+          error: statusError,
         };
       }
 
@@ -304,8 +311,11 @@ export class FirecrawlService {
               firecrawlConfig.requestTimeoutMs,
               `checkBatchScrapeErrors(${batchId})`,
             );
-            if ('errors' in errorsResult) {
-              failedUrls = errorsResult.errors.map((e: any) => ({ url: e.url, error: e.error }));
+            if ('errors' in errorsResult && Array.isArray(errorsResult.errors)) {
+              failedUrls = errorsResult.errors.map((e: { url: string; error?: string }) => ({
+                url: e.url,
+                error: e.error || 'Unknown error',
+              }));
               robotsBlockedUrls = errorsResult.robotsBlocked;
             }
           } catch {

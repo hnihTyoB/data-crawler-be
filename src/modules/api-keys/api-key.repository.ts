@@ -37,9 +37,12 @@ export class ApiKeyRepository {
     });
   }
 
-  async findByHash(keyHash: string): Promise<ApiKey | null> {
+  async findByHash(keyHash: string) {
     return prisma.apiKey.findUnique({
       where: { keyHash },
+      include: {
+        user: true,
+      },
     });
   }
 

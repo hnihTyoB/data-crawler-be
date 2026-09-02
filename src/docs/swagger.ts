@@ -542,7 +542,7 @@ async function generate() {
             const endpoint = swaggerJson.paths[path][method];
             if (endpoint.parameters) {
               endpoint.parameters = endpoint.parameters.filter(
-                (param: any) => param.name.toLowerCase() !== 'authorization'
+                (param: { name?: string }) => param.name?.toLowerCase() !== 'authorization'
               );
               // Nếu mảng parameters rỗng thì xóa luôn thuộc tính parameters
               if (endpoint.parameters.length === 0) {

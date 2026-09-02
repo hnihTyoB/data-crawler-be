@@ -23,7 +23,7 @@ async function bootstrap() {
     await redis.ping();
     await redis.quit();
     console.log('[Server] Redis connection confirmed.');
-  } catch (err) {
+  } catch {
     console.error('[Server] Cannot connect to Redis. Is Docker running?');
     console.error('[Server] Run: docker compose up -d');
     process.exit(1);
@@ -35,14 +35,12 @@ async function bootstrap() {
 
   initLocalStorage();
 
-  if (envConfig.redis.enabled) {
-    await import('./queues/webhook.worker');
-    console.log('[Server] Webhook worker initialized in background.');
+  await import('./queues/webhook.worker');
+  console.log('[Server] Webhook worker initialized in background.');
 
-    const { startScheduleWorker } = await import('./queues/schedule.worker');
-    startScheduleWorker();
-    console.log('[Server] Schedule worker initialized in background.');
-  }
+  const { startScheduleWorker } = await import('./queues/schedule.worker');
+  startScheduleWorker();
+  console.log('[Server] Schedule worker initialized in background.');
 
   app.listen(envConfig.port, () => {
     console.log(`Server running on port ${envConfig.port} in ${envConfig.nodeEnv} mode`);

@@ -1,11 +1,18 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { SignOptions } from 'jsonwebtoken';
 import { AuthRepository } from './auth.repository';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODE } from '../../common/errors/error-code';
 import { jwtConfig } from '../../config/jwt.config';
 import { LoginDto, AuthTokensDto, MeDto, LoginResponseDto, RegisterDto, UpdateMeDto, ForgotPasswordDto, ResetPasswordDto, ChangePasswordDto } from './auth.dto';
 import { MailService } from '../mail/mail.service';
+
+interface AuthJwtPayload {
+  id: string;
+  email: string;
+  role: string;
+  purpose?: string;
+}
 
 export class AuthService {
   private readonly repository = new AuthRepository();
@@ -65,14 +72,14 @@ export class AuthService {
       throw new AppError('Tài khoản hoặc mật khẩu không chính xác.', 401, ERROR_CODE.INVALID_CREDENTIALS);
     }
 
-    const payload = { id: user.id, email: user.email, role: user.role };
+    const payload: AuthJwtPayload = { id: user.id, email: user.email, role: user.role };
 
     const accessToken = jwt.sign(payload, jwtConfig.accessSecret, {
-      expiresIn: jwtConfig.accessExpiresIn as any,
+      expiresIn: jwtConfig.accessExpiresIn as unknown as SignOptions['expiresIn'],
     });
 
     const refreshToken = jwt.sign(payload, jwtConfig.refreshSecret, {
-      expiresIn: jwtConfig.refreshExpiresIn as any,
+      expiresIn: jwtConfig.refreshExpiresIn as unknown as SignOptions['expiresIn'],
     });
 
     const decoded = jwt.decode(refreshToken) as { exp: number };
@@ -109,10 +116,10 @@ export class AuthService {
   }
 
   async refresh(token: string, metadata?: { userAgent?: string; ipAddress?: string }): Promise<AuthTokensDto> {
-    let payload: any;
+    let payload: AuthJwtPayload;
     try {
-      payload = jwt.verify(token, jwtConfig.refreshSecret);
-    } catch (error) {
+      payload = jwt.verify(token, jwtConfig.refreshSecret) as AuthJwtPayload;
+    } catch {
       await this.repository.deleteRefreshToken(token).catch(() => { });
       throw new AppError('Invalid refresh token', 401, ERROR_CODE.TOKEN_INVALID);
     }
@@ -132,14 +139,14 @@ export class AuthService {
       throw new AppError('User not found or inactive', 401, ERROR_CODE.USER_INACTIVE);
     }
 
-    const newPayload = { id: user.id, email: user.email, role: user.role };
+    const newPayload: AuthJwtPayload = { id: user.id, email: user.email, role: user.role };
 
     const newAccessToken = jwt.sign(newPayload, jwtConfig.accessSecret, {
-      expiresIn: jwtConfig.accessExpiresIn as any,
+      expiresIn: jwtConfig.accessExpiresIn as unknown as SignOptions['expiresIn'],
     });
 
     const newRefreshToken = jwt.sign(newPayload, jwtConfig.refreshSecret, {
-      expiresIn: jwtConfig.refreshExpiresIn as any,
+      expiresIn: jwtConfig.refreshExpiresIn as unknown as SignOptions['expiresIn'],
     });
 
     await this.repository.deleteRefreshToken(token);
@@ -161,7 +168,7 @@ export class AuthService {
   private createEmailVerificationToken(email: string): string {
     return jwt.sign(
       { email, purpose: 'email-verification' },
-      jwtConfig.accessSecret,
+      jwtConfig.emailVerificationSecret,
       { expiresIn: '24h' },
     );
   }
@@ -299,14 +306,14 @@ export class AuthService {
     await this.repository.deleteUserRefreshTokens(userId);
 
     // Generate new tokens for the current session
-    const payload = { id: user.id, email: user.email, role: user.role };
+    const payload: AuthJwtPayload = { id: user.id, email: user.email, role: user.role };
 
     const accessToken = jwt.sign(payload, jwtConfig.accessSecret, {
-      expiresIn: jwtConfig.accessExpiresIn as any,
+      expiresIn: jwtConfig.accessExpiresIn as unknown as SignOptions['expiresIn'],
     });
 
     const refreshToken = jwt.sign(payload, jwtConfig.refreshSecret, {
-      expiresIn: jwtConfig.refreshExpiresIn as any,
+      expiresIn: jwtConfig.refreshExpiresIn as unknown as SignOptions['expiresIn'],
     });
 
     const decoded = jwt.decode(refreshToken) as { exp: number };
@@ -347,25 +354,34 @@ export class AuthService {
     };
   }
 
-  async resetPassword(data: ResetPasswordDto): Promise<{ success: boolean; userId: string }> {
-    const { token, password } = data;
-
-    let payload: any;
+  /**
+   * Verifies a password-reset JWT and returns the authenticated User.
+   *
+   * Pattern: decode (untrusted) → fetch user by id → verify with passwordHash-bound secret.
+   * This is intentional: the reset token is stateless and embeds userId so we can derive the
+   * per-user secret (accessSecret + passwordHash). The decode step only extracts the userId
+   * for the DB lookup; NO business logic is performed until jwt.verify() has succeeded.
+   */
+  private async verifyResetToken(token: string) {
+    // Step 1: structural decode only — do NOT trust any field yet
+    let untrustedPayload: AuthJwtPayload | null = null;
     try {
-      payload = jwt.decode(token);
-    } catch (error) {
+      untrustedPayload = jwt.decode(token) as AuthJwtPayload | null;
+    } catch {
       throw new AppError('Invalid token', 400, ERROR_CODE.TOKEN_INVALID);
     }
 
-    if (!payload || !payload.id) {
+    if (!untrustedPayload || !untrustedPayload.id) {
       throw new AppError('Invalid token payload', 400, ERROR_CODE.TOKEN_INVALID);
     }
 
-    const user = await this.repository.findById(payload.id);
+    // Step 2: fetch user needed to derive the per-user signing secret
+    const user = await this.repository.findById(untrustedPayload.id);
     if (!user || !user.isActive) {
       throw new AppError('User not found or inactive', 404, ERROR_CODE.NOT_FOUND);
     }
 
+    // Step 3: cryptographic verification — all business logic below this point is safe
     const secret = `${jwtConfig.accessSecret}-${user.passwordHash}`;
     try {
       jwt.verify(token, secret);
@@ -376,8 +392,16 @@ export class AuthService {
       throw new AppError('Invalid reset token', 400, ERROR_CODE.TOKEN_INVALID);
     }
 
-    const passwordHash = await bcrypt.hash(password, 10);
+    return user; // fully authenticated — caller may trust this object
+  }
 
+  async resetPassword(data: ResetPasswordDto): Promise<{ success: boolean; userId: string }> {
+    const { token, password } = data;
+
+    // verifyResetToken throws on any invalid/expired/tampered token
+    const user = await this.verifyResetToken(token);
+
+    const passwordHash = await bcrypt.hash(password, 10);
     await this.repository.updateUser(user.id, { passwordHash });
     await this.repository.deleteUserRefreshTokens(user.id);
 
@@ -385,9 +409,9 @@ export class AuthService {
   }
 
   async verifyEmail(token: string): Promise<{ success: boolean; userId: string }> {
-    let payload: any;
+    let payload: AuthJwtPayload | null = null;
     try {
-      payload = jwt.verify(token, jwtConfig.accessSecret);
+      payload = jwt.verify(token, jwtConfig.emailVerificationSecret) as AuthJwtPayload;
     } catch (error) {
       if (error instanceof jwt.TokenExpiredError) {
         throw new AppError('Verification token has expired', 400, ERROR_CODE.TOKEN_EXPIRED);

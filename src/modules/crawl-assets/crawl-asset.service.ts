@@ -4,8 +4,8 @@ import { AssetType } from '@prisma/client';
 export class CrawlAssetService {
   private readonly repository = new CrawlAssetRepository();
 
-  async findByJobId(jobId: string, assetType?: AssetType) {
-    return this.repository.findByJobId(jobId, assetType);
+  async findByJobId(jobId: string, assetType?: AssetType, page = 1, limit = 50) {
+    return this.repository.findByJobId(jobId, assetType, page, limit);
   }
 
   async create(data: {

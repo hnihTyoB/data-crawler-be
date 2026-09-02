@@ -58,7 +58,9 @@ export async function runExtractionIfTemplate(
   // Extraction requires raw HTML — Firecrawl returns it via the html field
   // which is not currently surfaced in FirecrawlPageResult. We fall back to
   // markdownContent if html is unavailable.
-  const html = (item as any).html ?? item.markdown ?? '';
+  const html = ('html' in item && typeof (item as { html?: string }).html === 'string')
+    ? (item as { html: string }).html
+    : (item.markdown ?? '');
   if (!html) return;
 
   const domain = extractDomainFromUrl(pageUrl);
@@ -76,7 +78,7 @@ export async function runExtractionIfTemplate(
   const result = runSelectors(html, fields);
 
   await getPageRepository().update(pageId, {
-    structuredData: {
+    extractedData: {
       templateId: template.id,
       templateName: template.name,
       success: result.success,
@@ -84,5 +86,5 @@ export async function runExtractionIfTemplate(
       data: result.data,
       extractedAt: new Date().toISOString(),
     },
-  } as any);
+  });
 }

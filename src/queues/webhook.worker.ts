@@ -3,6 +3,8 @@ import { Worker } from 'bullmq';
 import { envConfig } from '../config/env.config';
 import { WebhookDeliveryService } from '../modules/webhooks/webhook-delivery.service';
 
+import { getErrorMessage } from '../common/helpers/error-mapping.helper';
+
 if (!envConfig.redis.enabled) {
   console.log('[Webhook Worker] REDIS_ENABLED is not set to true. Webhook Worker will not start.');
   process.exit(0);
@@ -21,13 +23,14 @@ export const webhookWorker = new Worker(
     try {
       await deliveryService.send(deliveryId, currentAttempt);
       console.log(`[Webhook Worker] Delivery ${deliveryId} succeeded`);
-    } catch (err: any) {
+    } catch (err: unknown) {
       const maxAttempts = job.opts.attempts || 3;
-      console.error(`[Webhook Worker] Delivery ${deliveryId} failed on attempt ${currentAttempt}/${maxAttempts}: ${err.message}`);
+      const errorMessage = getErrorMessage(err);
+      console.error(`[Webhook Worker] Delivery ${deliveryId} failed on attempt ${currentAttempt}/${maxAttempts}: ${errorMessage}`);
       
       if (currentAttempt >= maxAttempts) {
         // Mark as permanently failed in DB when attempts are exhausted
-        await deliveryService.markFailed(deliveryId, err.message || 'Attempts exhausted');
+        await deliveryService.markFailed(deliveryId, errorMessage || 'Attempts exhausted');
         console.log(`[Webhook Worker] Delivery ${deliveryId} marked as permanently FAILED`);
       }
       

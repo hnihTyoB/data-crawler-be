@@ -86,6 +86,7 @@ describe('ApiKeyService', () => {
       expect(validatedKey.userId).toBe(mockApiKeyRecord.userId);
       expect(prisma.apiKey.findUnique).toHaveBeenCalledWith({
         where: { keyHash: hashed },
+        include: { user: true },
       });
       // Verification of background lastUsedAt update
       expect(prisma.apiKey.update).toHaveBeenCalledWith({

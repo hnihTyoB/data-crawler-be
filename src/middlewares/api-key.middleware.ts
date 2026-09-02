@@ -1,12 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
 import { ApiKeyService } from '../modules/api-keys/api-key.service';
-import { UserRepository } from '../modules/users/user.repository';
 import { authMiddleware } from './auth.middleware';
 import { AppError } from '../common/errors/app-error';
 import { ERROR_CODE } from '../common/errors/error-code';
 
 const apiKeyService = new ApiKeyService();
-const userRepository = new UserRepository();
 
 export async function apiKeyOrAuthMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
   const apiKey = req.headers['x-api-key'] as string | undefined;
@@ -14,8 +12,7 @@ export async function apiKeyOrAuthMiddleware(req: Request, res: Response, next: 
   if (apiKey) {
     try {
       const validKeyRecord = await apiKeyService.validate(apiKey);
-      
-      const user = await userRepository.findById(validKeyRecord.userId);
+      const user = validKeyRecord.user;
 
       if (!user) {
         next(new AppError('User associated with API key not found', 401, ERROR_CODE.UNAUTHORIZED));
@@ -41,3 +38,4 @@ export async function apiKeyOrAuthMiddleware(req: Request, res: Response, next: 
     authMiddleware(req, res, next);
   }
 }
+

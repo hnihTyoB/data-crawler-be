@@ -7,4 +7,5 @@ module.exports = {
     'node-html-parser': '<rootDir>/src/__mocks__/node-html-parser.ts',
   },
   modulePathIgnorePatterns: ['<rootDir>/dist/'],
+  setupFiles: ['<rootDir>/jest.setup.ts'],
 };

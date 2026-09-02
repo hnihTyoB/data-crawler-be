@@ -1,13 +1,17 @@
-import { WebhookDelivery } from '@prisma/client';
+import { WebhookDelivery, Prisma } from '@prisma/client';
 import { WebhookRepository } from './webhook.repository';
 import { decrypt, signPayload } from './webhook-crypto.helper';
 import { webhookQueue } from '../../queues/webhook.queue';
 import { getSecureAxios } from '../../common/helpers/url.helper';
+import { getErrorMessage } from '../../common/helpers/error-mapping.helper';
+
+import { AppError } from '../../common/errors/app-error';
+import { ERROR_CODE } from '../../common/errors/error-code';
 
 export class WebhookDeliveryService {
   private readonly repository = new WebhookRepository();
 
-  async dispatch(crawlJobId: string, userId: string, event: string, jobData: any): Promise<void> {
+  async dispatch(crawlJobId: string, userId: string, event: string, jobData: Record<string, unknown>): Promise<void> {
     try {
       const configs = await this.repository.findActiveConfigsByEvent(userId, event);
 
@@ -16,10 +20,10 @@ export class WebhookDeliveryService {
       }
 
       const timestamp = new Date().toISOString();
-      const payload = {
+      const payload: Prisma.InputJsonObject = {
         event,
         timestamp,
-        data: jobData,
+        data: jobData as Prisma.InputJsonValue,
       };
 
       for (const config of configs) {
@@ -27,7 +31,7 @@ export class WebhookDeliveryService {
           webhookConfigId: config.id,
           crawlJobId,
           event,
-          payload: payload as any,
+          payload,
           status: 'PENDING',
           attempt: 1,
         });
@@ -48,8 +52,8 @@ export class WebhookDeliveryService {
           console.error('[Webhook] Redis/BullMQ is not initialized. Webhook could not be enqueued.');
         }
       }
-    } catch (error) {
-      console.error('[Webhook Dispatch Error]:', error);
+    } catch (error: unknown) {
+      console.error('[Webhook Dispatch Error]:', getErrorMessage(error));
     }
   }
 
@@ -92,16 +96,19 @@ export class WebhookDeliveryService {
         errorMessage: null,
       });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       let statusCode: number | null = null;
       let responseBody: string | null = null;
-      const errorMessage = error.message || 'Unknown network error';
+      const errorMessage = getErrorMessage(error);
 
-      if (error.response) {
-        statusCode = error.response.status;
-        responseBody = typeof error.response.data === 'string'
-          ? error.response.data
-          : JSON.stringify(error.response.data);
+      if (error && typeof error === 'object' && 'response' in error) {
+        const resp = (error as { response?: { status?: number; data?: unknown } }).response;
+        if (resp) {
+          statusCode = resp.status ?? null;
+          responseBody = typeof resp.data === 'string'
+            ? resp.data
+            : JSON.stringify(resp.data);
+        }
       }
 
       await this.repository.updateDelivery(deliveryId, {
@@ -126,10 +133,40 @@ export class WebhookDeliveryService {
     });
   }
 
+  async redeliver(deliveryId: string, userId: string): Promise<WebhookDelivery> {
+    const delivery = await this.repository.findDeliveryById(deliveryId);
+
+    if (!delivery || delivery.webhookConfig.userId !== userId) {
+      throw new AppError('Webhook delivery not found', 404, ERROR_CODE.NOT_FOUND);
+    }
+
+    const updated = await this.repository.updateDelivery(deliveryId, {
+      status: 'PENDING',
+      attempt: 1,
+      errorMessage: null,
+    });
+
+    if (webhookQueue) {
+      await webhookQueue.add(
+        'send-webhook',
+        { deliveryId: delivery.id },
+        {
+          attempts: 3,
+          backoff: {
+            type: 'exponential',
+            delay: 5000,
+          },
+        },
+      );
+    }
+
+    return updated;
+  }
+
   async listDeliveries(
     userId: string,
-    query: { jobId?: string; status?: string },
-  ): Promise<WebhookDelivery[]> {
+    query: { jobId?: string; status?: string; page?: number; limit?: number },
+  ) {
     return this.repository.listDeliveries(userId, query);
   }
 }

@@ -149,19 +149,28 @@ export class CrawlJobController {
         return;
       }
       const assetType = rawType as AssetType | undefined;
-      const result = await this.assetService.findByJobId(
+      const page = Math.max(1, parseInt(req.query.page as string || '1', 10));
+      const limit = Math.min(Math.max(1, parseInt(req.query.limit as string || '50', 10)), 500);
+
+      const items = await this.assetService.findByJobId(
         req.params.id,
         assetType,
+        page,
+        limit,
       );
 
       res.json({
         success: true,
-        data: result,
+        data: {
+          items,
+          meta: { page, limit },
+        },
       });
     } catch (error) {
       next(error);
     }
   };
+
   getExports = async (req: Request, res: Response, next: NextFunction) => {
     try {
       await this.service.findById(req.user.id, req.user.role, req.params.id);
@@ -228,7 +237,10 @@ export class CrawlJobController {
       const changeDetectionService = new ChangeDetectionService();
       const compareWithJobId = req.query.compareWithJobId as string | undefined;
       const diffReport = await changeDetectionService.getDiffReport(req.params.id, compareWithJobId);
-      res.json(diffReport);
+      res.json({
+        success: true,
+        data: diffReport,
+      });
     } catch (error) {
       next(error);
     }
@@ -246,6 +258,85 @@ export class CrawlJobController {
       res.setHeader('Content-Type', 'application/json');
       res.setHeader('Content-Disposition', `attachment; filename="diff_report_${req.params.id}.json"`);
       res.send(jsonStr);
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  streamEvents = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const jobId = req.params.id;
+      const initialJob = await this.service.findById(req.user.id, req.user.role, jobId);
+
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+      if (res.flushHeaders) {
+        res.flushHeaders();
+      }
+
+      res.write(`event: initial\ndata: ${JSON.stringify(initialJob)}\n\n`);
+
+      const TERMINAL_STATUSES = ['COMPLETED', 'FAILED', 'CANCELED'];
+      if (TERMINAL_STATUSES.includes(initialJob.status)) {
+        res.write(`event: done\ndata: ${JSON.stringify({ status: initialJob.status })}\n\n`);
+        res.end();
+        return;
+      }
+
+      let isClosed = false;
+      let interval: NodeJS.Timeout | null = null;
+      let maxDurationTimeout: NodeJS.Timeout | null = null;
+
+      const cleanup = () => {
+        if (interval) {
+          clearInterval(interval);
+          interval = null;
+        }
+        if (maxDurationTimeout) {
+          clearTimeout(maxDurationTimeout);
+          maxDurationTimeout = null;
+        }
+      };
+
+      req.on('close', () => {
+        isClosed = true;
+        cleanup();
+      });
+
+      // Max stream duration guard (30 minutes)
+      const MAX_STREAM_DURATION_MS = 30 * 60 * 1000;
+      maxDurationTimeout = setTimeout(() => {
+        if (!isClosed) {
+          isClosed = true;
+          cleanup();
+          res.write(`event: done\ndata: ${JSON.stringify({ status: 'TIMEOUT', message: 'Stream reached max duration' })}\n\n`);
+          res.end();
+        }
+      }, MAX_STREAM_DURATION_MS);
+
+      interval = setInterval(async () => {
+        if (isClosed) return;
+        try {
+          const currentJob = await this.service.findById(req.user.id, req.user.role, jobId);
+          res.write(`event: progress\ndata: ${JSON.stringify(currentJob)}\n\n`);
+
+          if (TERMINAL_STATUSES.includes(currentJob.status)) {
+            res.write(`event: done\ndata: ${JSON.stringify({ status: currentJob.status })}\n\n`);
+            cleanup();
+            if (!isClosed) {
+              isClosed = true;
+              res.end();
+            }
+          }
+        } catch {
+          cleanup();
+          if (!isClosed) {
+            isClosed = true;
+            res.end();
+          }
+        }
+      }, 3000);
     } catch (error) {
       next(error);
     }

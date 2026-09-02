@@ -2,6 +2,8 @@ import 'dotenv/config';
 import { envConfig } from '../config/env.config';
 import { CrawlScheduleService } from '../modules/crawl-schedules/crawl-schedule.service';
 
+import { getErrorMessage } from '../common/helpers/error-mapping.helper';
+
 if (!envConfig.redis.enabled) {
   console.log('[Schedule Worker] REDIS_ENABLED is not set to true. Schedule Worker will not start.');
   process.exit(0);
@@ -19,8 +21,8 @@ export async function checkAndProcessDueSchedules() {
     if (triggered > 0) {
       console.log(`[Schedule Worker] Triggered ${triggered} due scheduled crawl jobs`);
     }
-  } catch (err: any) {
-    console.error(`[Schedule Worker] Error processing due schedules: ${err?.message}`);
+  } catch (err: unknown) {
+    console.error(`[Schedule Worker] Error processing due schedules: ${getErrorMessage(err)}`);
   } finally {
     isProcessing = false;
   }

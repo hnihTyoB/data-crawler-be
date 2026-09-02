@@ -11,8 +11,8 @@ export class CrawlPageService {
     const isPreview = query?.preview === true || query?.preview === 'true';
 
     if (isPreview) {
-      result.items = result.items.map((item: any) => {
-        const rawMarkdown = item.markdownContent ?? null;
+      result.items = result.items.map((item) => {
+        const rawMarkdown = (item as { markdownContent?: string | null }).markdownContent ?? null;
         const mainContent = extractMainContent(rawMarkdown) || null;
         const cleanText = mainContent ? stripMarkdown(mainContent) : null;
         return {

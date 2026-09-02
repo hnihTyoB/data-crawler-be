@@ -40,3 +40,13 @@ export const createCrawlJobSchema = z.object({
 export const createExportSchema = z.object({
   exportType: z.enum(['JSON', 'CSV', 'XLSX', 'MARKDOWN', 'ZIP']),
 });
+
+export const listCrawlJobsQuerySchema = z.object({
+  status: z.enum(['PENDING', 'QUEUED', 'RUNNING', 'PROCESSING_EXPORT', 'COMPLETED', 'FAILED', 'CANCELED']).optional(),
+  mode: z.enum(['SCRAPE', 'CRAWL', 'SITEMAP', 'URL_LIST']).optional(),
+  search: z.string().trim().optional(),
+  sortBy: z.enum(['createdAt', 'updatedAt', 'startUrl', 'status', 'mode', 'totalPages']).optional(),
+  order: z.enum(['asc', 'desc']).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
+});
