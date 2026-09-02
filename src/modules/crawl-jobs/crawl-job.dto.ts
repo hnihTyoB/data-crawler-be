@@ -1,7 +1,7 @@
 import { CrawlJobStatus, CrawlMode } from '@prisma/client';
 
 export interface CreateCrawlJobDto {
-  startUrl: string;
+  startUrl?: string;
   mode?: CrawlMode;
   maxPages?: number;
   maxDepth?: number;

@@ -255,18 +255,12 @@ export class CrawlScheduleService {
 
     for (const schedule of dueSchedules) {
       try {
-        const job = await this.jobRepository.create({
-          userId: schedule.userId,
-          startUrl: schedule.startUrl,
-          domain: schedule.domain ?? undefined,
-          mode: schedule.mode,
-          maxPages: schedule.maxPages,
-          maxDepth: schedule.maxDepth,
-          urls: schedule.urls,
-          scheduleId: schedule.id,
-        });
-
-        await crawlQueue.add('crawl-job', { jobId: job.id });
+        // Skip if user is inactive or deleted
+        const user = (schedule as any).user;
+        if (user && (!user.isActive || user.deletedAt)) {
+          console.warn(`[Schedule Service] Skipping schedule ${schedule.id}: user is inactive or deleted`);
+          continue;
+        }
 
         const nextRunAt = calculateNextRun({
           frequency: schedule.frequency,
@@ -279,7 +273,25 @@ export class CrawlScheduleService {
           fromDate: now,
         });
 
-        await this.repository.updateNextRun(schedule.id, now, nextRunAt);
+        // Atomic claim: only proceed if this instance successfully updated nextRunAt
+        const claimed = await this.repository.claimDueSchedule(schedule.id, now, nextRunAt);
+        if (!claimed) {
+          // Another worker instance already claimed and triggered this schedule
+          continue;
+        }
+
+        const job = await this.jobRepository.create({
+          userId: schedule.userId,
+          startUrl: schedule.startUrl,
+          domain: schedule.domain ?? undefined,
+          mode: schedule.mode,
+          maxPages: schedule.maxPages,
+          maxDepth: schedule.maxDepth,
+          urls: schedule.urls,
+          scheduleId: schedule.id,
+        });
+
+        await crawlQueue.add('crawl-job', { jobId: job.id });
         triggeredCount++;
       } catch (err: any) {
         console.error(`[Schedule Service] Failed to trigger due schedule ${schedule.id}: ${err.message}`);

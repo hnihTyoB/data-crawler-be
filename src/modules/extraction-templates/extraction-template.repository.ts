@@ -28,6 +28,20 @@ export class ExtractionTemplateRepository {
     return prisma.extractionTemplate.findFirst({ where: { domain } });
   }
 
+  findByUserAndDomain(userId: string, domain: string) {
+    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(userId);
+    if (!isUuid) return null;
+
+    return prisma.extractionTemplate.findUnique({
+      where: {
+        userId_domain: {
+          userId,
+          domain,
+        },
+      },
+    });
+  }
+
   update(id: string, data: UpdateExtractionTemplateDto) {
     return prisma.extractionTemplate.update({
       where: { id },

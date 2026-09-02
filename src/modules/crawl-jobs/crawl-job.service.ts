@@ -1,9 +1,13 @@
-import { prisma } from '../../database/prisma.client';
 import { CrawlJobRepository } from './crawl-job.repository';
 import { CrawlExportRepository } from '../crawl-exports/crawl-export.repository';
+import { UserRepository } from '../users/user.repository';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODE } from '../../common/errors/error-code';
 import { validateUrl, extractDomain } from '../../common/helpers/url.helper';
+import {
+  getZonedDateParts,
+  createUtcDateFromZonedParts,
+} from '../../common/helpers/schedule-calculator.helper';
 import { crawlQueue } from '../../queues/crawl.queue';
 import { ROLES } from '../../common/constants/role.constant';
 import { JOB_STATUS } from '../../common/constants/job-status.constant';
@@ -12,11 +16,12 @@ import { StorageFactory } from '../../common/storage/storage.factory';
 
 export class CrawlJobService {
   private readonly repository = new CrawlJobRepository();
+  private readonly userRepository = new UserRepository();
 
   async create(userId: string, payload: CreateCrawlJobDto) {
     const isUrlList = payload.mode === 'URL_LIST';
 
-    // Fix #3: Deduplicate URLs before anything else
+    // Deduplicate URLs before anything else
     const deduplicatedUrls = isUrlList
       ? [...new Set(payload.urls!.map((u) => u.trim()))]
       : [];
@@ -26,31 +31,36 @@ export class CrawlJobService {
       ? new URL(deduplicatedUrls[0]).hostname
       : extractDomain(payload.startUrl!);
 
-    const user = await prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.userRepository.findById(userId);
 
     if (!user) {
       throw new AppError('User not found', 404, ERROR_CODE.NOT_FOUND);
     }
 
-    // Fix #1: SSRF validation for ALL roles for URL_LIST
+    // SSRF validation with bounded concurrency for URL_LIST
     if (isUrlList) {
       const { validateUrlAsync } =
         await import('../../common/helpers/url.helper');
-      for (const url of deduplicatedUrls) {
-        try {
-          await validateUrlAsync(url);
-        } catch (err: any) {
-          throw new AppError(
-            `Invalid or blocked URL in list: ${url} — ${err?.message}`,
-            400,
-            ERROR_CODE.INVALID_URL,
-          );
-        }
+      const chunkSize = 10;
+      for (let i = 0; i < deduplicatedUrls.length; i += chunkSize) {
+        const chunk = deduplicatedUrls.slice(i, i + chunkSize);
+        await Promise.all(
+          chunk.map(async (url) => {
+            try {
+              await validateUrlAsync(url);
+            } catch (err: any) {
+              throw new AppError(
+                `Invalid or blocked URL in list: ${url} — ${err?.message}`,
+                400,
+                ERROR_CODE.INVALID_URL,
+              );
+            }
+          }),
+        );
       }
     }
 
     if (user.role !== ROLES.ADMIN) {
-      // Fix #2: For URL_LIST, quota check uses deduplicated urls.length
       const requestedPages = isUrlList
         ? deduplicatedUrls.length
         : (payload.maxPages ?? 20);
@@ -63,11 +73,18 @@ export class CrawlJobService {
         );
       }
 
-      const startOfDay = new Date();
-      startOfDay.setHours(0, 0, 0, 0);
-      const jobsTodayCount = await prisma.crawlJob.count({
-        where: { userId, createdAt: { gte: startOfDay } },
-      });
+      // Timezone UTC+7 start of day calculation
+      const nowZoned = getZonedDateParts(new Date(), 'Asia/Ho_Chi_Minh');
+      const startOfDay = createUtcDateFromZonedParts(
+        nowZoned.year,
+        nowZoned.month,
+        nowZoned.day,
+        0,
+        0,
+        'Asia/Ho_Chi_Minh',
+      );
+
+      const jobsTodayCount = await this.repository.countJobsSince(userId, startOfDay);
 
       if (jobsTodayCount >= user.maxJobsPerDayLimit) {
         throw new AppError(
@@ -79,20 +96,17 @@ export class CrawlJobService {
 
       const twoHoursAgo = new Date();
       twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
-      const concurrentJobsCount = await prisma.crawlJob.count({
-        where: {
-          userId,
-          status: {
-            in: [
-              JOB_STATUS.PENDING,
-              JOB_STATUS.QUEUED,
-              JOB_STATUS.RUNNING,
-              JOB_STATUS.PROCESSING_EXPORT,
-            ],
-          },
-          createdAt: { gte: twoHoursAgo },
-        },
-      });
+      const activeStatuses = [
+        JOB_STATUS.PENDING,
+        JOB_STATUS.QUEUED,
+        JOB_STATUS.RUNNING,
+        JOB_STATUS.PROCESSING_EXPORT,
+      ];
+      const concurrentJobsCount = await this.repository.countConcurrentJobs(
+        userId,
+        activeStatuses,
+        twoHoursAgo,
+      );
 
       if (concurrentJobsCount >= user.maxConcurrentJobsLimit) {
         throw new AppError(

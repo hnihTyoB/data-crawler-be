@@ -1,11 +1,12 @@
 import { Request, Response, NextFunction } from 'express';
 import { ApiKeyService } from '../modules/api-keys/api-key.service';
-import { prisma } from '../database/prisma.client';
+import { UserRepository } from '../modules/users/user.repository';
 import { authMiddleware } from './auth.middleware';
 import { AppError } from '../common/errors/app-error';
 import { ERROR_CODE } from '../common/errors/error-code';
 
 const apiKeyService = new ApiKeyService();
+const userRepository = new UserRepository();
 
 export async function apiKeyOrAuthMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
   const apiKey = req.headers['x-api-key'] as string | undefined;
@@ -14,10 +15,7 @@ export async function apiKeyOrAuthMiddleware(req: Request, res: Response, next: 
     try {
       const validKeyRecord = await apiKeyService.validate(apiKey);
       
-      const user = await prisma.user.findFirst({
-        where: { id: validKeyRecord.userId, deletedAt: null },
-        select: { id: true, email: true, role: true, isActive: true },
-      });
+      const user = await userRepository.findById(validKeyRecord.userId);
 
       if (!user) {
         next(new AppError('User associated with API key not found', 401, ERROR_CODE.UNAUTHORIZED));

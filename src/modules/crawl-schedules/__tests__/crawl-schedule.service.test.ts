@@ -33,6 +33,7 @@ describe('CrawlScheduleService', () => {
       findAll: jest.fn(),
       findDueSchedules: jest.fn(),
       updateNextRun: jest.fn(),
+      claimDueSchedule: jest.fn().mockResolvedValue(true),
     } as any;
 
     mockJobRepo = {
@@ -203,20 +204,46 @@ describe('CrawlScheduleService', () => {
 
   describe('processDueSchedules', () => {
     it('finds and triggers all due active schedules', async () => {
-      mockScheduleRepo.findDueSchedules.mockResolvedValue([mockSchedule] as any);
+      mockScheduleRepo.findDueSchedules.mockResolvedValue([
+        { ...mockSchedule, user: { isActive: true, deletedAt: null } },
+      ] as any);
       mockJobRepo.create.mockResolvedValue({ id: 'job-due-1' } as any);
-      mockScheduleRepo.updateNextRun.mockResolvedValue({} as any);
 
       const count = await service.processDueSchedules();
 
       expect(count).toBe(1);
+      expect(mockScheduleRepo.claimDueSchedule).toHaveBeenCalled();
       expect(mockJobRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
           scheduleId: 'schedule-1',
         }),
       );
       expect(crawlQueue?.add).toHaveBeenCalledWith('crawl-job', { jobId: 'job-due-1' });
-      expect(mockScheduleRepo.updateNextRun).toHaveBeenCalled();
+    });
+
+    it('skips schedule when user is inactive or deleted', async () => {
+      mockScheduleRepo.findDueSchedules.mockResolvedValue([
+        { ...mockSchedule, user: { isActive: false, deletedAt: null } },
+        { ...mockSchedule, id: 'schedule-2', user: { isActive: true, deletedAt: new Date() } },
+      ] as any);
+
+      const count = await service.processDueSchedules();
+
+      expect(count).toBe(0);
+      expect(mockScheduleRepo.claimDueSchedule).not.toHaveBeenCalled();
+      expect(mockJobRepo.create).not.toHaveBeenCalled();
+    });
+
+    it('skips schedule when another worker instance already claimed it', async () => {
+      mockScheduleRepo.findDueSchedules.mockResolvedValue([
+        { ...mockSchedule, user: { isActive: true, deletedAt: null } },
+      ] as any);
+      mockScheduleRepo.claimDueSchedule.mockResolvedValue(false);
+
+      const count = await service.processDueSchedules();
+
+      expect(count).toBe(0);
+      expect(mockJobRepo.create).not.toHaveBeenCalled();
     });
   });
 });
