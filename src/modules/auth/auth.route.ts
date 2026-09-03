@@ -17,6 +17,8 @@ import {
   verifyEmailSchema,
   resendVerificationSchema,
   changePasswordSchema,
+  requestDeactivationSchema,
+  confirmDeactivationSchema,
 } from "./auth.validation";
 
 const router = Router();
@@ -99,5 +101,24 @@ router.post(
 router.post("/verify-email", validate(verifyEmailSchema), (req, res, next) => {
   controller.verifyEmail(req, res, next);
 });
+
+router.post(
+  "/deactivate/request",
+  authMiddleware,
+  authRateLimiter,
+  validate(requestDeactivationSchema),
+  (req, res, next) => {
+    controller.requestDeactivation(req, res, next);
+  },
+);
+
+router.post(
+  "/deactivate/confirm",
+  authRateLimiter,
+  validate(confirmDeactivationSchema),
+  (req, res, next) => {
+    controller.confirmDeactivation(req, res, next);
+  },
+);
 
 export default router;

@@ -10,6 +10,8 @@ import {
   VerifyEmailDto,
   ChangePasswordDto,
   ResendVerificationDto,
+  RequestDeactivationDto,
+  ConfirmDeactivationDto,
 } from "./auth.dto";
 import { AuditLogService } from "../audit-logs/audit-log.service";
 import { AUDIT_ACTIONS } from "../../common/constants/audit-action.constant";
@@ -369,6 +371,62 @@ export class AuthController {
       res.json({
         success: true,
         message: "Email verified successfully",
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  requestDeactivation = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const requestDto: RequestDeactivationDto = req.body;
+      await this.service.requestDeactivation(req.user.id, requestDto);
+
+      await this.auditLogService.log({
+        userId: req.user.id,
+        action: AUDIT_ACTIONS.REQUEST_DEACTIVATE_ACCOUNT,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"] as string,
+        details: { email: req.user.email },
+      });
+
+      res.json({
+        success: true,
+        message:
+          "Email xác nhận vô hiệu hóa tài khoản đã được gửi. Vui lòng kiểm tra hộp thư của bạn.",
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  confirmDeactivation = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ) => {
+    try {
+      const confirmDto: ConfirmDeactivationDto = req.body;
+      const result = await this.service.confirmDeactivation(confirmDto);
+
+      await this.auditLogService.log({
+        userId: result.userId,
+        action: AUDIT_ACTIONS.CONFIRM_DEACTIVATE_ACCOUNT,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"] as string,
+        details: { email: result.email },
+      });
+
+      res.clearCookie("accessToken");
+      res.clearCookie("refreshToken");
+
+      res.json({
+        success: true,
+        message: "Tài khoản của bạn đã được vô hiệu hóa thành công.",
       });
     } catch (error) {
       next(error);

@@ -83,4 +83,41 @@ export class MailService {
 
     await this.transporter.sendMail(mailOptions);
   }
+
+  async sendDeactivationEmail(email: string, token: string): Promise<void> {
+    const deactivateUrl = `${mailConfig.frontendUrl}/deactivate-account?token=${token}`;
+
+    const mailOptions = {
+      from: mailConfig.from,
+      to: email,
+      subject: "Confirm Account Deactivation - Data Crawler",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
+          <h2 style="color: #d9534f; text-align: center;">Confirm Account Deactivation</h2>
+          <p style="color: #555555; font-size: 16px; line-height: 1.5;">
+            We received a request to deactivate your Data Crawler account. Deactivating your account will immediately stop all active crawl schedules and revoke your API keys and active sessions.
+          </p>
+          <p style="color: #555555; font-size: 16px; line-height: 1.5;">
+            If you wish to proceed with deactivation, please click the confirmation button below:
+          </p>
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${deactivateUrl}" style="background-color: #d9534f; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">
+              Confirm Deactivation
+            </a>
+          </div>
+          <p style="color: #777777; font-size: 14px; line-height: 1.5;">
+            This link is valid for 15 minutes. If you did not request to deactivate your account, please ignore this email and change your password immediately.
+          </p>
+          <hr style="border: 0; border-top: 1px solid #eeeeee; margin: 20px 0;">
+          <p style="color: #999999; font-size: 12px; text-align: center;">
+            If you're having trouble clicking the button, copy and paste the URL below into your web browser:
+            <br>
+            <a href="${deactivateUrl}" style="color: #d9534f; word-break: break-all;">${deactivateUrl}</a>
+          </p>
+        </div>
+      `,
+    };
+
+    await this.transporter.sendMail(mailOptions);
+  }
 }

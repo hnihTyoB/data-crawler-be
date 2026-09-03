@@ -15,10 +15,13 @@ import {
   ForgotPasswordDto,
   ResetPasswordDto,
   ChangePasswordDto,
+  RequestDeactivationDto,
+  ConfirmDeactivationDto,
 } from "./auth.dto";
 import { MailService } from "../mail/mail.service";
 import { CrawlJobRepository } from "../crawl-jobs/crawl-job.repository";
 import { JOB_STATUS } from "../../common/constants/job-status.constant";
+import { ROLES } from "../../common/constants/role.constant";
 import { DEFAULT_TIMEZONE } from "../../common/constants/timezone.constant";
 import {
   getZonedDateParts,
@@ -642,5 +645,156 @@ export class AuthService {
     await this.repository.updateUser(user.id, { isActive: true });
 
     return { success: true, userId: user.id };
+  }
+
+  async requestDeactivation(
+    userId: string,
+    data: RequestDeactivationDto,
+  ): Promise<{ success: boolean }> {
+    const user = await this.repository.findById(userId);
+
+    if (!user || !user.isActive) {
+      throw new AppError(
+        "Người dùng không tồn tại hoặc tài khoản đã bị vô hiệu hóa.",
+        404,
+        ERROR_CODE.NOT_FOUND,
+      );
+    }
+
+    if (user.role === ROLES.ADMIN) {
+      const activeAdmins = await this.repository.countActiveAdmins();
+      if (activeAdmins <= 1) {
+        throw new AppError(
+          "Không thể vô hiệu hóa tài khoản Quản trị viên duy nhất trong hệ thống.",
+          400,
+          ERROR_CODE.VALIDATION_ERROR,
+        );
+      }
+    }
+
+    const isPasswordValid = await bcrypt.compare(
+      data.password,
+      user.passwordHash,
+    );
+    if (!isPasswordValid) {
+      throw new AppError(
+        "Mật khẩu xác nhận không chính xác.",
+        401,
+        ERROR_CODE.INVALID_CREDENTIALS,
+      );
+    }
+
+    const deactivationToken = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        purpose: "deactivate-account",
+      },
+      `${jwtConfig.accessSecret}:deactivate:${user.passwordHash}`,
+      { expiresIn: "15m" },
+    );
+
+    try {
+      await this.mailService.sendDeactivationEmail(
+        user.email,
+        deactivationToken,
+      );
+    } catch (error: unknown) {
+      const mailError = error as { code?: string; responseCode?: number };
+      console.error(
+        `[Mail] Deactivation delivery failed: ${mailError.code ?? "UNKNOWN"}${mailError.responseCode ? ` (SMTP ${mailError.responseCode})` : ""}`,
+      );
+      throw new AppError(
+        "Không thể gửi email xác nhận vô hiệu hóa. Vui lòng thử lại sau.",
+        503,
+        ERROR_CODE.MAIL_DELIVERY_FAILED,
+      );
+    }
+
+    if (process.env.NODE_ENV !== "production") {
+      const { mailConfig } = await import("../../config/mail.config");
+      console.log(
+        `[DEV ONLY] Deactivation Link: ${mailConfig.frontendUrl}/deactivate-account?token=${deactivationToken}`,
+      );
+    }
+
+    return { success: true };
+  }
+
+  async confirmDeactivation(
+    data: ConfirmDeactivationDto,
+  ): Promise<{ success: boolean; userId: string; email: string }> {
+    const { token } = data;
+
+    let untrustedPayload: AuthJwtPayload | null = null;
+    try {
+      untrustedPayload = jwt.decode(token) as AuthJwtPayload | null;
+    } catch {
+      throw new AppError(
+        "Mã xác nhận không hợp lệ.",
+        400,
+        ERROR_CODE.TOKEN_INVALID,
+      );
+    }
+
+    if (
+      !untrustedPayload ||
+      !untrustedPayload.id ||
+      untrustedPayload.purpose !== "deactivate-account"
+    ) {
+      throw new AppError(
+        "Mã xác nhận không hợp lệ.",
+        400,
+        ERROR_CODE.TOKEN_INVALID,
+      );
+    }
+
+    const user = await this.repository.findById(untrustedPayload.id);
+    if (!user || !user.isActive) {
+      throw new AppError(
+        "Người dùng không tồn tại hoặc tài khoản đã bị vô hiệu hóa.",
+        400,
+        ERROR_CODE.USER_INACTIVE,
+      );
+    }
+
+    try {
+      jwt.verify(
+        token,
+        `${jwtConfig.accessSecret}:deactivate:${user.passwordHash}`,
+      );
+    } catch (error) {
+      if (error instanceof jwt.TokenExpiredError) {
+        throw new AppError(
+          "Mã xác nhận vô hiệu hóa đã hết hạn.",
+          400,
+          ERROR_CODE.TOKEN_EXPIRED,
+        );
+      }
+      throw new AppError(
+        "Mã xác nhận không hợp lệ.",
+        400,
+        ERROR_CODE.TOKEN_INVALID,
+      );
+    }
+
+    if (user.role === ROLES.ADMIN) {
+      const activeAdmins = await this.repository.countActiveAdmins();
+      if (activeAdmins <= 1) {
+        throw new AppError(
+          "Không thể vô hiệu hóa tài khoản Quản trị viên duy nhất trong hệ thống.",
+          400,
+          ERROR_CODE.VALIDATION_ERROR,
+        );
+      }
+    }
+
+    await this.repository.deactivateUser(user.id);
+
+    return {
+      success: true,
+      userId: user.id,
+      email: user.email,
+    };
   }
 }
