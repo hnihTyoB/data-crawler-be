@@ -1020,6 +1020,553 @@
         "summary": "Xóa người dùng"
       }
     },
+    "/users/{id}/roles": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lấy roles thành công"
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "403": {
+            "description": "Không có quyền users.roles.read"
+          }
+        },
+        "tags": [
+          "Users"
+        ],
+        "summary": "Xem Roles của User"
+      },
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gán roles thành công"
+          },
+          "400": {
+            "description": "Không thể thu hồi Super Admin cuối cùng"
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "403": {
+            "description": "Không được phép tự gán hoặc gán trái phép Super Admin"
+          },
+          "404": {
+            "description": "Không tìm thấy User hoặc Role"
+          }
+        },
+        "tags": [
+          "Users"
+        ],
+        "summary": "Cập nhật toàn bộ Roles của User",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignUserRolesRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{id}/roles/{roleId}": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gán role thành công"
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "403": {
+            "description": "Bị từ chối nâng quyền trái phép"
+          },
+          "404": {
+            "description": "Không tìm thấy User hoặc Role"
+          }
+        },
+        "tags": [
+          "Users"
+        ],
+        "summary": "Gán thêm một Role cho User"
+      },
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "roleId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gỡ role thành công"
+          },
+          "400": {
+            "description": "Không thể gỡ Super Admin cuối cùng"
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "403": {
+            "description": "Bị từ chối nâng quyền trái phép"
+          },
+          "404": {
+            "description": "Không tìm thấy User hoặc Role"
+          }
+        },
+        "tags": [
+          "Users"
+        ],
+        "summary": "Gỡ một Role khỏi User"
+      }
+    },
+    "/roles": {
+      "get": {
+        "description": "Lấy danh sách các vai trò (Roles) trong hệ thống kèm phân trang và tìm kiếm.",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "isSystem",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "isActive",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lấy danh sách thành công"
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "403": {
+            "description": "Không có quyền roles.read"
+          }
+        },
+        "tags": [
+          "Roles"
+        ],
+        "summary": "Danh sách Roles"
+      },
+      "post": {
+        "description": "Tạo mới một vai trò tùy chỉnh (Custom Role) trong hệ thống.",
+        "responses": {
+          "201": {
+            "description": "Tạo Role thành công"
+          },
+          "400": {
+            "description": "Dữ liệu không hợp lệ"
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "403": {
+            "description": "Không có quyền roles.create"
+          },
+          "409": {
+            "description": "Role slug đã tồn tại"
+          }
+        },
+        "tags": [
+          "Roles"
+        ],
+        "summary": "Tạo Role tùy chỉnh",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRoleRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/roles/{id}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lấy thông tin Role thành công"
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "403": {
+            "description": "Không có quyền roles.read"
+          },
+          "404": {
+            "description": "Không tìm thấy Role"
+          }
+        },
+        "tags": [
+          "Roles"
+        ],
+        "summary": "Chi tiết Role"
+      },
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Cập nhật Role thành công"
+          },
+          "400": {
+            "description": "Không thể vô hiệu hóa system role"
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "403": {
+            "description": "Không có quyền roles.update"
+          },
+          "404": {
+            "description": "Không tìm thấy Role"
+          }
+        },
+        "tags": [
+          "Roles"
+        ],
+        "summary": "Cập nhật Role",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateRoleRequest"
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Xóa Role thành công"
+          },
+          "400": {
+            "description": "Không thể xóa system role"
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "403": {
+            "description": "Không có quyền roles.delete"
+          },
+          "404": {
+            "description": "Không tìm thấy Role"
+          }
+        },
+        "tags": [
+          "Roles"
+        ],
+        "summary": "Xóa Role"
+      }
+    },
+    "/roles/{id}/permissions": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lấy danh sách permissions thành công"
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "403": {
+            "description": "Không có quyền roles.permissions.read"
+          },
+          "404": {
+            "description": "Không tìm thấy Role"
+          }
+        },
+        "tags": [
+          "Roles"
+        ],
+        "summary": "Xem danh sách Permissions của Role"
+      },
+      "put": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Gán permissions thành công"
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "403": {
+            "description": "Không có quyền roles.permissions.assign"
+          },
+          "404": {
+            "description": "Không tìm thấy Role"
+          }
+        },
+        "tags": [
+          "Roles"
+        ],
+        "summary": "Gán danh sách Permissions cho Role",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignRolePermissionsRequest"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/roles/{id}/users": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lấy danh sách thành công"
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "403": {
+            "description": "Không có quyền roles.read"
+          }
+        },
+        "tags": [
+          "Roles"
+        ],
+        "summary": "Danh sách Users thuộc Role"
+      }
+    },
+    "/permissions": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "resource",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lấy danh mục permissions thành công"
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "403": {
+            "description": "Không có quyền permissions.read"
+          }
+        },
+        "tags": [
+          "Permissions"
+        ],
+        "summary": "Danh mục Permissions hệ thống"
+      }
+    },
+    "/permissions/{id}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lấy chi tiết permission thành công"
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "403": {
+            "description": "Không có quyền permissions.read"
+          },
+          "404": {
+            "description": "Không tìm thấy Permission"
+          }
+        },
+        "tags": [
+          "Permissions"
+        ],
+        "summary": "Chi tiết Permission"
+      }
+    },
     "/dashboard/stats": {
       "get": {
         "description": "",
@@ -4729,6 +5276,147 @@
                   "type": "object"
                 }
               }
+            }
+          }
+        }
+      },
+      "Role": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "isSystem": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "Permission": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "slug": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string",
+            "nullable": true
+          },
+          "resource": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "isSystem": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateRoleRequest": {
+        "type": "object",
+        "required": [
+          "name",
+          "slug"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Finance Auditor"
+          },
+          "slug": {
+            "type": "string",
+            "example": "finance_auditor"
+          },
+          "description": {
+            "type": "string",
+            "example": "Audits financial records and reports"
+          },
+          "permissionIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "UpdateRoleRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "AssignRolePermissionsRequest": {
+        "type": "object",
+        "required": [
+          "permissionIds"
+        ],
+        "properties": {
+          "permissionIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "AssignUserRolesRequest": {
+        "type": "object",
+        "required": [
+          "roleIds"
+        ],
+        "properties": {
+          "roleIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
             }
           }
         }

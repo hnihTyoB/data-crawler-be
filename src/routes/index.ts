@@ -10,12 +10,16 @@ import extractionTemplateRoute from "../modules/extraction-templates/extraction-
 import crawlScheduleRoute from "../modules/crawl-schedules/crawl-schedule.route";
 import healthRoute from "../modules/health/health.route";
 import dashboardRoute from "../modules/dashboard/dashboard.route";
+import roleRoute from "../modules/roles/role.route";
+import permissionRoute from "../modules/permissions/permission.route";
 
 const router = Router();
 
 router.use("/health", healthRoute);
 router.use("/auth", authRoute);
 router.use("/users", userRoute);
+router.use("/roles", roleRoute);
+router.use("/permissions", permissionRoute);
 router.use("/dashboard", dashboardRoute);
 router.use("/crawl-jobs", crawlJobRoute);
 router.use("/crawl-schedules", crawlScheduleRoute);

@@ -10,3 +10,5 @@ export * from "./schedule-frequency.constant";
 export * from "./asset-type.constant";
 export * from "./crawl-page-status.constant";
 export * from "./webhook.constant";
+export * from "./system-role.constant";
+export * from "./permission.constant";

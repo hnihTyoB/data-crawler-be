@@ -2336,4 +2336,316 @@ export const swaggerPaths: Record<string, any> = {
       },
     },
   },
+  "/roles": {
+    get: {
+      tags: ["Roles"],
+      summary: "Danh sách Roles",
+      description:
+        "Lấy danh sách các vai trò (Roles) trong hệ thống kèm phân trang và tìm kiếm.",
+      parameters: [
+        { name: "search", in: "query", schema: { type: "string" } },
+        { name: "isSystem", in: "query", schema: { type: "boolean" } },
+        { name: "isActive", in: "query", schema: { type: "boolean" } },
+        { name: "page", in: "query", schema: { type: "integer", default: 1 } },
+        {
+          name: "limit",
+          in: "query",
+          schema: { type: "integer", default: 20 },
+        },
+      ],
+      responses: {
+        200: { description: "Lấy danh sách thành công" },
+        401: { description: "Chưa xác thực" },
+        403: { description: "Không có quyền roles.read" },
+      },
+    },
+    post: {
+      tags: ["Roles"],
+      summary: "Tạo Role tùy chỉnh",
+      description:
+        "Tạo mới một vai trò tùy chỉnh (Custom Role) trong hệ thống.",
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/CreateRoleRequest" },
+          },
+        },
+      },
+      responses: {
+        201: { description: "Tạo Role thành công" },
+        400: { description: "Dữ liệu không hợp lệ" },
+        401: { description: "Chưa xác thực" },
+        403: { description: "Không có quyền roles.create" },
+        409: { description: "Role slug đã tồn tại" },
+      },
+    },
+  },
+  "/roles/{id}": {
+    get: {
+      tags: ["Roles"],
+      summary: "Chi tiết Role",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+        },
+      ],
+      responses: {
+        200: { description: "Lấy thông tin Role thành công" },
+        401: { description: "Chưa xác thực" },
+        403: { description: "Không có quyền roles.read" },
+        404: { description: "Không tìm thấy Role" },
+      },
+    },
+    patch: {
+      tags: ["Roles"],
+      summary: "Cập nhật Role",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/UpdateRoleRequest" },
+          },
+        },
+      },
+      responses: {
+        200: { description: "Cập nhật Role thành công" },
+        400: { description: "Không thể vô hiệu hóa system role" },
+        401: { description: "Chưa xác thực" },
+        403: { description: "Không có quyền roles.update" },
+        404: { description: "Không tìm thấy Role" },
+      },
+    },
+    delete: {
+      tags: ["Roles"],
+      summary: "Xóa Role",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+        },
+      ],
+      responses: {
+        200: { description: "Xóa Role thành công" },
+        400: { description: "Không thể xóa system role" },
+        401: { description: "Chưa xác thực" },
+        403: { description: "Không có quyền roles.delete" },
+        404: { description: "Không tìm thấy Role" },
+      },
+    },
+  },
+  "/roles/{id}/permissions": {
+    get: {
+      tags: ["Roles"],
+      summary: "Xem danh sách Permissions của Role",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+        },
+      ],
+      responses: {
+        200: { description: "Lấy danh sách permissions thành công" },
+        401: { description: "Chưa xác thực" },
+        403: { description: "Không có quyền roles.permissions.read" },
+        404: { description: "Không tìm thấy Role" },
+      },
+    },
+    put: {
+      tags: ["Roles"],
+      summary: "Gán danh sách Permissions cho Role",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              $ref: "#/components/schemas/AssignRolePermissionsRequest",
+            },
+          },
+        },
+      },
+      responses: {
+        200: { description: "Gán permissions thành công" },
+        401: { description: "Chưa xác thực" },
+        403: { description: "Không có quyền roles.permissions.assign" },
+        404: { description: "Không tìm thấy Role" },
+      },
+    },
+  },
+  "/roles/{id}/users": {
+    get: {
+      tags: ["Roles"],
+      summary: "Danh sách Users thuộc Role",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+        },
+      ],
+      responses: {
+        200: { description: "Lấy danh sách thành công" },
+        401: { description: "Chưa xác thực" },
+        403: { description: "Không có quyền roles.read" },
+      },
+    },
+  },
+  "/permissions": {
+    get: {
+      tags: ["Permissions"],
+      summary: "Danh mục Permissions hệ thống",
+      parameters: [
+        { name: "resource", in: "query", schema: { type: "string" } },
+        { name: "search", in: "query", schema: { type: "string" } },
+      ],
+      responses: {
+        200: { description: "Lấy danh mục permissions thành công" },
+        401: { description: "Chưa xác thực" },
+        403: { description: "Không có quyền permissions.read" },
+      },
+    },
+  },
+  "/permissions/{id}": {
+    get: {
+      tags: ["Permissions"],
+      summary: "Chi tiết Permission",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+        },
+      ],
+      responses: {
+        200: { description: "Lấy chi tiết permission thành công" },
+        401: { description: "Chưa xác thực" },
+        403: { description: "Không có quyền permissions.read" },
+        404: { description: "Không tìm thấy Permission" },
+      },
+    },
+  },
+  "/users/{id}/roles": {
+    get: {
+      tags: ["Users"],
+      summary: "Xem Roles của User",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+        },
+      ],
+      responses: {
+        200: { description: "Lấy roles thành công" },
+        401: { description: "Chưa xác thực" },
+        403: { description: "Không có quyền users.roles.read" },
+      },
+    },
+    put: {
+      tags: ["Users"],
+      summary: "Cập nhật toàn bộ Roles của User",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/AssignUserRolesRequest" },
+          },
+        },
+      },
+      responses: {
+        200: { description: "Gán roles thành công" },
+        400: { description: "Không thể thu hồi Super Admin cuối cùng" },
+        401: { description: "Chưa xác thực" },
+        403: {
+          description: "Không được phép tự gán hoặc gán trái phép Super Admin",
+        },
+        404: { description: "Không tìm thấy User hoặc Role" },
+      },
+    },
+  },
+  "/users/{id}/roles/{roleId}": {
+    post: {
+      tags: ["Users"],
+      summary: "Gán thêm một Role cho User",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+        },
+        {
+          name: "roleId",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+        },
+      ],
+      responses: {
+        200: { description: "Gán role thành công" },
+        401: { description: "Chưa xác thực" },
+        403: { description: "Bị từ chối nâng quyền trái phép" },
+        404: { description: "Không tìm thấy User hoặc Role" },
+      },
+    },
+    delete: {
+      tags: ["Users"],
+      summary: "Gỡ một Role khỏi User",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+        },
+        {
+          name: "roleId",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+        },
+      ],
+      responses: {
+        200: { description: "Gỡ role thành công" },
+        400: { description: "Không thể gỡ Super Admin cuối cùng" },
+        401: { description: "Chưa xác thực" },
+        403: { description: "Bị từ chối nâng quyền trái phép" },
+        404: { description: "Không tìm thấy User hoặc Role" },
+      },
+    },
+  },
 };

@@ -64,7 +64,12 @@ export class UserController {
   update = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const updateUserDto: UpdateUserDto = req.body;
-      const result = await this.service.update(req.params.id, updateUserDto);
+      const result = await this.service.update(
+        req.params.id,
+        updateUserDto,
+        req.user.id,
+        req.user.roles || [],
+      );
 
       await this.auditLogService.log({
         userId: req.user.id,
@@ -88,7 +93,11 @@ export class UserController {
 
   delete = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.service.delete(req.params.id, req.user.id);
+      await this.service.delete(
+        req.params.id,
+        req.user.id,
+        req.user.roles || [],
+      );
 
       await this.auditLogService.log({
         userId: req.user.id,
@@ -101,6 +110,105 @@ export class UserController {
       res.json({
         success: true,
         message: "User deleted successfully",
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getUserRoles = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const result = await this.service.getUserRoles(req.params.id);
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  assignRoles = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const { roleIds } = req.body as { roleIds: string[] };
+      const result = await this.service.assignUserRoles(
+        req.user.id,
+        req.user.roles || [],
+        req.params.id,
+        roleIds,
+        {
+          actorId: req.user.id,
+          ipAddress: req.ip,
+          userAgent: req.headers["user-agent"] as string,
+        },
+      );
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  assignRole = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const result = await this.service.assignSingleRole(
+        req.user.id,
+        req.user.roles || [],
+        req.params.id,
+        req.params.roleId,
+        {
+          actorId: req.user.id,
+          ipAddress: req.ip,
+          userAgent: req.headers["user-agent"] as string,
+        },
+      );
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  revokeRole = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const result = await this.service.revokeSingleRole(
+        req.user.id,
+        req.user.roles || [],
+        req.params.id,
+        req.params.roleId,
+        {
+          actorId: req.user.id,
+          ipAddress: req.ip,
+          userAgent: req.headers["user-agent"] as string,
+        },
+      );
+
+      res.json({
+        success: true,
+        data: result,
       });
     } catch (error) {
       next(error);
