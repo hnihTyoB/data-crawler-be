@@ -1,4 +1,5 @@
 import { prisma } from "../../database/prisma.client";
+import { ROLES } from "../../common/constants/role.constant";
 
 export class AuthRepository {
   findByEmail(email: string) {
@@ -24,7 +25,7 @@ export class AuthRepository {
         email: data.email,
         passwordHash: data.passwordHash,
         fullName: data.fullName,
-        role: "CRAWLER_USER",
+        role: ROLES.CRAWLER_USER,
         isActive: data.isActive ?? true,
       },
     });
@@ -84,6 +85,43 @@ export class AuthRepository {
   async deleteUserRefreshTokens(userId: string) {
     return prisma.refreshToken.deleteMany({
       where: { userId },
+    });
+  }
+
+  async countActiveAdmins(): Promise<number> {
+    return prisma.user.count({
+      where: {
+        role: ROLES.ADMIN,
+        isActive: true,
+        deletedAt: null,
+      },
+    });
+  }
+
+  async deactivateUser(userId: string): Promise<void> {
+    await prisma.$transaction(async (tx) => {
+      await tx.user.update({
+        where: { id: userId },
+        data: {
+          isActive: false,
+          deletedAt: new Date(),
+          deletedBy: userId,
+        },
+      });
+
+      await tx.refreshToken.deleteMany({
+        where: { userId },
+      });
+
+      await tx.apiKey.updateMany({
+        where: { userId, isActive: true },
+        data: { isActive: false },
+      });
+
+      await tx.crawlSchedule.updateMany({
+        where: { userId, isActive: true },
+        data: { isActive: false },
+      });
     });
   }
 }

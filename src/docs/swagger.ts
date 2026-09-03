@@ -257,6 +257,28 @@ const rawSchemas = {
       email: { type: "string", format: "email", example: "user@example.com" },
     },
   },
+  RequestDeactivationRequest: {
+    type: "object",
+    required: ["password"],
+    properties: {
+      password: {
+        type: "string",
+        example: "Password123!",
+        description: "Mật khẩu hiện tại của người dùng để xác nhận danh tính",
+      },
+    },
+  },
+  ConfirmDeactivationRequest: {
+    type: "object",
+    required: ["token"],
+    properties: {
+      token: {
+        type: "string",
+        example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+        description: "Mã xác nhận vô hiệu hóa được gửi qua email",
+      },
+    },
+  },
   RefreshRequest: {
     type: "object",
     required: ["refreshToken"],

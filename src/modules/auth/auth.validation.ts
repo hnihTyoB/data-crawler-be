@@ -95,3 +95,11 @@ export const resendVerificationSchema = z.object({
 export const verifyEmailSchema = z.object({
   token: z.string().min(1, "Thiếu mã xác thực email."),
 });
+
+export const requestDeactivationSchema = z.object({
+  password: z.string().min(1, "Vui lòng nhập mật khẩu xác nhận."),
+});
+
+export const confirmDeactivationSchema = z.object({
+  token: z.string().min(1, "Thiếu mã xác nhận vô hiệu hóa."),
+});

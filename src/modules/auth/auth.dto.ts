@@ -79,3 +79,11 @@ export interface VerifyEmailDto {
 export interface ResendVerificationDto {
   email: string;
 }
+
+export interface RequestDeactivationDto {
+  password: string;
+}
+
+export interface ConfirmDeactivationDto {
+  token: string;
+}

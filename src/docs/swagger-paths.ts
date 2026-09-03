@@ -472,6 +472,88 @@ export const swaggerPaths: Record<string, any> = {
       },
     },
   },
+  "/auth/deactivate/request": {
+    post: {
+      tags: ["Auth"],
+      summary: "Yêu cầu vô hiệu hóa tài khoản",
+      description:
+        "Gửi email chứa liên kết/mã xác nhận vô hiệu hóa tài khoản. Yêu cầu người dùng đang đăng nhập và phải nhập đúng mật khẩu hiện tại.",
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/RequestDeactivationRequest" },
+          },
+        },
+      },
+      responses: {
+        200: {
+          description:
+            "Yêu cầu vô hiệu hóa đã được tiếp nhận và email đã được gửi",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  message: {
+                    type: "string",
+                    example:
+                      "Email xác nhận vô hiệu hóa tài khoản đã được gửi. Vui lòng kiểm tra hộp thư của bạn.",
+                  },
+                },
+              },
+            },
+          },
+        },
+        400: {
+          description:
+            "Dữ liệu không hợp lệ hoặc tài khoản là Quản trị viên duy nhất",
+        },
+        401: { description: "Chưa xác thực hoặc mật khẩu không chính xác" },
+      },
+    },
+  },
+  "/auth/deactivate/confirm": {
+    post: {
+      tags: ["Auth"],
+      summary: "Xác nhận vô hiệu hóa tài khoản",
+      description:
+        "Sử dụng token được gửi qua email để hoàn tất vô hiệu hóa tài khoản. Khi hoàn tất, tài khoản bị vô hiệu hóa, toàn bộ refresh tokens, API keys và lịch crawl bị thu hồi.",
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/ConfirmDeactivationRequest" },
+          },
+        },
+      },
+      responses: {
+        200: {
+          description: "Vô hiệu hóa tài khoản thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  message: {
+                    type: "string",
+                    example:
+                      "Tài khoản của bạn đã được vô hiệu hóa thành công.",
+                  },
+                },
+              },
+            },
+          },
+        },
+        400: {
+          description:
+            "Mã xác nhận không hợp lệ, đã hết hạn hoặc tài khoản đã bị vô hiệu hóa",
+        },
+      },
+    },
+  },
   "/users": {
     get: {
       tags: ["Users"],
