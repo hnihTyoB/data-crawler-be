@@ -1,22 +1,22 @@
-import fs from 'fs';
-import path from 'path';
-import { Readable } from 'stream';
-import { pipeline } from 'stream/promises';
-import type { ReadableStream as NodeReadableStream } from 'stream/web';
+import fs from "fs";
+import path from "path";
+import { Readable } from "stream";
+import { pipeline } from "stream/promises";
+import type { ReadableStream as NodeReadableStream } from "stream/web";
 import {
   DeleteObjectCommand,
   GetObjectCommand,
   HeadObjectCommand,
   S3Client,
-} from '@aws-sdk/client-s3';
-import { Upload } from '@aws-sdk/lib-storage';
+} from "@aws-sdk/client-s3";
+import { Upload } from "@aws-sdk/lib-storage";
 import {
   IStorageService,
   UploadResult,
   UploadStreamOptions,
-} from './storage.interface';
-import { storageConfig } from '../../config/storage.config';
-import { ensureDirExists, getFileSizeBytes } from '../helpers/file.helper';
+} from "./storage.interface";
+import { storageConfig } from "../../config/storage.config";
+import { ensureDirExists, getFileSizeBytes } from "../helpers/file.helper";
 
 export class S3StorageService implements IStorageService {
   private readonly config = storageConfig.s3;
@@ -37,8 +37,8 @@ export class S3StorageService implements IStorageService {
               }
             : undefined,
         // Avoid optional checksum headers that older MinIO versions reject.
-        requestChecksumCalculation: 'WHEN_REQUIRED',
-        responseChecksumValidation: 'WHEN_REQUIRED',
+        requestChecksumCalculation: "WHEN_REQUIRED",
+        responseChecksumValidation: "WHEN_REQUIRED",
       });
   }
 
@@ -109,9 +109,8 @@ export class S3StorageService implements IStorageService {
     }
 
     const webStreamBody = body as
-      | { transformToWebStream?: () => NodeReadableStream }
-      | undefined;
-    if (typeof webStreamBody?.transformToWebStream === 'function') {
+      { transformToWebStream?: () => NodeReadableStream } | undefined;
+    if (typeof webStreamBody?.transformToWebStream === "function") {
       return Readable.fromWeb(webStreamBody.transformToWebStream());
     }
 
@@ -144,8 +143,8 @@ export class S3StorageService implements IStorageService {
       const statusCode = storageError.$metadata?.httpStatusCode;
       if (
         statusCode === 404 ||
-        storageError.name === 'NotFound' ||
-        storageError.name === 'NoSuchKey'
+        storageError.name === "NotFound" ||
+        storageError.name === "NoSuchKey"
       ) {
         return false;
       }
@@ -154,17 +153,17 @@ export class S3StorageService implements IStorageService {
   }
 
   private normalizeKey(destinationKey: string): string {
-    return destinationKey.replace(/\\/g, '/').replace(/^\/+/, '');
+    return destinationKey.replace(/\\/g, "/").replace(/^\/+/, "");
   }
 
   private buildObjectUrl(key: string): string {
     const encodedKey = key
-      .split('/')
+      .split("/")
       .map((segment) => encodeURIComponent(segment))
-      .join('/');
+      .join("/");
 
     if (this.config.endpoint) {
-      return `${this.config.endpoint.replace(/\/+$/, '')}/${encodeURIComponent(
+      return `${this.config.endpoint.replace(/\/+$/, "")}/${encodeURIComponent(
         this.config.bucket,
       )}/${encodedKey}`;
     }

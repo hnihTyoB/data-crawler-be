@@ -1,27 +1,40 @@
-import { Request, Response, NextFunction } from 'express';
-import { WebhookConfigService } from './webhook-config.service';
-import { WebhookDeliveryService } from './webhook-delivery.service';
-import { AuditLogService } from '../audit-logs/audit-log.service';
-import { AUDIT_ACTIONS } from '../../common/constants/audit-action.constant';
+import { Request, Response, NextFunction } from "express";
+import { WebhookConfigService } from "./webhook-config.service";
+import { WebhookDeliveryService } from "./webhook-delivery.service";
+import { AuditLogService } from "../audit-logs/audit-log.service";
+import { AUDIT_ACTIONS } from "../../common/constants/audit-action.constant";
 
 export class WebhookController {
   private readonly configService = new WebhookConfigService();
   private readonly deliveryService = new WebhookDeliveryService();
   private readonly auditLogService = new AuditLogService();
 
-  createConfig = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  createConfig = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const userId = req.user.id;
       const { url, secret, events } = req.body;
 
-      const result = await this.configService.create(userId, url, secret, events);
+      const result = await this.configService.create(
+        userId,
+        url,
+        secret,
+        events,
+      );
 
       await this.auditLogService.log({
         userId,
         action: AUDIT_ACTIONS.CREATE_WEBHOOK_CONFIG,
         ipAddress: req.ip,
-        userAgent: req.headers['user-agent'] as string,
-        details: { webhookConfigId: result.id, url: result.url, events: result.events },
+        userAgent: req.headers["user-agent"] as string,
+        details: {
+          webhookConfigId: result.id,
+          url: result.url,
+          events: result.events,
+        },
       });
 
       res.status(201).json({
@@ -33,7 +46,11 @@ export class WebhookController {
     }
   };
 
-  listConfigs = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  listConfigs = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const userId = req.user.id;
       const result = await this.configService.list(userId);
@@ -47,7 +64,11 @@ export class WebhookController {
     }
   };
 
-  deleteConfig = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  deleteConfig = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const userId = req.user.id;
       const configId = req.params.id;
@@ -58,7 +79,7 @@ export class WebhookController {
         userId,
         action: AUDIT_ACTIONS.DELETE_WEBHOOK_CONFIG,
         ipAddress: req.ip,
-        userAgent: req.headers['user-agent'] as string,
+        userAgent: req.headers["user-agent"] as string,
         details: { webhookConfigId: configId, url: result.url },
       });
 
@@ -71,11 +92,19 @@ export class WebhookController {
     }
   };
 
-  updateConfig = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  updateConfig = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const userId = req.user.id;
       const configId = req.params.id;
-      const result = await this.configService.update(configId, userId, req.body);
+      const result = await this.configService.update(
+        configId,
+        userId,
+        req.body,
+      );
 
       res.json({
         success: true,
@@ -86,7 +115,11 @@ export class WebhookController {
     }
   };
 
-  testConfig = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  testConfig = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const userId = req.user.id;
       const configId = req.params.id;
@@ -101,7 +134,11 @@ export class WebhookController {
     }
   };
 
-  listDeliveries = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  listDeliveries = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const userId = req.user.id;
       const jobId = req.query.jobId as string | undefined;
@@ -109,7 +146,12 @@ export class WebhookController {
       const page = req.query.page ? Number(req.query.page) : undefined;
       const limit = req.query.limit ? Number(req.query.limit) : undefined;
 
-      const result = await this.deliveryService.listDeliveries(userId, { jobId, status, page, limit });
+      const result = await this.deliveryService.listDeliveries(userId, {
+        jobId,
+        status,
+        page,
+        limit,
+      });
 
       res.json({
         success: true,
@@ -120,7 +162,11 @@ export class WebhookController {
     }
   };
 
-  redeliver = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  redeliver = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const userId = req.user.id;
       const deliveryId = req.params.id;
@@ -131,13 +177,13 @@ export class WebhookController {
         userId,
         action: AUDIT_ACTIONS.REDELIVER_WEBHOOK,
         ipAddress: req.ip,
-        userAgent: req.headers['user-agent'] as string,
+        userAgent: req.headers["user-agent"] as string,
         details: { deliveryId: result.id, event: result.event },
       });
 
       res.json({
         success: true,
-        message: 'Webhook redelivery enqueued successfully',
+        message: "Webhook redelivery enqueued successfully",
         data: result,
       });
     } catch (error) {

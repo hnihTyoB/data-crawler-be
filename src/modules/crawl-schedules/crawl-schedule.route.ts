@@ -1,20 +1,20 @@
-import { Router } from 'express';
-import { CrawlScheduleController } from './crawl-schedule.controller';
-import { apiKeyOrAuthMiddleware } from '../../middlewares/api-key.middleware';
-import { validate, validateQuery } from '../../middlewares/validate.middleware';
+import { Router } from "express";
+import { CrawlScheduleController } from "./crawl-schedule.controller";
+import { apiKeyOrAuthMiddleware } from "../../middlewares/api-key.middleware";
+import { validate, validateQuery } from "../../middlewares/validate.middleware";
 import {
   createCrawlScheduleSchema,
   updateCrawlScheduleSchema,
   crawlScheduleQuerySchema,
-} from './crawl-schedule.validation';
-import { requireRole } from '../../middlewares/role.middleware';
-import { ROLES } from '../../common/constants/role.constant';
+} from "./crawl-schedule.validation";
+import { requireRole } from "../../middlewares/role.middleware";
+import { ROLES } from "../../common/constants/role.constant";
 
 const router = Router();
 const controller = new CrawlScheduleController();
 
 router.post(
-  '/',
+  "/",
   apiKeyOrAuthMiddleware,
   requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER),
   validate(createCrawlScheduleSchema),
@@ -22,7 +22,7 @@ router.post(
 );
 
 router.get(
-  '/',
+  "/",
   apiKeyOrAuthMiddleware,
   requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER),
   validateQuery(crawlScheduleQuerySchema),
@@ -30,14 +30,14 @@ router.get(
 );
 
 router.get(
-  '/:id',
+  "/:id",
   apiKeyOrAuthMiddleware,
   requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER),
   controller.findById,
 );
 
 router.patch(
-  '/:id',
+  "/:id",
   apiKeyOrAuthMiddleware,
   requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER),
   validate(updateCrawlScheduleSchema),
@@ -45,21 +45,21 @@ router.patch(
 );
 
 router.delete(
-  '/:id',
+  "/:id",
   apiKeyOrAuthMiddleware,
   requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER),
   controller.delete,
 );
 
 router.post(
-  '/:id/run',
+  "/:id/run",
   apiKeyOrAuthMiddleware,
   requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER),
   controller.triggerRun,
 );
 
 router.get(
-  '/:id/history',
+  "/:id/history",
   apiKeyOrAuthMiddleware,
   requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER),
   controller.getHistory,

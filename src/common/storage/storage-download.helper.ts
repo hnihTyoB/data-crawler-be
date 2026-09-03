@@ -1,8 +1,8 @@
-import { Response } from 'express';
-import { pipeline } from 'stream/promises';
-import { AppError } from '../errors/app-error';
-import { ERROR_CODE } from '../errors/error-code';
-import { StorageFactory } from './storage.factory';
+import { Response } from "express";
+import { pipeline } from "stream/promises";
+import { AppError } from "../errors/app-error";
+import { ERROR_CODE } from "../errors/error-code";
+import { StorageFactory } from "./storage.factory";
 
 interface StoredDownload {
   fileName: string;
@@ -19,26 +19,26 @@ export async function streamStorageDownload(
 
   if (!(await storage.exists(file.filePath))) {
     throw new AppError(
-      'Export file not found in storage',
+      "Export file not found in storage",
       404,
       ERROR_CODE.EXPORT_FILE_MISSING,
     );
   }
 
   const source = await storage.getReadStream(file.filePath);
-  const safeFileName = file.fileName.replace(/[\r\n"]/g, '_');
+  const safeFileName = file.fileName.replace(/[\r\n"]/g, "_");
   const encodedFileName = encodeURIComponent(file.fileName);
 
   response.setHeader(
-    'Content-Disposition',
+    "Content-Disposition",
     `attachment; filename="${safeFileName}"; filename*=UTF-8''${encodedFileName}`,
   );
   response.setHeader(
-    'Content-Type',
-    file.mimeType || 'application/octet-stream',
+    "Content-Type",
+    file.mimeType || "application/octet-stream",
   );
   if (file.fileSize !== null && file.fileSize !== undefined) {
-    response.setHeader('Content-Length', String(file.fileSize));
+    response.setHeader("Content-Length", String(file.fileSize));
   }
 
   await pipeline(source, response);

@@ -1,11 +1,13 @@
-import 'dotenv/config';
-import { envConfig } from '../config/env.config';
-import { CrawlScheduleService } from '../modules/crawl-schedules/crawl-schedule.service';
+import "dotenv/config";
+import { envConfig } from "../config/env.config";
+import { CrawlScheduleService } from "../modules/crawl-schedules/crawl-schedule.service";
 
-import { getErrorMessage } from '../common/helpers/error-mapping.helper';
+import { getErrorMessage } from "../common/helpers/error-mapping.helper";
 
 if (!envConfig.redis.enabled) {
-  console.log('[Schedule Worker] REDIS_ENABLED is not set to true. Schedule Worker will not start.');
+  console.log(
+    "[Schedule Worker] REDIS_ENABLED is not set to true. Schedule Worker will not start.",
+  );
   process.exit(0);
 }
 
@@ -19,17 +21,23 @@ export async function checkAndProcessDueSchedules() {
   try {
     const triggered = await scheduleService.processDueSchedules();
     if (triggered > 0) {
-      console.log(`[Schedule Worker] Triggered ${triggered} due scheduled crawl jobs`);
+      console.log(
+        `[Schedule Worker] Triggered ${triggered} due scheduled crawl jobs`,
+      );
     }
   } catch (err: unknown) {
-    console.error(`[Schedule Worker] Error processing due schedules: ${getErrorMessage(err)}`);
+    console.error(
+      `[Schedule Worker] Error processing due schedules: ${getErrorMessage(err)}`,
+    );
   } finally {
     isProcessing = false;
   }
 }
 
 export function startScheduleWorker(intervalMs = 60000): void {
-  console.log(`[Schedule Worker] Started checking due schedules every ${intervalMs / 1000}s`);
+  console.log(
+    `[Schedule Worker] Started checking due schedules every ${intervalMs / 1000}s`,
+  );
   // Run an immediate check on startup
   void checkAndProcessDueSchedules();
   intervalTimer = setInterval(() => {
@@ -41,7 +49,7 @@ export function stopScheduleWorker(): void {
   if (intervalTimer) {
     clearInterval(intervalTimer);
     intervalTimer = null;
-    console.log('[Schedule Worker] Stopped');
+    console.log("[Schedule Worker] Stopped");
   }
 }
 
@@ -55,6 +63,6 @@ if (require.main === module) {
     process.exit(0);
   };
 
-  process.on('SIGTERM', () => shutdown('SIGTERM'));
-  process.on('SIGINT', () => shutdown('SIGINT'));
+  process.on("SIGTERM", () => shutdown("SIGTERM"));
+  process.on("SIGINT", () => shutdown("SIGINT"));
 }

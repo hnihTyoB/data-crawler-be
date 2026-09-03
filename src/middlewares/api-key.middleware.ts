@@ -1,13 +1,17 @@
-import { Request, Response, NextFunction } from 'express';
-import { ApiKeyService } from '../modules/api-keys/api-key.service';
-import { authMiddleware } from './auth.middleware';
-import { AppError } from '../common/errors/app-error';
-import { ERROR_CODE } from '../common/errors/error-code';
+import { Request, Response, NextFunction } from "express";
+import { ApiKeyService } from "../modules/api-keys/api-key.service";
+import { authMiddleware } from "./auth.middleware";
+import { AppError } from "../common/errors/app-error";
+import { ERROR_CODE } from "../common/errors/error-code";
 
 const apiKeyService = new ApiKeyService();
 
-export async function apiKeyOrAuthMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
-  const apiKey = req.headers['x-api-key'] as string | undefined;
+export async function apiKeyOrAuthMiddleware(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
+  const apiKey = req.headers["x-api-key"] as string | undefined;
 
   if (apiKey) {
     try {
@@ -15,12 +19,20 @@ export async function apiKeyOrAuthMiddleware(req: Request, res: Response, next: 
       const user = validKeyRecord.user;
 
       if (!user) {
-        next(new AppError('User associated with API key not found', 401, ERROR_CODE.UNAUTHORIZED));
+        next(
+          new AppError(
+            "User associated with API key not found",
+            401,
+            ERROR_CODE.UNAUTHORIZED,
+          ),
+        );
         return;
       }
 
       if (!user.isActive) {
-        next(new AppError('Account is inactive', 403, ERROR_CODE.USER_INACTIVE));
+        next(
+          new AppError("Account is inactive", 403, ERROR_CODE.USER_INACTIVE),
+        );
         return;
       }
 
@@ -38,4 +50,3 @@ export async function apiKeyOrAuthMiddleware(req: Request, res: Response, next: 
     authMiddleware(req, res, next);
   }
 }
-

@@ -1,35 +1,35 @@
-import fs from 'fs';
-import path from 'path';
-import archiver from 'archiver';
-import { PassThrough } from 'stream';
-import { CrawlJob, CrawlPage } from '@prisma/client';
-import { CrawlAssetRepository } from '../crawl-assets/crawl-asset.repository';
+import fs from "fs";
+import path from "path";
+import archiver from "archiver";
+import { PassThrough } from "stream";
+import { CrawlJob, CrawlPage } from "@prisma/client";
+import { CrawlAssetRepository } from "../crawl-assets/crawl-asset.repository";
 import {
   JOB_EXPORT_FILES,
   JOB_EXPORT_SUBDIRS,
   buildCrawlResultZipKey,
   buildCrawlResultZipName,
-} from '../../common/constants/storage-path.constant';
-import { EXPORT_MIME_TYPES } from '../../common/constants/export-type.constant';
+} from "../../common/constants/storage-path.constant";
+import { EXPORT_MIME_TYPES } from "../../common/constants/export-type.constant";
 import {
   buildJobLogsFilePath,
   buildJobRootFilePath,
   ensureJobExportStructure,
   buildJobDataFilePath,
-} from '../../common/helpers/file.helper';
-import { JsonExportService } from './json-export.service';
-import { CsvExportService } from './csv-export.service';
-import { XlsxExportService } from './xlsx-export.service';
-import { MarkdownExportService } from './markdown-export.service';
-import { BaseExportService } from './base-export.service';
+} from "../../common/helpers/file.helper";
+import { JsonExportService } from "./json-export.service";
+import { CsvExportService } from "./csv-export.service";
+import { XlsxExportService } from "./xlsx-export.service";
+import { MarkdownExportService } from "./markdown-export.service";
+import { BaseExportService } from "./base-export.service";
 import {
   extractMainContent,
   countWords,
   hashContent,
   calcDataQualityScore,
   detectWarnings,
-} from '../../common/helpers/data-contract.helper';
-import { StorageFactory } from '../../common/storage/storage.factory';
+} from "../../common/helpers/data-contract.helper";
+import { StorageFactory } from "../../common/storage/storage.factory";
 
 export class ZipExportService extends BaseExportService {
   readonly mimeType = EXPORT_MIME_TYPES.ZIP;
@@ -63,7 +63,10 @@ export class ZipExportService extends BaseExportService {
   }
 
   private writeStructuredJson(job: CrawlJob & { pages: CrawlPage[] }): void {
-    const { filePath } = buildJobDataFilePath(job.id, JOB_EXPORT_FILES.STRUCTURED_JSON);
+    const { filePath } = buildJobDataFilePath(
+      job.id,
+      JOB_EXPORT_FILES.STRUCTURED_JSON,
+    );
     const records = job.pages
       .filter((p) => p.structuredData != null)
       .map((p) => ({
@@ -71,7 +74,11 @@ export class ZipExportService extends BaseExportService {
         url: p.url,
         structuredData: p.structuredData,
       }));
-    fs.writeFileSync(filePath, JSON.stringify({ jobId: job.id, records }, null, 2), 'utf-8');
+    fs.writeFileSync(
+      filePath,
+      JSON.stringify({ jobId: job.id, records }, null, 2),
+      "utf-8",
+    );
   }
 
   private writeMetadata(job: CrawlJob): void {
@@ -89,14 +96,14 @@ export class ZipExportService extends BaseExportService {
       maxDepth: job.maxDepth,
       exportedAt: new Date().toISOString(),
     };
-    fs.writeFileSync(filePath, JSON.stringify(metadata, null, 2), 'utf-8');
+    fs.writeFileSync(filePath, JSON.stringify(metadata, null, 2), "utf-8");
   }
 
   private writeSummary(job: CrawlJob & { pages: CrawlPage[] }): void {
     const { filePath } = buildJobRootFilePath(job.id, JOB_EXPORT_FILES.SUMMARY);
-    const successPages = job.pages.filter((p) => p.status === 'SUCCESS').length;
+    const successPages = job.pages.filter((p) => p.status === "SUCCESS").length;
     const failedPages = job.pages.filter(
-      (p) => p.status !== 'SUCCESS' && p.status !== 'SKIPPED',
+      (p) => p.status !== "SUCCESS" && p.status !== "SKIPPED",
     ).length;
 
     const summary = {
@@ -107,7 +114,7 @@ export class ZipExportService extends BaseExportService {
       failedPages,
       exportedAt: new Date().toISOString(),
     };
-    fs.writeFileSync(filePath, JSON.stringify(summary, null, 2), 'utf-8');
+    fs.writeFileSync(filePath, JSON.stringify(summary, null, 2), "utf-8");
   }
 
   private writeErrors(job: CrawlJob & { pages: CrawlPage[] }): void {
@@ -116,7 +123,12 @@ export class ZipExportService extends BaseExportService {
       JOB_EXPORT_FILES.ERRORS_JSON,
     );
     const errors = job.pages
-      .filter((p) => p.status !== 'SUCCESS' && p.status !== 'PENDING' && p.status !== 'SKIPPED')
+      .filter(
+        (p) =>
+          p.status !== "SUCCESS" &&
+          p.status !== "PENDING" &&
+          p.status !== "SKIPPED",
+      )
       .map((p) => ({
         url: p.url,
         status: p.status,
@@ -124,15 +136,21 @@ export class ZipExportService extends BaseExportService {
         errorMessage: p.errorMessage,
         crawledAt: p.crawledAt?.toISOString() ?? null,
       }));
-    fs.writeFileSync(filePath, JSON.stringify(errors, null, 2), 'utf-8');
+    fs.writeFileSync(filePath, JSON.stringify(errors, null, 2), "utf-8");
   }
 
   private writeDataQuality(job: CrawlJob & { pages: CrawlPage[] }): void {
-    const { filePath } = buildJobRootFilePath(job.id, JOB_EXPORT_FILES.DATA_QUALITY_JSON);
+    const { filePath } = buildJobRootFilePath(
+      job.id,
+      JOB_EXPORT_FILES.DATA_QUALITY_JSON,
+    );
 
-    const successPages = job.pages.filter((p) => p.status === 'SUCCESS');
+    const successPages = job.pages.filter((p) => p.status === "SUCCESS");
     const errorPages = job.pages.filter(
-      (p) => p.status !== 'SUCCESS' && p.status !== 'SKIPPED' && p.status !== 'PENDING',
+      (p) =>
+        p.status !== "SUCCESS" &&
+        p.status !== "SKIPPED" &&
+        p.status !== "PENDING",
     );
 
     const seenHashes = new Set<string>();
@@ -144,13 +162,19 @@ export class ZipExportService extends BaseExportService {
     for (const page of successPages) {
       const rawMarkdown = page.markdownContent ?? null;
       const mainContent = extractMainContent(rawMarkdown) || null;
-      const cleanText = mainContent ? mainContent.replace(/[#*_\[\]`>]/g, '').replace(/\s+/g, ' ').trim() : null;
+      const cleanText = mainContent
+        ? mainContent
+            .replace(/[#*_\[\]`>]/g, "")
+            .replace(/\s+/g, " ")
+            .trim()
+        : null;
       const wordCount = cleanText ? countWords(cleanText) : 0;
       const contentHash = cleanText ? hashContent(cleanText) : null;
 
-      const originalLines = rawMarkdown ? rawMarkdown.split('\n').length : 0;
-      const mainLines = mainContent ? mainContent.split('\n').length : 0;
-      const isNavNoise = originalLines > 10 && (originalLines - mainLines) / originalLines > 0.3;
+      const originalLines = rawMarkdown ? rawMarkdown.split("\n").length : 0;
+      const mainLines = mainContent ? mainContent.split("\n").length : 0;
+      const isNavNoise =
+        originalLines > 10 && (originalLines - mainLines) / originalLines > 0.3;
       const isDuplicate = contentHash !== null && seenHashes.has(contentHash);
       if (contentHash && !isDuplicate) seenHashes.add(contentHash);
 
@@ -180,7 +204,8 @@ export class ZipExportService extends BaseExportService {
       }
     }
 
-    const cleanPages = successPages.length - duplicateRemoved - navNoisePages - tooShortPages;
+    const cleanPages =
+      successPages.length - duplicateRemoved - navNoisePages - tooShortPages;
     const cleanDataRatio =
       job.pages.length > 0
         ? parseFloat((Math.max(0, cleanPages) / job.pages.length).toFixed(4))
@@ -209,7 +234,7 @@ export class ZipExportService extends BaseExportService {
       ),
     };
 
-    fs.writeFileSync(filePath, JSON.stringify(report, null, 2), 'utf-8');
+    fs.writeFileSync(filePath, JSON.stringify(report, null, 2), "utf-8");
   }
 
   private async createResultZip(jobId: string): Promise<{
@@ -222,15 +247,15 @@ export class ZipExportService extends BaseExportService {
     const destinationKey = buildCrawlResultZipKey(jobId);
     const rootDir = ensureJobExportStructure(jobId);
     const storage = StorageFactory.getStorageService();
-    const archive = archiver('zip', { zlib: { level: 9 } });
+    const archive = archiver("zip", { zlib: { level: 9 } });
     const zipStream = new PassThrough();
 
-    archive.on('warning', (error) => {
-      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+    archive.on("warning", (error) => {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
         zipStream.destroy(error);
       }
     });
-    archive.on('error', (error) => zipStream.destroy(error));
+    archive.on("error", (error) => zipStream.destroy(error));
     archive.pipe(zipStream);
 
     const uploadPromise = storage.uploadStream(destinationKey, zipStream, {
@@ -289,7 +314,7 @@ export class ZipExportService extends BaseExportService {
 
       const rawJsonPath = path.join(
         dataDir,
-        'raw',
+        "raw",
         JOB_EXPORT_FILES.PAGES_RAW_JSON,
       );
       if (fs.existsSync(rawJsonPath)) {
@@ -303,7 +328,7 @@ export class ZipExportService extends BaseExportService {
 
       const cleanJsonPath = path.join(
         dataDir,
-        'clean',
+        "clean",
         JOB_EXPORT_FILES.PAGES_CLEAN_JSON,
       );
       if (fs.existsSync(cleanJsonPath)) {

@@ -1,14 +1,14 @@
-import fs from 'fs';
-import path from 'path';
-import { Readable } from 'stream';
-import { pipeline } from 'stream/promises';
+import fs from "fs";
+import path from "path";
+import { Readable } from "stream";
+import { pipeline } from "stream/promises";
 import {
   IStorageService,
   UploadResult,
   UploadStreamOptions,
-} from './storage.interface';
-import { storageConfig } from '../../config/storage.config';
-import { ensureDirExists, getFileSizeBytes } from '../helpers/file.helper';
+} from "./storage.interface";
+import { storageConfig } from "../../config/storage.config";
+import { ensureDirExists, getFileSizeBytes } from "../helpers/file.helper";
 
 export class LocalStorageService implements IStorageService {
   private getAbsolutePath(key: string): string {

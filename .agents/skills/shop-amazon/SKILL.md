@@ -35,6 +35,7 @@ Gửi yêu cầu tới `POST /api/v1/crawl-jobs`:
 ```
 
 > **Quy tắc chống chặn (Anti-bot):**
+>
 > - Amazon áp dụng cơ chế phát hiện bot rất mạnh. Luôn đặt `delayMs >= 2000`ms.
 > - Đảm bảo worker bắt cờ `CAPTCHA_DETECTED` hoặc `BLOCKED` trong bảng `crawl_pages` để cảnh báo kịp thời.
 
@@ -49,12 +50,43 @@ Gửi yêu cầu tới `POST /api/v1/crawl-jobs`:
   "domain": "amazon.com",
   "name": "Amazon Product Standard Template",
   "fields": [
-    { "name": "title", "selector": "#productTitle, h2 a.a-link-normal span", "type": "text", "required": true },
-    { "name": "price", "selector": ".a-price .a-offscreen, span.a-price-whole", "type": "text", "required": false },
-    { "name": "rating", "selector": "span[data-hook='rating-out-of-text'], span.a-icon-alt", "type": "text", "required": false },
-    { "name": "reviewCount", "selector": "#acrCustomerReviewText, span[data-hook='total-review-count']", "type": "number", "required": false },
-    { "name": "mainImage", "selector": "#landingImage, .s-image", "type": "attribute", "attributeName": "src", "required": false },
-    { "name": "availability", "selector": "#availability span", "type": "text", "required": false }
+    {
+      "name": "title",
+      "selector": "#productTitle, h2 a.a-link-normal span",
+      "type": "text",
+      "required": true
+    },
+    {
+      "name": "price",
+      "selector": ".a-price .a-offscreen, span.a-price-whole",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "rating",
+      "selector": "span[data-hook='rating-out-of-text'], span.a-icon-alt",
+      "type": "text",
+      "required": false
+    },
+    {
+      "name": "reviewCount",
+      "selector": "#acrCustomerReviewText, span[data-hook='total-review-count']",
+      "type": "number",
+      "required": false
+    },
+    {
+      "name": "mainImage",
+      "selector": "#landingImage, .s-image",
+      "type": "attribute",
+      "attributeName": "src",
+      "required": false
+    },
+    {
+      "name": "availability",
+      "selector": "#availability span",
+      "type": "text",
+      "required": false
+    }
   ]
 }
 ```
@@ -64,5 +96,6 @@ Gửi yêu cầu tới `POST /api/v1/crawl-jobs`:
 ## 4. Xuất Dữ Liệu Sau Khi Cào
 
 Sau khi Job đạt trạng thái `COMPLETED`:
+
 - Kích hoạt export sang Excel qua `POST /api/v1/exports` với `exportType: "XLSX"`.
 - Báo cáo kết quả và đường dẫn tải file xuất cho người dùng.

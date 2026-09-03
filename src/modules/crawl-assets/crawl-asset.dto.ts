@@ -1,4 +1,4 @@
-import { AssetType } from '@prisma/client';
+import { AssetType } from "../../common/constants/asset-type.constant";
 
 export interface CreateCrawlAssetDto {
   jobId: string;

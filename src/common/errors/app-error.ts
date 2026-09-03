@@ -1,4 +1,4 @@
-import { ErrorCode } from './error-code';
+import { ErrorCode } from "./error-code";
 
 export class AppError extends Error {
   public readonly statusCode: number;
@@ -6,7 +6,12 @@ export class AppError extends Error {
   public readonly details?: unknown;
   public readonly isOperational: boolean;
 
-  constructor(message: string, statusCode: number = 500, code?: ErrorCode, details?: unknown) {
+  constructor(
+    message: string,
+    statusCode: number = 500,
+    code?: ErrorCode,
+    details?: unknown,
+  ) {
     super(message);
     this.statusCode = statusCode;
     this.code = code;
@@ -19,4 +24,3 @@ export class AppError extends Error {
     }
   }
 }
-

@@ -1,24 +1,28 @@
-import * as cheerio from 'cheerio';
-import { ExtractionTemplateRepository } from './extraction-template.repository';
-import { ExtractionFieldDto } from './extraction-template.dto';
-import { CrawlPageRepository } from '../crawl-pages/crawl-page.repository';
-import { FirecrawlPageResult } from '../firecrawl/firecrawl.dto';
+import * as cheerio from "cheerio";
+import { ExtractionTemplateRepository } from "./extraction-template.repository";
+import { ExtractionFieldDto } from "./extraction-template.dto";
+import { CrawlPageRepository } from "../crawl-pages/crawl-page.repository";
+import { FirecrawlPageResult } from "../firecrawl/firecrawl.dto";
 
 const getTemplateRepository = () => new ExtractionTemplateRepository();
 const getPageRepository = () => new CrawlPageRepository();
 
 function extractDomainFromUrl(url: string): string {
   try {
-    return new URL(url).hostname.replace(/^www\./, '');
+    return new URL(url).hostname.replace(/^www\./, "");
   } catch {
-    return '';
+    return "";
   }
 }
 
 function runSelectors(
   html: string,
   fields: ExtractionFieldDto[],
-): { success: boolean; data: Record<string, string | null>; missingRequired: string[] } {
+): {
+  success: boolean;
+  data: Record<string, string | null>;
+  missingRequired: string[];
+} {
   const $ = cheerio.load(html);
   const data: Record<string, string | null> = {};
   const missingRequired: string[] = [];
@@ -27,9 +31,10 @@ function runSelectors(
     const el = $(field.selector).first();
     let value: string | null = null;
     if (el.length > 0) {
-      value = field.attr === 'innerText'
-        ? (el.text().trim() || null)
-        : (el.attr(field.attr)?.trim() ?? null);
+      value =
+        field.attr === "innerText"
+          ? el.text().trim() || null
+          : (el.attr(field.attr)?.trim() ?? null);
     }
     data[field.name] = value;
     if (field.required && !value) missingRequired.push(field.name);
@@ -58,9 +63,10 @@ export async function runExtractionIfTemplate(
   // Extraction requires raw HTML — Firecrawl returns it via the html field
   // which is not currently surfaced in FirecrawlPageResult. We fall back to
   // markdownContent if html is unavailable.
-  const html = ('html' in item && typeof (item as { html?: string }).html === 'string')
-    ? (item as { html: string }).html
-    : (item.markdown ?? '');
+  const html =
+    "html" in item && typeof (item as { html?: string }).html === "string"
+      ? (item as { html: string }).html
+      : (item.markdown ?? "");
   if (!html) return;
 
   const domain = extractDomainFromUrl(pageUrl);

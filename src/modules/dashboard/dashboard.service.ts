@@ -1,5 +1,5 @@
-import { DashboardRepository } from './dashboard.repository';
-import { AuthService } from '../auth/auth.service';
+import { DashboardRepository } from "./dashboard.repository";
+import { AuthService } from "../auth/auth.service";
 
 export class DashboardService {
   private readonly repository = new DashboardRepository();

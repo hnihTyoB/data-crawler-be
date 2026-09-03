@@ -1,5 +1,5 @@
-import { PrismaClient } from '@prisma/client';
-import { databaseConfig } from '../config/database.config';
+import { PrismaClient } from "@prisma/client";
+import { databaseConfig } from "../config/database.config";
 
 export const prisma = new PrismaClient({
   datasources: {
@@ -7,7 +7,8 @@ export const prisma = new PrismaClient({
       url: databaseConfig.url,
     },
   },
-  log: process.env.NODE_ENV === 'development'
-    ? ['query', 'error', 'warn']
-    : ['error', 'warn'],
+  log:
+    process.env.NODE_ENV === "development"
+      ? ["query", "error", "warn"]
+      : ["error", "warn"],
 });

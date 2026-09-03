@@ -1,8 +1,8 @@
-import { Queue } from 'bullmq';
-import { envConfig } from '../config/env.config';
+import { Queue } from "bullmq";
+import { envConfig } from "../config/env.config";
 
 export const crawlQueue = envConfig.redis.enabled
-  ? new Queue('crawl-jobs', {
+  ? new Queue("crawl-jobs", {
       connection: {
         host: envConfig.redis.host,
         port: envConfig.redis.port,
@@ -11,7 +11,7 @@ export const crawlQueue = envConfig.redis.enabled
       },
       defaultJobOptions: {
         attempts: 3,
-        backoff: { type: 'exponential', delay: 10000 },
+        backoff: { type: "exponential", delay: 10000 },
         removeOnComplete: { count: 1000 },
         removeOnFail: { count: 5000 },
       },

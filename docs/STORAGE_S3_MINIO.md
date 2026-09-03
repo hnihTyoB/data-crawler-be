@@ -4,10 +4,10 @@
 
 Storage được chọn bằng `STORAGE_DRIVER`:
 
-| Cấu hình | Nơi lưu file |
-| --- | --- |
-| `STORAGE_DRIVER=local` | Lưu trực tiếp trong `STORAGE_EXPORT_DIR` |
-| `STORAGE_DRIVER=s3` | Dùng AWS S3, MinIO hoặc dịch vụ tương thích S3 |
+| Cấu hình               | Nơi lưu file                                   |
+| ---------------------- | ---------------------------------------------- |
+| `STORAGE_DRIVER=local` | Lưu trực tiếp trong `STORAGE_EXPORT_DIR`       |
+| `STORAGE_DRIVER=s3`    | Dùng AWS S3, MinIO hoặc dịch vụ tương thích S3 |
 
 Với JSON, CSV, XLSX và Markdown, hệ thống tạo file staging rồi upload lên storage. ZIP được stream trực tiếp lên storage, không tạo file ZIP local.
 

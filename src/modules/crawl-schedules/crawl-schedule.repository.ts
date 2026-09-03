@@ -1,6 +1,7 @@
-import { prisma } from '../../database/prisma.client';
-import { CrawlMode, ScheduleFrequency, Prisma } from '@prisma/client';
-import { CrawlScheduleQueryDto } from './crawl-schedule.dto';
+import { prisma } from "../../database/prisma.client";
+import { CrawlMode, ScheduleFrequency, Prisma } from "@prisma/client";
+import { CrawlScheduleQueryDto } from "./crawl-schedule.dto";
+import { DEFAULT_TIMEZONE } from "../../common/constants/timezone.constant";
 
 export class CrawlScheduleRepository {
   create(data: {
@@ -36,7 +37,7 @@ export class CrawlScheduleRepository {
         minute: data.minute ?? 0,
         dayOfWeek: data.dayOfWeek,
         dayOfMonth: data.dayOfMonth,
-        timezone: data.timezone ?? 'Asia/Ho_Chi_Minh',
+        timezone: data.timezone ?? DEFAULT_TIMEZONE,
         maxPages: data.maxPages ?? 20,
         maxDepth: data.maxDepth ?? 1,
         urls: data.urls ?? [],
@@ -109,26 +110,27 @@ export class CrawlScheduleRepository {
     }
     if (query.search) {
       where.OR = [
-        { name: { contains: query.search, mode: 'insensitive' } },
-        { startUrl: { contains: query.search, mode: 'insensitive' } },
-        { domain: { contains: query.search, mode: 'insensitive' } },
+        { name: { contains: query.search, mode: "insensitive" } },
+        { startUrl: { contains: query.search, mode: "insensitive" } },
+        { domain: { contains: query.search, mode: "insensitive" } },
       ];
     }
 
-    const sortBy = query.sortBy || 'createdAt';
-    const order = (query.order || 'desc') as Prisma.SortOrder;
+    const sortBy = query.sortBy || "createdAt";
+    const order = (query.order || "desc") as Prisma.SortOrder;
     const allowedSortFields = [
-      'createdAt',
-      'updatedAt',
-      'name',
-      'frequency',
-      'nextRunAt',
-      'lastRunAt',
-      'isActive',
+      "createdAt",
+      "updatedAt",
+      "name",
+      "frequency",
+      "nextRunAt",
+      "lastRunAt",
+      "isActive",
     ];
-    const orderBy: Prisma.CrawlScheduleOrderByWithRelationInput = allowedSortFields.includes(sortBy)
-      ? { [sortBy]: order }
-      : { createdAt: 'desc' };
+    const orderBy: Prisma.CrawlScheduleOrderByWithRelationInput =
+      allowedSortFields.includes(sortBy)
+        ? { [sortBy]: order }
+        : { createdAt: "desc" };
 
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(Math.max(1, Number(query.limit) || 20), 100);
@@ -177,7 +179,11 @@ export class CrawlScheduleRepository {
     });
   }
 
-  async claimDueSchedule(id: string, now: Date, nextRunAt: Date): Promise<boolean> {
+  async claimDueSchedule(
+    id: string,
+    now: Date,
+    nextRunAt: Date,
+  ): Promise<boolean> {
     const result = await prisma.crawlSchedule.updateMany({
       where: {
         id,

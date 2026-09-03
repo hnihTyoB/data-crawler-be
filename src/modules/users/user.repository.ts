@@ -1,7 +1,7 @@
-import { prisma } from '../../database/prisma.client';
-import { UserRole, Prisma, User } from '@prisma/client';
-import { UserQueryDto } from './user.dto';
-import { envConfig } from '../../config/env.config';
+import { prisma } from "../../database/prisma.client";
+import { UserRole, Prisma, User } from "@prisma/client";
+import { UserQueryDto } from "./user.dto";
+import { envConfig } from "../../config/env.config";
 
 export class UserRepository {
   async findAll(query: UserQueryDto = {}) {
@@ -10,25 +10,33 @@ export class UserRepository {
       where.role = query.role;
     }
     if (query.isActive !== undefined) {
-      if (typeof query.isActive === 'boolean') {
+      if (typeof query.isActive === "boolean") {
         where.isActive = query.isActive;
       } else {
-        where.isActive = query.isActive === 'true';
+        where.isActive = query.isActive === "true";
       }
     }
     if (query.search) {
       where.OR = [
-        { email: { contains: query.search, mode: 'insensitive' } },
-        { fullName: { contains: query.search, mode: 'insensitive' } },
+        { email: { contains: query.search, mode: "insensitive" } },
+        { fullName: { contains: query.search, mode: "insensitive" } },
       ];
     }
 
-    const sortBy = query.sortBy || 'createdAt';
-    const order = query.order || 'desc';
-    const allowedSortFields = ['createdAt', 'updatedAt', 'email', 'fullName', 'role', 'isActive'];
-    const orderBy: Prisma.UserOrderByWithRelationInput = allowedSortFields.includes(sortBy)
-      ? { [sortBy]: order }
-      : { createdAt: 'desc' };
+    const sortBy = query.sortBy || "createdAt";
+    const order = query.order || "desc";
+    const allowedSortFields = [
+      "createdAt",
+      "updatedAt",
+      "email",
+      "fullName",
+      "role",
+      "isActive",
+    ];
+    const orderBy: Prisma.UserOrderByWithRelationInput =
+      allowedSortFields.includes(sortBy)
+        ? { [sortBy]: order }
+        : { createdAt: "desc" };
 
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(Math.max(1, Number(query.limit) || 20), 100);
@@ -80,10 +88,13 @@ export class UserRepository {
         passwordHash: data.passwordHash,
         fullName: data.fullName,
         avatarUrl: data.avatarUrl,
-        role: data.role ?? 'CRAWLER_USER',
+        role: data.role ?? "CRAWLER_USER",
         maxPagesLimit: data.maxPagesLimit ?? envConfig.quota.defaultMaxPages,
-        maxJobsPerDayLimit: data.maxJobsPerDayLimit ?? envConfig.quota.defaultMaxJobsPerDay,
-        maxConcurrentJobsLimit: data.maxConcurrentJobsLimit ?? envConfig.quota.defaultMaxConcurrentJobs,
+        maxJobsPerDayLimit:
+          data.maxJobsPerDayLimit ?? envConfig.quota.defaultMaxJobsPerDay,
+        maxConcurrentJobsLimit:
+          data.maxConcurrentJobsLimit ??
+          envConfig.quota.defaultMaxConcurrentJobs,
       },
     });
   }

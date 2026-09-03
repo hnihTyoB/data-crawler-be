@@ -1,7 +1,10 @@
-import { ExtractionTemplateRepository } from './extraction-template.repository';
-import { CreateExtractionTemplateDto, UpdateExtractionTemplateDto } from './extraction-template.dto';
-import { AppError } from '../../common/errors/app-error';
-import { ERROR_CODE } from '../../common/errors/error-code';
+import { ExtractionTemplateRepository } from "./extraction-template.repository";
+import {
+  CreateExtractionTemplateDto,
+  UpdateExtractionTemplateDto,
+} from "./extraction-template.dto";
+import { AppError } from "../../common/errors/app-error";
+import { ERROR_CODE } from "../../common/errors/error-code";
 
 export class ExtractionTemplateService {
   private readonly repository = new ExtractionTemplateRepository();
@@ -10,7 +13,12 @@ export class ExtractionTemplateService {
     try {
       return await this.repository.create(userId, payload);
     } catch (err: unknown) {
-      if (err && typeof err === 'object' && 'code' in err && (err as { code: string }).code === 'P2002') {
+      if (
+        err &&
+        typeof err === "object" &&
+        "code" in err &&
+        (err as { code: string }).code === "P2002"
+      ) {
         throw new AppError(
           `A template for domain "${payload.domain}" already exists`,
           409,
@@ -28,12 +36,20 @@ export class ExtractionTemplateService {
   async findById(userId: string, id: string) {
     const template = await this.repository.findById(id);
     if (!template || template.userId !== userId) {
-      throw new AppError('Extraction template not found', 404, ERROR_CODE.NOT_FOUND);
+      throw new AppError(
+        "Extraction template not found",
+        404,
+        ERROR_CODE.NOT_FOUND,
+      );
     }
     return template;
   }
 
-  async update(userId: string, id: string, payload: UpdateExtractionTemplateDto) {
+  async update(
+    userId: string,
+    id: string,
+    payload: UpdateExtractionTemplateDto,
+  ) {
     await this.findById(userId, id);
     return this.repository.update(id, payload);
   }

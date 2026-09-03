@@ -1,11 +1,14 @@
-import type { ApiKey } from '@prisma/client';
+import type { ApiKey } from "@prisma/client";
 
-export type PublicApiKey = Omit<ApiKey, 'keyHash'>;
+export type PublicApiKey = Omit<ApiKey, "keyHash">;
 
 export type CreatedApiKey = PublicApiKey & {
   rawKey: string;
 };
 
-export function toPublicApiKey({ keyHash: _keyHash, ...apiKey }: ApiKey): PublicApiKey {
+export function toPublicApiKey({
+  keyHash: _keyHash,
+  ...apiKey
+}: ApiKey): PublicApiKey {
   return apiKey;
 }

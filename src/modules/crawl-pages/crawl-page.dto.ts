@@ -1,4 +1,4 @@
-import { CrawlPageStatus } from '@prisma/client';
+import { CrawlPageStatus } from "@prisma/client";
 
 export interface CreateCrawlPageDto {
   jobId: string;
@@ -29,7 +29,7 @@ export interface CrawlPageQueryDto {
   statusCode?: string | number;
   search?: string;
   sortBy?: string;
-  order?: 'asc' | 'desc';
+  order?: "asc" | "desc";
   page?: string | number;
   limit?: string | number;
   dataQualityScore?: string | number;
@@ -49,4 +49,3 @@ export interface CrawlPageQueryDto {
   maxWordCount?: string | number;
   preview?: string | boolean;
 }
-

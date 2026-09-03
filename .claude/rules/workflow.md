@@ -9,7 +9,7 @@
 Khi xây dựng một module hoặc tính năng mới, Agent cần thực hiện tuần tự theo 6 bước:
 
 ```
-[1. Khảo sát Schema & Yêu Cầu] 
+[1. Khảo sát Schema & Yêu Cầu]
         ↓
 [2. Viết Repository (Prisma Query)]
         ↓
@@ -82,6 +82,7 @@ pnpm build
 ## 5. Quy Trình Bổ Sung Queue Worker
 
 Khi tạo thêm Worker xử lý tác vụ nền:
+
 1. Tạo Queue tại `src/queues/<job-name>.queue.ts`.
 2. Tạo Processor xử lý logic tại `src/queues/<job-name>.worker.processor.ts`.
 3. Khởi tạo Worker file tại `src/queues/<job-name>.worker.ts`.

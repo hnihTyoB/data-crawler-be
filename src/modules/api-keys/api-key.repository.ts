@@ -1,5 +1,5 @@
-import { prisma } from '../../database/prisma.client';
-import { ApiKey } from '@prisma/client';
+import { prisma } from "../../database/prisma.client";
+import { ApiKey } from "@prisma/client";
 
 export class ApiKeyRepository {
   async create(data: {
@@ -26,7 +26,7 @@ export class ApiKeyRepository {
         userId,
       },
       orderBy: {
-        createdAt: 'desc',
+        createdAt: "desc",
       },
     });
   }
@@ -46,7 +46,10 @@ export class ApiKeyRepository {
     });
   }
 
-  async update(id: string, data: Partial<Omit<ApiKey, 'id' | 'createdAt' | 'updatedAt'>>): Promise<ApiKey> {
+  async update(
+    id: string,
+    data: Partial<Omit<ApiKey, "id" | "createdAt" | "updatedAt">>,
+  ): Promise<ApiKey> {
     return prisma.apiKey.update({
       where: { id },
       data,

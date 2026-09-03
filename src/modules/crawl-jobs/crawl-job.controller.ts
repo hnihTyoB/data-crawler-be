@@ -1,14 +1,18 @@
-import { Request, Response, NextFunction } from 'express';
-import { CrawlJobService } from './crawl-job.service';
-import { CrawlPageService } from '../crawl-pages/crawl-page.service';
-import { CrawlExportService } from '../crawl-exports/crawl-export.service';
-import { CreateCrawlJobDto, CrawlJobQueryDto } from './crawl-job.dto';
-import { CrawlPageQueryDto } from '../crawl-pages/crawl-page.dto';
-import { AuditLogService } from '../audit-logs/audit-log.service';
-import { AUDIT_ACTIONS } from '../../common/constants/audit-action.constant';
-import { CrawlAssetService } from '../crawl-assets/crawl-asset.service';
-import { AssetType } from '@prisma/client';
-import { streamStorageDownload } from '../../common/storage/storage-download.helper';
+import { Request, Response, NextFunction } from "express";
+import { CrawlJobService } from "./crawl-job.service";
+import { CrawlPageService } from "../crawl-pages/crawl-page.service";
+import { CrawlExportService } from "../crawl-exports/crawl-export.service";
+import { CreateCrawlJobDto, CrawlJobQueryDto } from "./crawl-job.dto";
+import { CrawlPageQueryDto } from "../crawl-pages/crawl-page.dto";
+import { AuditLogService } from "../audit-logs/audit-log.service";
+import { AUDIT_ACTIONS } from "../../common/constants/audit-action.constant";
+import { JOB_STATUS } from "../../common/constants/job-status.constant";
+import { CrawlAssetService } from "../crawl-assets/crawl-asset.service";
+import {
+  AssetType,
+  ASSET_TYPES,
+} from "../../common/constants/asset-type.constant";
+import { streamStorageDownload } from "../../common/storage/storage-download.helper";
 export class CrawlJobController {
   private readonly service = new CrawlJobService();
   private readonly pageService = new CrawlPageService();
@@ -26,7 +30,7 @@ export class CrawlJobController {
         userId,
         action: AUDIT_ACTIONS.CREATE_JOB,
         ipAddress: req.ip,
-        userAgent: req.headers['user-agent'] as string,
+        userAgent: req.headers["user-agent"] as string,
         details: {
           jobId: result.id,
           startUrl: result.startUrl,
@@ -84,7 +88,7 @@ export class CrawlJobController {
         userId,
         action: AUDIT_ACTIONS.CANCEL_JOB,
         ipAddress: req.ip,
-        userAgent: req.headers['user-agent'] as string,
+        userAgent: req.headers["user-agent"] as string,
         details: { jobId: req.params.id },
       });
 
@@ -133,14 +137,7 @@ export class CrawlJobController {
     try {
       await this.service.findById(req.user.id, req.user.role, req.params.id);
 
-      const VALID_ASSET_TYPES: string[] = [
-        'IMAGE',
-        'LINK',
-        'PDF',
-        'FILE',
-        'VIDEO',
-        'OTHER',
-      ];
+      const VALID_ASSET_TYPES: readonly string[] = Object.values(ASSET_TYPES);
       const rawType = req.query.assetType as string | undefined;
       if (rawType && !VALID_ASSET_TYPES.includes(rawType)) {
         res
@@ -149,8 +146,11 @@ export class CrawlJobController {
         return;
       }
       const assetType = rawType as AssetType | undefined;
-      const page = Math.max(1, parseInt(req.query.page as string || '1', 10));
-      const limit = Math.min(Math.max(1, parseInt(req.query.limit as string || '50', 10)), 500);
+      const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
+      const limit = Math.min(
+        Math.max(1, parseInt((req.query.limit as string) || "50", 10)),
+        500,
+      );
 
       const items = await this.assetService.findByJobId(
         req.params.id,
@@ -216,7 +216,7 @@ export class CrawlJobController {
         userId,
         action: AUDIT_ACTIONS.DOWNLOAD_EXPORT,
         ipAddress: req.ip,
-        userAgent: req.headers['user-agent'] as string,
+        userAgent: req.headers["user-agent"] as string,
         details: {
           jobId: req.params.id,
           exportId: exportRecord.id,
@@ -233,10 +233,14 @@ export class CrawlJobController {
   getDiff = async (req: Request, res: Response, next: NextFunction) => {
     try {
       await this.service.findById(req.user.id, req.user.role, req.params.id);
-      const { ChangeDetectionService } = await import('../change-detection/change-detection.service');
+      const { ChangeDetectionService } =
+        await import("../change-detection/change-detection.service");
       const changeDetectionService = new ChangeDetectionService();
       const compareWithJobId = req.query.compareWithJobId as string | undefined;
-      const diffReport = await changeDetectionService.getDiffReport(req.params.id, compareWithJobId);
+      const diffReport = await changeDetectionService.getDiffReport(
+        req.params.id,
+        compareWithJobId,
+      );
       res.json({
         success: true,
         data: diffReport,
@@ -249,14 +253,21 @@ export class CrawlJobController {
   downloadDiff = async (req: Request, res: Response, next: NextFunction) => {
     try {
       await this.service.findById(req.user.id, req.user.role, req.params.id);
-      const { ChangeDetectionService } = await import('../change-detection/change-detection.service');
+      const { ChangeDetectionService } =
+        await import("../change-detection/change-detection.service");
       const changeDetectionService = new ChangeDetectionService();
       const compareWithJobId = req.query.compareWithJobId as string | undefined;
-      const diffReport = await changeDetectionService.getDiffReport(req.params.id, compareWithJobId);
+      const diffReport = await changeDetectionService.getDiffReport(
+        req.params.id,
+        compareWithJobId,
+      );
 
       const jsonStr = JSON.stringify(diffReport, null, 2);
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Content-Disposition', `attachment; filename="diff_report_${req.params.id}.json"`);
+      res.setHeader("Content-Type", "application/json");
+      res.setHeader(
+        "Content-Disposition",
+        `attachment; filename="diff_report_${req.params.id}.json"`,
+      );
       res.send(jsonStr);
     } catch (error) {
       next(error);
@@ -266,20 +277,30 @@ export class CrawlJobController {
   streamEvents = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const jobId = req.params.id;
-      const initialJob = await this.service.findById(req.user.id, req.user.role, jobId);
+      const initialJob = await this.service.findById(
+        req.user.id,
+        req.user.role,
+        jobId,
+      );
 
-      res.setHeader('Content-Type', 'text/event-stream');
-      res.setHeader('Cache-Control', 'no-cache');
-      res.setHeader('Connection', 'keep-alive');
+      res.setHeader("Content-Type", "text/event-stream");
+      res.setHeader("Cache-Control", "no-cache");
+      res.setHeader("Connection", "keep-alive");
       if (res.flushHeaders) {
         res.flushHeaders();
       }
 
       res.write(`event: initial\ndata: ${JSON.stringify(initialJob)}\n\n`);
 
-      const TERMINAL_STATUSES = ['COMPLETED', 'FAILED', 'CANCELED'];
+      const TERMINAL_STATUSES: string[] = [
+        JOB_STATUS.COMPLETED,
+        JOB_STATUS.FAILED,
+        JOB_STATUS.CANCELED,
+      ];
       if (TERMINAL_STATUSES.includes(initialJob.status)) {
-        res.write(`event: done\ndata: ${JSON.stringify({ status: initialJob.status })}\n\n`);
+        res.write(
+          `event: done\ndata: ${JSON.stringify({ status: initialJob.status })}\n\n`,
+        );
         res.end();
         return;
       }
@@ -299,7 +320,7 @@ export class CrawlJobController {
         }
       };
 
-      req.on('close', () => {
+      req.on("close", () => {
         isClosed = true;
         cleanup();
       });
@@ -310,7 +331,9 @@ export class CrawlJobController {
         if (!isClosed) {
           isClosed = true;
           cleanup();
-          res.write(`event: done\ndata: ${JSON.stringify({ status: 'TIMEOUT', message: 'Stream reached max duration' })}\n\n`);
+          res.write(
+            `event: done\ndata: ${JSON.stringify({ status: "TIMEOUT", message: "Stream reached max duration" })}\n\n`,
+          );
           res.end();
         }
       }, MAX_STREAM_DURATION_MS);
@@ -318,11 +341,17 @@ export class CrawlJobController {
       interval = setInterval(async () => {
         if (isClosed) return;
         try {
-          const currentJob = await this.service.findById(req.user.id, req.user.role, jobId);
+          const currentJob = await this.service.findById(
+            req.user.id,
+            req.user.role,
+            jobId,
+          );
           res.write(`event: progress\ndata: ${JSON.stringify(currentJob)}\n\n`);
 
           if (TERMINAL_STATUSES.includes(currentJob.status)) {
-            res.write(`event: done\ndata: ${JSON.stringify({ status: currentJob.status })}\n\n`);
+            res.write(
+              `event: done\ndata: ${JSON.stringify({ status: currentJob.status })}\n\n`,
+            );
             cleanup();
             if (!isClosed) {
               isClosed = true;

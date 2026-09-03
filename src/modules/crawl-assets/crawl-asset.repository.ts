@@ -1,5 +1,5 @@
-import { prisma } from '../../database/prisma.client';
-import { AssetType } from '@prisma/client';
+import { prisma } from "../../database/prisma.client";
+import { AssetType } from "@prisma/client";
 
 export class CrawlAssetRepository {
   create(data: {
@@ -23,16 +23,18 @@ export class CrawlAssetRepository {
     });
   }
 
-  createMany(assets: Array<{
-    jobId: string;
-    pageId?: string;
-    assetType: AssetType;
-    url: string;
-    sourceUrl?: string;
-    altText?: string;
-    mimeType?: string;
-    orderIndex?: number;
-  }>) {
+  createMany(
+    assets: Array<{
+      jobId: string;
+      pageId?: string;
+      assetType: AssetType;
+      url: string;
+      sourceUrl?: string;
+      altText?: string;
+      mimeType?: string;
+      orderIndex?: number;
+    }>,
+  ) {
     const prismaAssets = assets.map(({ jobId, ...rest }) => ({
       ...rest,
       crawlJobId: jobId,
@@ -49,7 +51,7 @@ export class CrawlAssetRepository {
         crawlJobId: jobId,
         ...(assetType ? { assetType } : {}),
       },
-      orderBy: { createdAt: 'asc' },
+      orderBy: { createdAt: "asc" },
       skip,
       take: safeLimit,
     });

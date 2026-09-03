@@ -1,5 +1,5 @@
-import path from 'path';
-import { envConfig } from './env.config';
+import path from "path";
+import { envConfig } from "./env.config";
 
 export const storageConfig = {
   driver: envConfig.storage.driver,

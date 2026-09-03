@@ -1,8 +1,8 @@
-import fs from 'fs';
-import archiver from 'archiver';
-import { CrawlJob, CrawlPage } from '@prisma/client';
-import { JOB_EXPORT_SUBDIRS } from '../../common/constants/storage-path.constant';
-import { EXPORT_MIME_TYPES } from '../../common/constants/export-type.constant';
+import fs from "fs";
+import archiver from "archiver";
+import { CrawlJob, CrawlPage } from "@prisma/client";
+import { JOB_EXPORT_SUBDIRS } from "../../common/constants/storage-path.constant";
+import { EXPORT_MIME_TYPES } from "../../common/constants/export-type.constant";
 import {
   buildJobMarkdownFilePath,
   buildJobMarkdownRawFilePath,
@@ -10,9 +10,9 @@ import {
   buildJobMarkdownZipPath,
   buildJobSubDir,
   ensureJobExportStructure,
-} from '../../common/helpers/file.helper';
-import { BaseExportService } from './base-export.service';
-import { extractMainContent } from '../../common/helpers/data-contract.helper';
+} from "../../common/helpers/file.helper";
+import { BaseExportService } from "./base-export.service";
+import { extractMainContent } from "../../common/helpers/data-contract.helper";
 
 export class MarkdownExportService extends BaseExportService {
   readonly mimeType = EXPORT_MIME_TYPES.MARKDOWN;
@@ -42,27 +42,22 @@ export class MarkdownExportService extends BaseExportService {
         idx,
         page.url,
       );
-      fs.writeFileSync(filePath, rawContent, 'utf-8');
+      fs.writeFileSync(filePath, rawContent, "utf-8");
       results.push({ fileName, filePath });
 
       // 2. Ghi bản raw ở markdown/raw/
-      const { fileName: rawName, filePath: rawPath } = buildJobMarkdownRawFilePath(
-        job.id,
-        idx,
-        page.url,
-      );
-      fs.writeFileSync(rawPath, rawContent, 'utf-8');
+      const { fileName: rawName, filePath: rawPath } =
+        buildJobMarkdownRawFilePath(job.id, idx, page.url);
+      fs.writeFileSync(rawPath, rawContent, "utf-8");
       results.push({ fileName: rawName, filePath: rawPath });
 
       // 3. Ghi bản clean ở markdown/clean/
-      const { fileName: cleanName, filePath: cleanPath } = buildJobMarkdownCleanFilePath(
-        job.id,
-        idx,
-        page.url,
-      );
-      const cleanContent = extractMainContent(page.markdownContent) ||
+      const { fileName: cleanName, filePath: cleanPath } =
+        buildJobMarkdownCleanFilePath(job.id, idx, page.url);
+      const cleanContent =
+        extractMainContent(page.markdownContent) ||
         `# ${page.title ?? page.url}\n\n**URL:** ${page.url}\n\nNo clean content available.`;
-      fs.writeFileSync(cleanPath, cleanContent, 'utf-8');
+      fs.writeFileSync(cleanPath, cleanContent, "utf-8");
       results.push({ fileName: cleanName, filePath: cleanPath });
     });
 
@@ -77,13 +72,13 @@ export class MarkdownExportService extends BaseExportService {
 
     await new Promise<void>((resolve, reject) => {
       const output = fs.createWriteStream(filePath);
-      const archive = archiver('zip', { zlib: { level: 9 } });
+      const archive = archiver("zip", { zlib: { level: 9 } });
 
-      output.on('close', resolve);
-      archive.on('error', reject);
+      output.on("close", resolve);
+      archive.on("error", reject);
       archive.pipe(output);
 
-      archive.directory(markdownDir, 'markdown');
+      archive.directory(markdownDir, "markdown");
       archive.finalize();
     });
 

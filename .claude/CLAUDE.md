@@ -22,6 +22,7 @@ Route  →  Controller  →  Service  →  Repository  →  Prisma Client  →  
 ```
 
 ### Quy tắc bất di bất dịch:
+
 1. **Chỉ Repository được gọi Prisma:** Tuyệt đối **chỉ có** các file `*.repository.ts` được import `prisma` hoặc `PrismaClient`. Service, Controller, Worker hay Helper **không bao giờ** được gọi Prisma trực tiếp.
 2. **Cấu trúc Module chuẩn:** Mọi tính năng nghiệp vụ đặt tại `src/modules/<feature>/` với đầy đủ các file quy chuẩn:
    - `<feature>.route.ts`: Định nghĩa endpoint, gắn middleware (auth, validate, rate-limit).

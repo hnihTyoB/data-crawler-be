@@ -1,6 +1,6 @@
-import fs from 'fs';
-import { CrawlJob, Prisma } from '@prisma/client';
-import { CrawlJobRepository } from '../crawl-jobs/crawl-job.repository';
+import fs from "fs";
+import { CrawlJob, Prisma } from "@prisma/client";
+import { CrawlJobRepository } from "../crawl-jobs/crawl-job.repository";
 import {
   DiffReportEnvelope,
   DiffSummary,
@@ -8,12 +8,12 @@ import {
   ModifiedPageItem,
   DeletedPageItem,
   UnchangedPageItem,
-} from './change-detection.types';
-import { JOB_EXPORT_FILES } from '../../common/constants/storage-path.constant';
-import { buildJobRootFilePath } from '../../common/helpers/file.helper';
-import { normalizeUrl } from '../../common/helpers/data-contract.helper';
-import { AppError } from '../../common/errors/app-error';
-import { ERROR_CODE } from '../../common/errors/error-code';
+} from "./change-detection.types";
+import { JOB_EXPORT_FILES } from "../../common/constants/storage-path.constant";
+import { buildJobRootFilePath } from "../../common/helpers/file.helper";
+import { normalizeUrl } from "../../common/helpers/data-contract.helper";
+import { AppError } from "../../common/errors/app-error";
+import { ERROR_CODE } from "../../common/errors/error-code";
 
 /**
  * Minimal page shape required for diff comparison.
@@ -26,7 +26,7 @@ type DiffPage = {
   normalizedUrl: string;
   contentHash: string | null;
   wordCount: number;
-  status: import('@prisma/client').CrawlPageStatus;
+  status: import("@prisma/client").CrawlPageStatus;
   statusCode: number | null;
   title: string | null;
   crawledAt: Date | null;
@@ -83,9 +83,14 @@ export class ChangeDetectionService {
 
         const isHashModified = currHash && prevHash && currHash !== prevHash;
         const isStatusModified = curr.status !== prev.status;
-        const isWordCountSignificantlyModified = !currHash && !prevHash && curr.wordCount !== prev.wordCount;
+        const isWordCountSignificantlyModified =
+          !currHash && !prevHash && curr.wordCount !== prev.wordCount;
 
-        if (isHashModified || isStatusModified || isWordCountSignificantlyModified) {
+        if (
+          isHashModified ||
+          isStatusModified ||
+          isWordCountSignificantlyModified
+        ) {
           modifiedPages.push({
             url: curr.url,
             normalizedUrl: curr.normalizedUrl || normalizeUrl(curr.url),
@@ -130,7 +135,8 @@ export class ChangeDetectionService {
     const totalCurrentPages = currentJob.pages.length;
     const totalPreviousPages = previousJob?.pages.length ?? 0;
     const denominator = Math.max(totalCurrentPages, totalPreviousPages, 1);
-    const changedCount = newPages.length + modifiedPages.length + deletedPages.length;
+    const changedCount =
+      newPages.length + modifiedPages.length + deletedPages.length;
     const changeRate = parseFloat((changedCount / denominator).toFixed(4));
 
     const summary: DiffSummary = {
@@ -144,7 +150,7 @@ export class ChangeDetectionService {
     };
 
     return {
-      schemaVersion: '1.0.0',
+      schemaVersion: "1.0.0",
       generatedAt: new Date().toISOString(),
       jobId: currentJob.id,
       previousJobId: previousJob?.id ?? null,
@@ -168,10 +174,11 @@ export class ChangeDetectionService {
     currentJob: CrawlJob,
   ): Promise<(CrawlJob & { pages: DiffPage[] }) | null> {
     if (currentJob.scheduleId) {
-      const prevScheduleJob = await this.jobRepository.findPreviousCompletedJobForSchedule(
-        currentJob.scheduleId,
-        currentJob.id,
-      );
+      const prevScheduleJob =
+        await this.jobRepository.findPreviousCompletedJobForSchedule(
+          currentJob.scheduleId,
+          currentJob.id,
+        );
       if (prevScheduleJob) return prevScheduleJob;
     }
 
@@ -192,14 +199,23 @@ export class ChangeDetectionService {
   ): Promise<DiffReportEnvelope> {
     const currentJob = await this.jobRepository.findByIdWithPages(currentJobId);
     if (!currentJob) {
-      throw new AppError('Crawl job not found', 404, ERROR_CODE.CRAWL_JOB_NOT_FOUND);
+      throw new AppError(
+        "Crawl job not found",
+        404,
+        ERROR_CODE.CRAWL_JOB_NOT_FOUND,
+      );
     }
 
     let previousJob: (CrawlJob & { pages: DiffPage[] }) | null = null;
     if (explicitCompareJobId) {
-      previousJob = await this.jobRepository.findByIdWithPages(explicitCompareJobId);
+      previousJob =
+        await this.jobRepository.findByIdWithPages(explicitCompareJobId);
       if (!previousJob) {
-        throw new AppError('Comparison crawl job not found', 404, ERROR_CODE.CRAWL_JOB_NOT_FOUND);
+        throw new AppError(
+          "Comparison crawl job not found",
+          404,
+          ERROR_CODE.CRAWL_JOB_NOT_FOUND,
+        );
       }
     } else {
       previousJob = await this.findBaselineJob(currentJob);
@@ -208,11 +224,18 @@ export class ChangeDetectionService {
     const diffReport = this.comparePageSets(currentJob, previousJob);
 
     // Write diff_report.json to export directory
-    const { filePath } = buildJobRootFilePath(currentJobId, JOB_EXPORT_FILES.DIFF_REPORT_JSON);
-    fs.writeFileSync(filePath, JSON.stringify(diffReport, null, 2), 'utf-8');
+    const { filePath } = buildJobRootFilePath(
+      currentJobId,
+      JOB_EXPORT_FILES.DIFF_REPORT_JSON,
+    );
+    fs.writeFileSync(filePath, JSON.stringify(diffReport, null, 2), "utf-8");
 
     // Persist diff summary & path on the crawl job
-    await this.jobRepository.updateDiffReport(currentJobId, filePath, diffReport.summary as unknown as Prisma.InputJsonValue);
+    await this.jobRepository.updateDiffReport(
+      currentJobId,
+      filePath,
+      diffReport.summary as unknown as Prisma.InputJsonValue,
+    );
 
     return diffReport;
   }
@@ -228,10 +251,13 @@ export class ChangeDetectionService {
       return this.generateAndSaveDiffReport(currentJobId, explicitCompareJobId);
     }
 
-    const { filePath } = buildJobRootFilePath(currentJobId, JOB_EXPORT_FILES.DIFF_REPORT_JSON);
+    const { filePath } = buildJobRootFilePath(
+      currentJobId,
+      JOB_EXPORT_FILES.DIFF_REPORT_JSON,
+    );
     if (fs.existsSync(filePath)) {
       try {
-        const content = fs.readFileSync(filePath, 'utf-8');
+        const content = fs.readFileSync(filePath, "utf-8");
         return JSON.parse(content) as DiffReportEnvelope;
       } catch {
         // If file is corrupt, regenerate

@@ -1,5 +1,5 @@
-import { prisma } from '../../database/prisma.client';
-import { CreateCrawlExportDto, UpdateCrawlExportDto } from './crawl-export.dto';
+import { prisma } from "../../database/prisma.client";
+import { CreateCrawlExportDto, UpdateCrawlExportDto } from "./crawl-export.dto";
 
 export class CrawlExportRepository {
   create(data: CreateCrawlExportDto) {
@@ -9,7 +9,7 @@ export class CrawlExportRepository {
   findByJobId(jobId: string) {
     return prisma.crawlExport.findMany({
       where: { jobId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 
@@ -50,7 +50,7 @@ export class CrawlExportRepository {
             },
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take: safeLimit,
       }),
@@ -66,4 +66,3 @@ export class CrawlExportRepository {
     });
   }
 }
-

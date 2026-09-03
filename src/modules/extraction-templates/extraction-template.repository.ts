@@ -1,6 +1,9 @@
-import { prisma } from '../../database/prisma.client';
-import { Prisma } from '@prisma/client';
-import { CreateExtractionTemplateDto, UpdateExtractionTemplateDto } from './extraction-template.dto';
+import { prisma } from "../../database/prisma.client";
+import { Prisma } from "@prisma/client";
+import {
+  CreateExtractionTemplateDto,
+  UpdateExtractionTemplateDto,
+} from "./extraction-template.dto";
 
 export class ExtractionTemplateRepository {
   create(userId: string, data: CreateExtractionTemplateDto) {
@@ -17,7 +20,7 @@ export class ExtractionTemplateRepository {
   findAllByUser(userId: string) {
     return prisma.extractionTemplate.findMany({
       where: { userId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 
@@ -30,7 +33,10 @@ export class ExtractionTemplateRepository {
   }
 
   findByUserAndDomain(userId: string, domain: string) {
-    const isUuid = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(userId);
+    const isUuid =
+      /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+        userId,
+      );
     if (!isUuid) return null;
 
     return prisma.extractionTemplate.findUnique({
@@ -48,7 +54,9 @@ export class ExtractionTemplateRepository {
       where: { id },
       data: {
         ...(data.name !== undefined && { name: data.name }),
-        ...(data.fields !== undefined && { fields: data.fields as unknown as Prisma.InputJsonValue }),
+        ...(data.fields !== undefined && {
+          fields: data.fields as unknown as Prisma.InputJsonValue,
+        }),
       },
     });
   }

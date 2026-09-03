@@ -1,7 +1,7 @@
-import { prisma } from '../../database/prisma.client';
-import { CrawlJobStatus, CrawlMode, LogLevel, Prisma } from '@prisma/client';
-import { CrawlJobQueryDto } from './crawl-job.dto';
-import { JOB_STATUS } from '../../common/constants/job-status.constant';
+import { prisma } from "../../database/prisma.client";
+import { CrawlJobStatus, CrawlMode, LogLevel, Prisma } from "@prisma/client";
+import { CrawlJobQueryDto } from "./crawl-job.dto";
+import { JOB_STATUS } from "../../common/constants/job-status.constant";
 
 export class CrawlJobRepository {
   create(data: {
@@ -50,25 +50,26 @@ export class CrawlJobRepository {
     }
     if (query.search) {
       where.OR = [
-        { startUrl: { contains: query.search, mode: 'insensitive' } },
-        { domain: { contains: query.search, mode: 'insensitive' } },
+        { startUrl: { contains: query.search, mode: "insensitive" } },
+        { domain: { contains: query.search, mode: "insensitive" } },
       ];
     }
 
-    const sortBy = query.sortBy || 'createdAt';
-    const order = (query.order || 'desc') as Prisma.SortOrder;
+    const sortBy = query.sortBy || "createdAt";
+    const order = (query.order || "desc") as Prisma.SortOrder;
     const allowedSortFields = [
-      'createdAt',
-      'updatedAt',
-      'status',
-      'mode',
-      'totalPages',
-      'successPages',
-      'failedPages',
+      "createdAt",
+      "updatedAt",
+      "status",
+      "mode",
+      "totalPages",
+      "successPages",
+      "failedPages",
     ];
-    const orderBy: Prisma.CrawlJobOrderByWithRelationInput = allowedSortFields.includes(sortBy)
-      ? { [sortBy]: order }
-      : { createdAt: 'desc' };
+    const orderBy: Prisma.CrawlJobOrderByWithRelationInput =
+      allowedSortFields.includes(sortBy)
+        ? { [sortBy]: order }
+        : { createdAt: "desc" };
 
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(Math.max(1, Number(query.limit) || 20), 100);
@@ -170,7 +171,10 @@ export class CrawlJobRepository {
       select: { status: true },
     });
 
-    if (currentJob?.status === JOB_STATUS.CANCELED && status !== JOB_STATUS.CANCELED) {
+    if (
+      currentJob?.status === JOB_STATUS.CANCELED &&
+      status !== JOB_STATUS.CANCELED
+    ) {
       return prisma.crawlJob.findUnique({
         where: { id },
         include: {
@@ -185,7 +189,10 @@ export class CrawlJobRepository {
     });
   }
 
-  updateProgress(id: string, data: { totalPages?: number; successPages?: number; failedPages?: number }) {
+  updateProgress(
+    id: string,
+    data: { totalPages?: number; successPages?: number; failedPages?: number },
+  ) {
     return prisma.crawlJob.update({
       where: { id },
       data,
@@ -204,14 +211,17 @@ export class CrawlJobRepository {
     });
   }
 
-  findPreviousCompletedJobForSchedule(scheduleId: string, currentJobId: string) {
+  findPreviousCompletedJobForSchedule(
+    scheduleId: string,
+    currentJobId: string,
+  ) {
     return prisma.crawlJob.findFirst({
       where: {
         scheduleId,
         id: { not: currentJobId },
-        status: 'COMPLETED',
+        status: JOB_STATUS.COMPLETED,
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       include: {
         pages: {
           select: {
@@ -230,18 +240,20 @@ export class CrawlJobRepository {
     });
   }
 
-  findPreviousCompletedJobForDomain(userId: string, domain: string | null, startUrl: string, currentJobId: string) {
+  findPreviousCompletedJobForDomain(
+    userId: string,
+    domain: string | null,
+    startUrl: string,
+    currentJobId: string,
+  ) {
     return prisma.crawlJob.findFirst({
       where: {
         userId,
         id: { not: currentJobId },
-        status: 'COMPLETED',
-        OR: [
-          ...(domain ? [{ domain }] : []),
-          { startUrl },
-        ],
+        status: JOB_STATUS.COMPLETED,
+        OR: [...(domain ? [{ domain }] : []), { startUrl }],
       },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       include: {
         pages: {
           select: {
@@ -260,7 +272,11 @@ export class CrawlJobRepository {
     });
   }
 
-  updateDiffReport(id: string, diffReportPath: string, diffSummary: Prisma.InputJsonValue) {
+  updateDiffReport(
+    id: string,
+    diffReportPath: string,
+    diffSummary: Prisma.InputJsonValue,
+  ) {
     return prisma.crawlJob.update({
       where: { id },
       data: {
@@ -275,7 +291,7 @@ export class CrawlJobRepository {
     return Promise.all([
       prisma.crawlJob.findMany({
         where: { scheduleId },
-        orderBy: { createdAt: 'desc' },
+        orderBy: { createdAt: "desc" },
         skip,
         take: limit,
       }),
@@ -292,7 +308,11 @@ export class CrawlJobRepository {
     });
   }
 
-  countConcurrentJobs(userId: string, activeStatuses: CrawlJobStatus[], sinceDate?: Date): Promise<number> {
+  countConcurrentJobs(
+    userId: string,
+    activeStatuses: CrawlJobStatus[],
+    sinceDate?: Date,
+  ): Promise<number> {
     return prisma.crawlJob.count({
       where: {
         userId,
@@ -338,7 +358,7 @@ export class CrawlJobRepository {
     const [items, total] = await Promise.all([
       prisma.crawlJobLog.findMany({
         where: { jobId },
-        orderBy: { createdAt: 'asc' },
+        orderBy: { createdAt: "asc" },
         skip,
         take: safeLimit,
       }),

@@ -1,25 +1,25 @@
-import fs from 'fs';
-import path from 'path';
-import { Readable } from 'stream';
-import { ZipExportService } from '../zip-export.service';
-import { StorageFactory } from '../../../common/storage/storage.factory';
-import { IStorageService } from '../../../common/storage/storage.interface';
-import { ensureJobExportStructure } from '../../../common/helpers/file.helper';
+import fs from "fs";
+import path from "path";
+import { Readable } from "stream";
+import { ZipExportService } from "../zip-export.service";
+import { StorageFactory } from "../../../common/storage/storage.factory";
+import { IStorageService } from "../../../common/storage/storage.interface";
+import { ensureJobExportStructure } from "../../../common/helpers/file.helper";
 import {
   JOB_EXPORT_FILES,
   JOB_EXPORT_SUBDIRS,
-} from '../../../common/constants/storage-path.constant';
+} from "../../../common/constants/storage-path.constant";
 
-describe('ZipExportService storage streaming', () => {
-  const jobId = 'zip-streaming-regression';
-  const rootDir = path.join(process.cwd(), 'storage', 'exports', jobId);
+describe("ZipExportService storage streaming", () => {
+  const jobId = "zip-streaming-regression";
+  const rootDir = path.join(process.cwd(), "storage", "exports", jobId);
 
   afterEach(() => {
     jest.restoreAllMocks();
     fs.rmSync(rootDir, { recursive: true, force: true });
   });
 
-  it('streams the ZIP to the configured storage provider instead of buffering it', async () => {
+  it("streams the ZIP to the configured storage provider instead of buffering it", async () => {
     const exportRoot = ensureJobExportStructure(jobId);
     const dataFile = path.join(
       exportRoot,
@@ -46,7 +46,7 @@ describe('ZipExportService storage streaming', () => {
     );
 
     jest
-      .spyOn(StorageFactory, 'getStorageService')
+      .spyOn(StorageFactory, "getStorageService")
       .mockReturnValue({ uploadStream } as unknown as IStorageService);
 
     const service = new ZipExportService() as unknown as {
@@ -60,7 +60,7 @@ describe('ZipExportService storage streaming', () => {
     expect(uploadStream).toHaveBeenCalledWith(
       `${jobId}/${jobId}.zip`,
       expect.any(Readable),
-      expect.objectContaining({ contentType: 'application/zip' }),
+      expect.objectContaining({ contentType: "application/zip" }),
     );
     expect(result).toEqual(
       expect.objectContaining({

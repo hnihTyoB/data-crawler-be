@@ -583,10 +583,10 @@ src/database/prisma.client.ts
 ```
 
 ```ts
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient } from "@prisma/client";
 
 export const prisma = new PrismaClient({
-  log: ['error', 'warn'],
+  log: ["error", "warn"],
 });
 ```
 
@@ -594,9 +594,10 @@ Nếu cần log query khi development:
 
 ```ts
 export const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development'
-    ? ['query', 'error', 'warn']
-    : ['error', 'warn'],
+  log:
+    process.env.NODE_ENV === "development"
+      ? ["query", "error", "warn"]
+      : ["error", "warn"],
 });
 ```
 
@@ -628,17 +629,17 @@ Không để repository xử lý nghiệp vụ.
 ### 11.1. Route
 
 ```ts
-import { Router } from 'express';
-import { CrawlJobController } from './crawl-job.controller';
-import { authMiddleware } from '../../middlewares/auth.middleware';
+import { Router } from "express";
+import { CrawlJobController } from "./crawl-job.controller";
+import { authMiddleware } from "../../middlewares/auth.middleware";
 
 const router = Router();
 const controller = new CrawlJobController();
 
-router.post('/', authMiddleware, controller.create);
-router.get('/', authMiddleware, controller.findAll);
-router.get('/:id', authMiddleware, controller.findById);
-router.post('/:id/cancel', authMiddleware, controller.cancel);
+router.post("/", authMiddleware, controller.create);
+router.get("/", authMiddleware, controller.findAll);
+router.get("/:id", authMiddleware, controller.findById);
+router.post("/:id/cancel", authMiddleware, controller.cancel);
 
 export default router;
 ```
@@ -648,8 +649,8 @@ export default router;
 ### 11.2. Controller
 
 ```ts
-import { Request, Response, NextFunction } from 'express';
-import { CrawlJobService } from './crawl-job.service';
+import { Request, Response, NextFunction } from "express";
+import { CrawlJobService } from "./crawl-job.service";
 
 export class CrawlJobController {
   private readonly service = new CrawlJobService();
@@ -717,9 +718,9 @@ export class CrawlJobController {
 ### 11.3. Service
 
 ```ts
-import { CrawlJobRepository } from './crawl-job.repository';
-import { AppError } from '../../common/errors/app-error';
-import { crawlQueue } from '../../queues/crawl.queue';
+import { CrawlJobRepository } from "./crawl-job.repository";
+import { AppError } from "../../common/errors/app-error";
+import { crawlQueue } from "../../queues/crawl.queue";
 
 export class CrawlJobService {
   private readonly repository = new CrawlJobRepository();
@@ -738,7 +739,7 @@ export class CrawlJobService {
       maxDepth: payload.maxDepth,
     });
 
-    await crawlQueue.add('crawl-job', {
+    await crawlQueue.add("crawl-job", {
       jobId: job.id,
     });
 
@@ -753,7 +754,7 @@ export class CrawlJobService {
     const job = await this.repository.findById(jobId);
 
     if (!job || job.userId !== userId) {
-      throw new AppError('Crawl job not found', 404);
+      throw new AppError("Crawl job not found", 404);
     }
 
     return job;
@@ -762,11 +763,11 @@ export class CrawlJobService {
   async cancel(userId: string, jobId: string) {
     const job = await this.findById(userId, jobId);
 
-    if (job.status === 'COMPLETED') {
-      throw new AppError('Completed job cannot be canceled', 400);
+    if (job.status === "COMPLETED") {
+      throw new AppError("Completed job cannot be canceled", 400);
     }
 
-    return this.repository.updateStatus(jobId, 'CANCELED');
+    return this.repository.updateStatus(jobId, "CANCELED");
   }
 }
 ```
@@ -776,8 +777,8 @@ export class CrawlJobService {
 ### 11.4. Repository
 
 ```ts
-import { prisma } from '../../database/prisma.client';
-import { CrawlJobStatus } from '@prisma/client';
+import { prisma } from "../../database/prisma.client";
+import { CrawlJobStatus } from "@prisma/client";
 
 export class CrawlJobRepository {
   create(data: {
@@ -801,7 +802,7 @@ export class CrawlJobRepository {
   findAllByUser(userId: string, query: any) {
     return prisma.crawlJob.findMany({
       where: { userId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
       include: {
         exports: true,
       },
@@ -839,27 +840,27 @@ prisma/seed.ts
 ```
 
 ```ts
-import { PrismaClient, UserRole } from '@prisma/client';
-import bcrypt from 'bcryptjs';
+import { PrismaClient, UserRole } from "@prisma/client";
+import bcrypt from "bcryptjs";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  const passwordHash = await bcrypt.hash('Admin@123456', 10);
+  const passwordHash = await bcrypt.hash("Admin@123456", 10);
 
   await prisma.user.upsert({
-    where: { email: 'admin@crawl.local' },
+    where: { email: "admin@crawl.local" },
     update: {},
     create: {
-      email: 'admin@crawl.local',
+      email: "admin@crawl.local",
       passwordHash,
-      fullName: 'System Admin',
+      fullName: "System Admin",
       role: UserRole.ADMIN,
       isActive: true,
     },
   });
 
-  console.log('Seed completed');
+  console.log("Seed completed");
 }
 
 main()

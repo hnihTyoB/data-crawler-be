@@ -1,11 +1,11 @@
-import { UserService } from '../user.service';
+import { UserService } from "../user.service";
 
-describe('UserService admin role guard', () => {
+describe("UserService admin role guard", () => {
   const admin = {
-    id: 'admin-1',
-    email: 'admin@example.com',
-    fullName: 'Admin',
-    role: 'ADMIN',
+    id: "admin-1",
+    email: "admin@example.com",
+    fullName: "Admin",
+    role: "ADMIN",
     isActive: true,
     maxPagesLimit: 100,
     maxJobsPerDayLimit: 10,
@@ -14,17 +14,18 @@ describe('UserService admin role guard', () => {
     updatedAt: new Date(),
   };
 
-  it('rejects changing the role of an existing admin account', async () => {
+  it("rejects changing the role of an existing admin account", async () => {
     const service = new UserService();
     const repository = {
       findById: jest.fn().mockResolvedValue(admin),
       update: jest.fn(),
     };
-    (service as unknown as { repository: typeof repository }).repository = repository;
+    (service as unknown as { repository: typeof repository }).repository =
+      repository;
 
-    await expect(
-      service.update(admin.id, { role: 'VIEWER' }),
-    ).rejects.toThrow('Không thể thay đổi vai trò của tài khoản Admin');
+    await expect(service.update(admin.id, { role: "VIEWER" })).rejects.toThrow(
+      "Không thể thay đổi vai trò của tài khoản Admin",
+    );
     expect(repository.update).not.toHaveBeenCalled();
   });
 });

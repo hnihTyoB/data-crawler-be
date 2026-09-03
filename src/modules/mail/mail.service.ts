@@ -1,5 +1,5 @@
-import nodemailer from 'nodemailer';
-import { mailConfig } from '../../config/mail.config';
+import nodemailer from "nodemailer";
+import { mailConfig } from "../../config/mail.config";
 
 export class MailService {
   private transporter: nodemailer.Transporter;
@@ -22,7 +22,7 @@ export class MailService {
     const mailOptions = {
       from: mailConfig.from,
       to: email,
-      subject: 'Reset Your Password - Data Crawler',
+      subject: "Reset Your Password - Data Crawler",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
           <h2 style="color: #333333; text-align: center;">Reset Your Password</h2>
@@ -56,7 +56,7 @@ export class MailService {
     const mailOptions = {
       from: mailConfig.from,
       to: email,
-      subject: 'Verify Your Email Address - Data Crawler',
+      subject: "Verify Your Email Address - Data Crawler",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 8px;">
           <h2 style="color: #333333; text-align: center;">Verify Your Email Address</h2>

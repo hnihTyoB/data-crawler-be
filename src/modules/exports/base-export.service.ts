@@ -1,11 +1,11 @@
-import { CrawlJob, CrawlPage } from '@prisma/client';
-import path from 'path';
+import { CrawlJob, CrawlPage } from "@prisma/client";
+import path from "path";
 import {
   ensureJobExportStructure,
   getFileSizeBytes,
-} from '../../common/helpers/file.helper';
-import { StorageFactory } from '../../common/storage/storage.factory';
-import { storageConfig } from '../../config/storage.config';
+} from "../../common/helpers/file.helper";
+import { StorageFactory } from "../../common/storage/storage.factory";
+import { storageConfig } from "../../config/storage.config";
 
 export interface ExportResult {
   fileName: string;
@@ -56,7 +56,7 @@ export abstract class BaseExportService implements IExportService {
       storageConfig.exportDir,
       result.filePath,
     );
-    const destinationKey = relativePath.split(path.sep).join('/');
+    const destinationKey = relativePath.split(path.sep).join("/");
     const uploadResult = await StorageFactory.getStorageService().uploadFile(
       result.filePath,
       destinationKey,

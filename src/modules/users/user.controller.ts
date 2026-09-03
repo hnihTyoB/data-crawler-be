@@ -1,8 +1,8 @@
-import { Request, Response, NextFunction } from 'express';
-import { UserService } from './user.service';
-import { CreateUserDto, UpdateUserDto, UserQueryDto } from './user.dto';
-import { AuditLogService } from '../audit-logs/audit-log.service';
-import { AUDIT_ACTIONS } from '../../common/constants/audit-action.constant';
+import { Request, Response, NextFunction } from "express";
+import { UserService } from "./user.service";
+import { CreateUserDto, UpdateUserDto, UserQueryDto } from "./user.dto";
+import { AuditLogService } from "../audit-logs/audit-log.service";
+import { AUDIT_ACTIONS } from "../../common/constants/audit-action.constant";
 
 export class UserController {
   private readonly service = new UserService();
@@ -44,8 +44,12 @@ export class UserController {
         userId: req.user.id,
         action: AUDIT_ACTIONS.ADMIN_CREATE_USER,
         ipAddress: req.ip,
-        userAgent: req.headers['user-agent'] as string,
-        details: { targetUserId: result.id, targetUserEmail: result.email, role: result.role },
+        userAgent: req.headers["user-agent"] as string,
+        details: {
+          targetUserId: result.id,
+          targetUserEmail: result.email,
+          role: result.role,
+        },
       });
 
       res.status(201).json({
@@ -66,8 +70,11 @@ export class UserController {
         userId: req.user.id,
         action: AUDIT_ACTIONS.ADMIN_UPDATE_USER,
         ipAddress: req.ip,
-        userAgent: req.headers['user-agent'] as string,
-        details: { targetUserId: result.id, updatedFields: Object.keys(updateUserDto) },
+        userAgent: req.headers["user-agent"] as string,
+        details: {
+          targetUserId: result.id,
+          updatedFields: Object.keys(updateUserDto),
+        },
       });
 
       res.json({
@@ -87,7 +94,7 @@ export class UserController {
         userId: req.user.id,
         action: AUDIT_ACTIONS.ADMIN_DELETE_USER,
         ipAddress: req.ip,
-        userAgent: req.headers['user-agent'] as string,
+        userAgent: req.headers["user-agent"] as string,
         details: { targetUserId: req.params.id },
       });
 
@@ -100,4 +107,3 @@ export class UserController {
     }
   };
 }
-

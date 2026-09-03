@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { DashboardService } from './dashboard.service';
+import { Request, Response, NextFunction } from "express";
+import { DashboardService } from "./dashboard.service";
 
 export class DashboardController {
   private readonly service = new DashboardService();

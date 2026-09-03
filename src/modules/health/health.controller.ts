@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { HealthService } from './health.service';
+import { Request, Response, NextFunction } from "express";
+import { HealthService } from "./health.service";
 
 export class HealthController {
   private readonly service = new HealthService();
@@ -9,17 +9,25 @@ export class HealthController {
     res.json(result);
   };
 
-  getReadiness = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getReadiness = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const result = await this.service.getReadiness();
-      const statusCode = result.status === 'ready' ? 200 : 503;
+      const statusCode = result.status === "ready" ? 200 : 503;
       res.status(statusCode).json(result);
     } catch (error) {
       next(error);
     }
   };
 
-  getMetrics = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  getMetrics = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const result = await this.service.getMetrics();
       res.json(result);

@@ -1,4 +1,4 @@
-import { AuditAction } from '../../common/constants/audit-action.constant';
+import { AuditAction } from "../../common/constants/audit-action.constant";
 
 export interface AuditLogQueryDto {
   userId?: string;
@@ -7,7 +7,7 @@ export interface AuditLogQueryDto {
   endDate?: string;
   search?: string;
   sortBy?: string;
-  order?: 'asc' | 'desc';
+  order?: "asc" | "desc";
   page?: string | number;
   limit?: string | number;
 }

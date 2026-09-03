@@ -46,10 +46,10 @@ Hệ thống áp dụng kiến trúc phân lớp hướng dịch vụ (Layered C
 - Mọi dữ liệu đầu vào từ người dùng (Body, Query, Params) **bắt buộc** phải được định nghĩa Schema bằng **Zod** trong `<feature>.validation.ts`.
 - Sử dụng middleware dùng chung `validateMiddleware`:
   ```typescript
-  import { validate } from '../../middlewares/validate.middleware';
-  import { createCrawlJobSchema } from './crawl-job.validation';
+  import { validate } from "../../middlewares/validate.middleware";
+  import { createCrawlJobSchema } from "./crawl-job.validation";
 
-  router.post('/', validate(createCrawlJobSchema), crawlJobController.create);
+  router.post("/", validate(createCrawlJobSchema), crawlJobController.create);
   ```
 - Định nghĩa kiểu TypeScript tương ứng (`DTO`) bằng `z.infer<typeof schema>` trong `<feature>.dto.ts`.
 
@@ -60,11 +60,11 @@ Hệ thống áp dụng kiến trúc phân lớp hướng dịch vụ (Layered C
 - Không dùng `throw new Error("...")` một cách tùy tiện.
 - Bắt buộc kế thừa từ `AppError`:
   ```typescript
-  import { AppError } from '../../common/errors/app-error';
-  import { ERROR_CODE } from '../../common/errors/error-code';
+  import { AppError } from "../../common/errors/app-error";
+  import { ERROR_CODE } from "../../common/errors/error-code";
 
   if (!job) {
-    throw new AppError('Crawl job not found', 404, ERROR_CODE.NOT_FOUND);
+    throw new AppError("Crawl job not found", 404, ERROR_CODE.NOT_FOUND);
   }
   ```
 - Cấu trúc response trả về cho client luôn thống nhất:

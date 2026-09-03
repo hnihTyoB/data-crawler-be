@@ -1,7 +1,7 @@
-import { prisma } from '../../database/prisma.client';
-import { crawlQueue } from '../../queues/crawl.queue';
-import { webhookQueue } from '../../queues/webhook.queue';
-import { getErrorMessage } from '../../common/helpers/error-mapping.helper';
+import { prisma } from "../../database/prisma.client";
+import { crawlQueue } from "../../queues/crawl.queue";
+import { webhookQueue } from "../../queues/webhook.queue";
+import { getErrorMessage } from "../../common/helpers/error-mapping.helper";
 
 export interface QueueCountMetrics {
   waiting: number;
@@ -10,12 +10,12 @@ export interface QueueCountMetrics {
   failed: number;
 }
 
-export type QueueMetricsResult = QueueCountMetrics | 'unavailable' | null;
+export type QueueMetricsResult = QueueCountMetrics | "unavailable" | null;
 
 export class HealthService {
   getLiveness() {
     return {
-      status: 'ok',
+      status: "ok",
       uptimeSeconds: Math.floor(process.uptime()),
       timestamp: new Date().toISOString(),
       nodeVersion: process.version,
@@ -23,7 +23,10 @@ export class HealthService {
   }
 
   async getReadiness() {
-    const checks: Record<string, { status: string; latencyMs?: number; error?: string }> = {};
+    const checks: Record<
+      string,
+      { status: string; latencyMs?: number; error?: string }
+    > = {};
     let isReady = true;
 
     // 1. Check Database
@@ -31,13 +34,13 @@ export class HealthService {
     try {
       await prisma.$queryRaw`SELECT 1`;
       checks.database = {
-        status: 'up',
+        status: "up",
         latencyMs: Date.now() - dbStart,
       };
     } catch (err: unknown) {
       isReady = false;
       checks.database = {
-        status: 'down',
+        status: "down",
         error: getErrorMessage(err),
       };
     }
@@ -47,27 +50,30 @@ export class HealthService {
       const redisStart = Date.now();
       try {
         const client = await crawlQueue.client;
-        if ('ping' in client && typeof (client as { ping: () => Promise<string> }).ping === 'function') {
+        if (
+          "ping" in client &&
+          typeof (client as { ping: () => Promise<string> }).ping === "function"
+        ) {
           await (client as { ping: () => Promise<string> }).ping();
         }
         checks.redis = {
-          status: 'up',
+          status: "up",
           latencyMs: Date.now() - redisStart,
         };
       } catch (err: unknown) {
         checks.redis = {
-          status: 'degraded',
+          status: "degraded",
           error: getErrorMessage(err),
         };
       }
     } else {
       checks.redis = {
-        status: 'skipped',
+        status: "skipped",
       };
     }
 
     return {
-      status: isReady ? 'ready' : 'unhealthy',
+      status: isReady ? "ready" : "unhealthy",
       timestamp: new Date().toISOString(),
       checks,
     };
@@ -88,7 +94,7 @@ export class HealthService {
         ]);
         crawlQueueMetrics = { waiting, active, completed, failed };
       } catch {
-        crawlQueueMetrics = 'unavailable';
+        crawlQueueMetrics = "unavailable";
       }
     }
 
@@ -102,7 +108,7 @@ export class HealthService {
         ]);
         webhookQueueMetrics = { waiting, active, completed, failed };
       } catch {
-        webhookQueueMetrics = 'unavailable';
+        webhookQueueMetrics = "unavailable";
       }
     }
 

@@ -1,4 +1,5 @@
-import { CrawlMode, ScheduleFrequency } from '@prisma/client';
+import { CrawlMode } from "../../common/constants/crawl-mode.constant";
+import { ScheduleFrequency } from "../../common/constants/schedule-frequency.constant";
 
 export interface CreateCrawlScheduleDto {
   name: string;
@@ -43,5 +44,5 @@ export interface CrawlScheduleQueryDto {
   page?: number;
   limit?: number;
   sortBy?: string;
-  order?: 'asc' | 'desc';
+  order?: "asc" | "desc";
 }
