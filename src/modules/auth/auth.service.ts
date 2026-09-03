@@ -4,8 +4,14 @@ import { AuthRepository } from './auth.repository';
 import { AppError } from '../../common/errors/app-error';
 import { ERROR_CODE } from '../../common/errors/error-code';
 import { jwtConfig } from '../../config/jwt.config';
-import { LoginDto, AuthTokensDto, MeDto, LoginResponseDto, RegisterDto, UpdateMeDto, ForgotPasswordDto, ResetPasswordDto, ChangePasswordDto } from './auth.dto';
+import { LoginDto, AuthTokensDto, MeDto, LoginResponseDto, RegisterDto, UpdateMeDto, UserUsageDto, ForgotPasswordDto, ResetPasswordDto, ChangePasswordDto } from './auth.dto';
 import { MailService } from '../mail/mail.service';
+import { CrawlJobRepository } from '../crawl-jobs/crawl-job.repository';
+import { JOB_STATUS } from '../../common/constants/job-status.constant';
+import {
+  getZonedDateParts,
+  createUtcDateFromZonedParts,
+} from '../../common/helpers/schedule-calculator.helper';
 
 interface AuthJwtPayload {
   id: string;
@@ -93,6 +99,7 @@ export class AuthService {
         id: user.id,
         email: user.email,
         fullName: user.fullName,
+        avatarUrl: user.avatarUrl,
         role: user.role,
       },
     };
@@ -109,6 +116,7 @@ export class AuthService {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
+      avatarUrl: user.avatarUrl,
       role: user.role,
       isActive: user.isActive,
       createdAt: user.createdAt,
@@ -183,6 +191,7 @@ export class AuthService {
           id: existing.id,
           email: existing.email,
           fullName: existing.fullName,
+          avatarUrl: existing.avatarUrl ?? null,
           role: existing.role,
           isActive: existing.isActive,
           createdAt: existing.createdAt,
@@ -210,6 +219,7 @@ export class AuthService {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
+      avatarUrl: user.avatarUrl ?? null,
       role: user.role,
       isActive: user.isActive,
       createdAt: user.createdAt,
@@ -237,10 +247,14 @@ export class AuthService {
     }
 
     const normalizedFullName = data.fullName?.trim();
-    if (
-      normalizedFullName !== undefined &&
-      normalizedFullName === (user.fullName ?? '')
-    ) {
+    const avatarUrl = data.avatarUrl;
+
+    const hasNameChange =
+      normalizedFullName !== undefined && normalizedFullName !== (user.fullName ?? '');
+    const hasAvatarChange =
+      avatarUrl !== undefined && avatarUrl !== (user.avatarUrl ?? null);
+
+    if (!hasNameChange && !hasAvatarChange) {
       throw new AppError(
         'Không có thay đổi nào để cập nhật.',
         400,
@@ -248,10 +262,13 @@ export class AuthService {
       );
     }
 
-    const updateData: { fullName?: string } = {};
+    const updateData: { fullName?: string; avatarUrl?: string | null } = {};
 
-    if (normalizedFullName !== undefined) {
+    if (hasNameChange) {
       updateData.fullName = normalizedFullName;
+    }
+    if (hasAvatarChange) {
+      updateData.avatarUrl = avatarUrl;
     }
 
     const updatedUser = await this.repository.updateUser(userId, updateData);
@@ -260,9 +277,67 @@ export class AuthService {
       id: updatedUser.id,
       email: updatedUser.email,
       fullName: updatedUser.fullName,
+      avatarUrl: updatedUser.avatarUrl,
       role: updatedUser.role,
       isActive: updatedUser.isActive,
       createdAt: updatedUser.createdAt,
+    };
+  }
+
+  async getUsage(userId: string): Promise<UserUsageDto> {
+    const user = await this.repository.findById(userId);
+    if (!user || !user.isActive) {
+      throw new AppError('User not found', 404, ERROR_CODE.NOT_FOUND);
+    }
+
+    const crawlJobRepo = new CrawlJobRepository();
+    const nowZoned = getZonedDateParts(new Date(), 'Asia/Ho_Chi_Minh');
+    const startOfDay = createUtcDateFromZonedParts(
+      nowZoned.year,
+      nowZoned.month,
+      nowZoned.day,
+      0,
+      0,
+      'Asia/Ho_Chi_Minh',
+    );
+    const nextDay = createUtcDateFromZonedParts(
+      nowZoned.year,
+      nowZoned.month,
+      nowZoned.day + 1,
+      0,
+      0,
+      'Asia/Ho_Chi_Minh',
+    );
+
+    const twoHoursAgo = new Date();
+    twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
+    const activeStatuses = [
+      JOB_STATUS.PENDING,
+      JOB_STATUS.QUEUED,
+      JOB_STATUS.RUNNING,
+      JOB_STATUS.PROCESSING_EXPORT,
+    ];
+
+    const [jobsTodayCount, concurrentJobsCount, totalPages] = await Promise.all([
+      crawlJobRepo.countJobsSince(userId, startOfDay),
+      crawlJobRepo.countConcurrentJobs(userId, activeStatuses, twoHoursAgo),
+      crawlJobRepo.sumPagesCrawledByUser(userId),
+    ]);
+
+    return {
+      quota: {
+        maxPagesLimit: user.maxPagesLimit,
+        maxJobsPerDayLimit: user.maxJobsPerDayLimit,
+        maxConcurrentJobsLimit: user.maxConcurrentJobsLimit,
+      },
+      usage: {
+        jobsUsedToday: jobsTodayCount,
+        jobsRemainingToday: Math.max(0, user.maxJobsPerDayLimit - jobsTodayCount),
+        concurrentJobsRunning: concurrentJobsCount,
+        concurrentJobsAvailable: Math.max(0, user.maxConcurrentJobsLimit - concurrentJobsCount),
+        totalPagesCrawled: totalPages,
+      },
+      resetAt: nextDay.toISOString(),
     };
   }
 

@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json.schemastore.org/partial-claude-code-settings.json",
+  "version": "1.0",
+  "permissions": {
+    "allowAutoExecution": [
+      "pnpm lint",
+      "pnpm format",
+      "pnpm swagger",
+      "pnpm test",
+      "pnpm build",
+      "pnpm prisma:generate",
+      "node scripts/prisma-run.js migrate status"
+    ],
+    "denyExecution": [
+      "pnpm db:migrate:reset",
+      "rm -rf *",
+      "git push --force",
+      "git reset --hard"
+    ],
+    "fileProtection": {
+      "readOnly": [
+        "pnpm-lock.yaml",
+        "dist/**",
+        "storage/exports/**",
+        "src/docs/swagger.json"
+      ]
+    }
+  },
+  "hooks": {
+    "postEdit": [
+      {
+        "pattern": "src/modules/**/*.route.ts",
+        "command": "pnpm swagger",
+        "description": "Tự động sinh lại Swagger JSON khi có route thay đổi"
+      },
+      {
+        "pattern": "prisma/schema.prisma",
+        "command": "pnpm prisma:generate",
+        "description": "Tự động sinh lại Prisma Client khi schema thay đổi"
+      }
+    ],
+    "preCommit": [
+      {
+        "command": "pnpm lint",
+        "description": "Kiểm tra cú pháp và quy chuẩn code trước khi commit"
+      },
+      {
+        "command": "pnpm test -- --runInBand",
+        "description": "Chạy unit test để đảm bảo không làm gãy tính năng"
+      }
+    ]
+  },
+  "environment": {
+    "NODE_ENV": "development",
+    "PAGER": "cat"
+  }
+}

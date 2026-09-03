@@ -68,6 +68,7 @@ export class UserRepository {
     email: string;
     passwordHash: string;
     fullName?: string;
+    avatarUrl?: string;
     role?: UserRole;
     maxPagesLimit?: number;
     maxJobsPerDayLimit?: number;
@@ -78,6 +79,7 @@ export class UserRepository {
         email: data.email,
         passwordHash: data.passwordHash,
         fullName: data.fullName,
+        avatarUrl: data.avatarUrl,
         role: data.role ?? 'CRAWLER_USER',
         maxPagesLimit: data.maxPagesLimit ?? envConfig.quota.defaultMaxPages,
         maxJobsPerDayLimit: data.maxJobsPerDayLimit ?? envConfig.quota.defaultMaxJobsPerDay,
@@ -90,6 +92,7 @@ export class UserRepository {
     id: string,
     data: {
       fullName?: string;
+      avatarUrl?: string | null;
       isActive?: boolean;
       role?: UserRole;
       maxPagesLimit?: number;

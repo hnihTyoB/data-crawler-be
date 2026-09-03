@@ -52,4 +52,21 @@ export class CrawlExportService {
 
     return exportService.generate(job, exportType);
   }
+
+  async findAllByUser(userId: string, page = 1, limit = 20) {
+    return this.repository.findAllByUser(userId, page, limit);
+  }
+
+  async delete(userId: string, role: string, id: string) {
+    const exportRecord = await this.findById(userId, role, id);
+
+    if (exportRecord.filePath) {
+      const { StorageFactory } = await import('../../common/storage/storage.factory');
+      const storage = StorageFactory.getStorageService();
+      await storage.deleteFile(exportRecord.filePath).catch(() => {});
+    }
+
+    await this.repository.delete(id);
+    return { success: true, message: 'Export deleted successfully' };
+  }
 }

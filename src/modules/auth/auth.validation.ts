@@ -29,7 +29,8 @@ export const registerSchema = z.object({
 });
 
 export const updateMeSchema = z.object({
-  fullName: z.string().optional(),
+  fullName: z.string().trim().min(1, 'Họ và tên không được để trống.').optional(),
+  avatarUrl: z.string().url('Avatar URL không đúng định dạng.').or(z.literal('')).nullable().optional(),
 });
 
 export const changePasswordSchema = z

@@ -33,4 +33,36 @@ export class CrawlExportController {
       next(error);
     }
   };
+
+  findAll = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const page = Number(req.query.page) || 1;
+      const limit = Number(req.query.limit) || 20;
+      const result = await this.service.findAllByUser(req.user.id, page, limit);
+      res.json({
+        success: true,
+        data: result.items,
+        pagination: {
+          total: result.total,
+          page: result.page,
+          limit: result.limit,
+        },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  delete = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.service.delete(
+        req.user.id,
+        req.user.role,
+        req.params.exportId,
+      );
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  };
 }

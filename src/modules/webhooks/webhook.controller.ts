@@ -71,6 +71,36 @@ export class WebhookController {
     }
   };
 
+  updateConfig = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.user.id;
+      const configId = req.params.id;
+      const result = await this.configService.update(configId, userId, req.body);
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  testConfig = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.user.id;
+      const configId = req.params.id;
+      const result = await this.configService.test(configId, userId);
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   listDeliveries = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.user.id;

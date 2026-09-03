@@ -12,6 +12,7 @@ export interface MeDto {
   id: string;
   email: string;
   fullName: string | null;
+  avatarUrl: string | null;
   role: string;
   isActive: boolean;
   createdAt: Date;
@@ -24,6 +25,7 @@ export interface LoginResponseDto {
     id: string;
     email: string;
     fullName: string | null;
+    avatarUrl?: string | null;
     role: string;
   };
 }
@@ -36,6 +38,23 @@ export interface RegisterDto {
 
 export interface UpdateMeDto {
   fullName?: string;
+  avatarUrl?: string | null;
+}
+
+export interface UserUsageDto {
+  quota: {
+    maxPagesLimit: number;
+    maxJobsPerDayLimit: number;
+    maxConcurrentJobsLimit: number;
+  };
+  usage: {
+    jobsUsedToday: number;
+    jobsRemainingToday: number;
+    concurrentJobsRunning: number;
+    concurrentJobsAvailable: number;
+    totalPagesCrawled: number;
+  };
+  resetAt: string;
 }
 
 export interface ChangePasswordDto {

@@ -162,6 +162,53 @@ export const swaggerPaths: Record<string, any> = {
       }
     }
   },
+  '/auth/me/usage': {
+    get: {
+      tags: ['Auth'],
+      summary: 'Xem hạn mức và mức độ sử dụng Quota hiện tại',
+      description: 'Trả về số job đã chạy hôm nay theo giờ Việt Nam UTC+7, số job đồng thời đang chạy và tổng trang đã crawl.',
+      responses: {
+        200: {
+          description: 'Lấy quota và usage thành công',
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  success: { type: 'boolean', example: true },
+                  data: {
+                    type: 'object',
+                    properties: {
+                      quota: {
+                        type: 'object',
+                        properties: {
+                          maxPagesLimit: { type: 'integer', example: 100 },
+                          maxJobsPerDayLimit: { type: 'integer', example: 10 },
+                          maxConcurrentJobsLimit: { type: 'integer', example: 3 }
+                        }
+                      },
+                      usage: {
+                        type: 'object',
+                        properties: {
+                          jobsUsedToday: { type: 'integer', example: 2 },
+                          jobsRemainingToday: { type: 'integer', example: 8 },
+                          concurrentJobsRunning: { type: 'integer', example: 0 },
+                          concurrentJobsAvailable: { type: 'integer', example: 3 },
+                          totalPagesCrawled: { type: 'integer', example: 45 }
+                        }
+                      },
+                      resetAt: { type: 'string', example: '2026-09-04T00:00:00.000Z' }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        401: { description: 'Chưa xác thực' }
+      }
+    }
+  },
   '/auth/change-password': {
     post: {
       tags: ['Auth'],

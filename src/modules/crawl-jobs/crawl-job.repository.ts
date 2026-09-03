@@ -1,5 +1,5 @@
 import { prisma } from '../../database/prisma.client';
-import { CrawlJobStatus, CrawlMode, Prisma } from '@prisma/client';
+import { CrawlJobStatus, CrawlMode, LogLevel, Prisma } from '@prisma/client';
 import { CrawlJobQueryDto } from './crawl-job.dto';
 import { JOB_STATUS } from '../../common/constants/job-status.constant';
 
@@ -300,5 +300,50 @@ export class CrawlJobRepository {
         ...(sinceDate ? { createdAt: { gte: sinceDate } } : {}),
       },
     });
+  }
+
+  async sumPagesCrawledByUser(userId: string): Promise<number> {
+    const aggregate = await prisma.crawlJob.aggregate({
+      where: { userId },
+      _sum: { totalPages: true },
+    });
+    return aggregate._sum.totalPages ?? 0;
+  }
+
+  async delete(id: string) {
+    return prisma.$transaction(async (tx) => {
+      await tx.crawlAsset.deleteMany({ where: { crawlJobId: id } });
+      await tx.crawlJobLog.deleteMany({ where: { jobId: id } });
+      await tx.crawlExport.deleteMany({ where: { jobId: id } });
+      await tx.crawlPage.deleteMany({ where: { jobId: id } });
+      return tx.crawlJob.delete({ where: { id } });
+    });
+  }
+
+  async createJobLog(data: {
+    jobId: string;
+    level: LogLevel;
+    step: string;
+    message: string;
+  }) {
+    return prisma.crawlJobLog.create({
+      data,
+    });
+  }
+
+  async findLogsByJobId(jobId: string, page = 1, limit = 50) {
+    const safePage = Math.max(1, page);
+    const safeLimit = Math.min(Math.max(1, limit), 200);
+    const skip = (safePage - 1) * safeLimit;
+    const [items, total] = await Promise.all([
+      prisma.crawlJobLog.findMany({
+        where: { jobId },
+        orderBy: { createdAt: 'asc' },
+        skip,
+        take: safeLimit,
+      }),
+      prisma.crawlJobLog.count({ where: { jobId } }),
+    ]);
+    return { items, total, page: safePage, limit: safeLimit };
   }
 }
