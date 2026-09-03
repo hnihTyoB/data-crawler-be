@@ -1,6 +1,6 @@
 import fs from "fs";
 import archiver from "archiver";
-import { CrawlJob, CrawlPage } from "@prisma/client";
+import { CrawlJob, CrawlPage } from "../../common/types/database.types";
 import { JOB_EXPORT_SUBDIRS } from "../../common/constants/storage-path.constant";
 import { EXPORT_MIME_TYPES } from "../../common/constants/export-type.constant";
 import {

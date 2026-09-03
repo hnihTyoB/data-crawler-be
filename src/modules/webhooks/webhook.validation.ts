@@ -1,4 +1,8 @@
 import { z } from "zod";
+import {
+  WEBHOOK_DELIVERY_STATUS,
+  WEBHOOK_EVENT,
+} from "../../common/constants/webhook.constant";
 
 export const createWebhookConfigSchema = z.object({
   url: z
@@ -13,7 +17,7 @@ export const createWebhookConfigSchema = z.object({
     .min(16, "Signing secret must be at least 16 characters long for security")
     .max(128, "Signing secret is too long"),
   events: z
-    .array(z.enum(["job.completed", "job.failed"]))
+    .array(z.nativeEnum(WEBHOOK_EVENT))
     .min(1, "At least one event must be selected for notifications"),
 });
 
@@ -25,7 +29,7 @@ export const updateWebhookConfigSchema = z.object({
     .max(128, "Signing secret is too long")
     .optional(),
   events: z
-    .array(z.enum(["job.completed", "job.failed"]))
+    .array(z.nativeEnum(WEBHOOK_EVENT))
     .min(1, "At least one event must be selected for notifications")
     .optional(),
   isActive: z.boolean().optional(),
@@ -33,7 +37,7 @@ export const updateWebhookConfigSchema = z.object({
 
 export const listWebhookDeliveriesQuerySchema = z.object({
   jobId: z.string().uuid().optional(),
-  status: z.enum(["PENDING", "SUCCESS", "FAILED"]).optional(),
-  page: z.coerce.number().int().min(1).optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional(),
+  status: z.nativeEnum(WEBHOOK_DELIVERY_STATUS).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
 });

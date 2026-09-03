@@ -5,6 +5,7 @@ jest.mock("../../../database/prisma.client", () => ({
 jest.mock("../crawl-job.repository");
 jest.mock("../../users/user.repository");
 jest.mock("../../crawl-exports/crawl-export.repository");
+jest.mock("../../crawl-schedules/crawl-schedule.repository");
 jest.mock("../../../common/helpers/url.helper");
 jest.mock("../../../queues/crawl.queue", () => ({
   crawlQueue: {
@@ -15,12 +16,14 @@ jest.mock("../../../queues/crawl.queue", () => ({
 import { CrawlJobService } from "../crawl-job.service";
 import { CrawlJobRepository } from "../crawl-job.repository";
 import { UserRepository } from "../../users/user.repository";
+import { CrawlScheduleRepository } from "../../crawl-schedules/crawl-schedule.repository";
 import * as urlHelper from "../../../common/helpers/url.helper";
 
 describe("CrawlJobService", () => {
   let service: CrawlJobService;
   let mockJobRepo: jest.Mocked<CrawlJobRepository>;
   let mockUserRepo: jest.Mocked<UserRepository>;
+  let mockScheduleRepo: jest.Mocked<CrawlScheduleRepository>;
 
   beforeEach(() => {
     jest.clearAllMocks();
@@ -31,6 +34,13 @@ describe("CrawlJobService", () => {
       countConcurrentJobs: jest.fn().mockResolvedValue(0),
       findById: jest.fn(),
     } as any;
+
+    mockScheduleRepo = {
+      findById: jest.fn().mockResolvedValue(null),
+    } as any;
+
+    (CrawlJobRepository as jest.Mock).mockReturnValue(mockJobRepo);
+    (CrawlScheduleRepository as jest.Mock).mockReturnValue(mockScheduleRepo);
 
     mockUserRepo = {
       findById: jest.fn().mockResolvedValue({
@@ -109,24 +119,34 @@ describe("CrawlJobService", () => {
       ).rejects.toThrow("Concurrent jobs quota of 3 exceeded");
     });
 
-    it("deduplicates URLs in URL_LIST mode and validates them", async () => {
-      const urls = [
-        "https://example.com/1",
-        "https://example.com/2",
-        "https://example.com/1",
-      ];
+    it("throws error when scheduleId does not belong to user", async () => {
+      mockScheduleRepo.findById.mockResolvedValue({
+        id: "sched-1",
+        userId: "other-user",
+      } as any);
+
+      await expect(
+        service.create("user-1", {
+          startUrl: "https://example.com",
+          scheduleId: "sched-1",
+        }),
+      ).rejects.toThrow("Crawl schedule not found");
+    });
+
+    it("attaches scheduleId when schedule belongs to user", async () => {
+      mockScheduleRepo.findById.mockResolvedValue({
+        id: "sched-1",
+        userId: "user-1",
+      } as any);
 
       await service.create("user-1", {
-        mode: "URL_LIST",
-        urls,
+        startUrl: "https://example.com",
+        scheduleId: "sched-1",
       });
 
-      expect(urlHelper.validateUrlAsync).toHaveBeenCalledTimes(2);
       expect(mockJobRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          mode: "URL_LIST",
-          startUrl: "https://example.com/1",
-          urls: ["https://example.com/1", "https://example.com/2"],
+          scheduleId: "sched-1",
         }),
       );
     });

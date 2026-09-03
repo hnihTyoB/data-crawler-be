@@ -1,6 +1,10 @@
 import fs from "fs";
 import { parse as parseHtml } from "node-html-parser";
-import { CrawlJob, CrawlPage, CrawlAsset } from "@prisma/client";
+import {
+  CrawlJob,
+  CrawlPage,
+  CrawlAsset,
+} from "../../common/types/database.types";
 import { CrawlAssetRepository } from "../crawl-assets/crawl-asset.repository";
 import { JOB_EXPORT_FILES } from "../../common/constants/storage-path.constant";
 import { EXPORT_MIME_TYPES } from "../../common/constants/export-type.constant";

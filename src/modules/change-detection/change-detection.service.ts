@@ -1,5 +1,5 @@
 import fs from "fs";
-import { CrawlJob, Prisma } from "@prisma/client";
+import { CrawlJob, Prisma } from "../../common/types/database.types";
 import { CrawlJobRepository } from "../crawl-jobs/crawl-job.repository";
 import {
   DiffReportEnvelope,

@@ -11,9 +11,9 @@ export const createUserSchema = z.object({
     .or(z.literal(""))
     .optional(),
   role: z.nativeEnum(ROLES).optional(),
-  maxPagesLimit: z.number().int().min(1).optional(),
-  maxJobsPerDayLimit: z.number().int().min(1).optional(),
-  maxConcurrentJobsLimit: z.number().int().min(1).optional(),
+  maxPagesLimit: z.number().int().min(1).max(100000).optional(),
+  maxJobsPerDayLimit: z.number().int().min(1).max(10000).optional(),
+  maxConcurrentJobsLimit: z.number().int().min(1).max(100).optional(),
 });
 
 export const updateUserSchema = z.object({
@@ -26,9 +26,9 @@ export const updateUserSchema = z.object({
     .optional(),
   isActive: z.boolean().optional(),
   role: z.nativeEnum(ROLES).optional(),
-  maxPagesLimit: z.number().int().min(1).optional(),
-  maxJobsPerDayLimit: z.number().int().min(1).optional(),
-  maxConcurrentJobsLimit: z.number().int().min(1).optional(),
+  maxPagesLimit: z.number().int().min(1).max(100000).optional(),
+  maxJobsPerDayLimit: z.number().int().min(1).max(10000).optional(),
+  maxConcurrentJobsLimit: z.number().int().min(1).max(100).optional(),
 });
 
 export const listUsersQuerySchema = z.object({
@@ -38,6 +38,6 @@ export const listUsersQuerySchema = z.object({
     .enum(["true", "false"])
     .transform((v) => v === "true")
     .optional(),
-  page: z.coerce.number().int().min(1).optional(),
-  limit: z.coerce.number().int().min(1).max(100).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
 });

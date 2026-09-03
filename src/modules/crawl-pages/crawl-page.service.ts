@@ -1,5 +1,5 @@
 import { CrawlPageRepository } from "./crawl-page.repository";
-import { CrawlPageStatus } from "@prisma/client";
+import { CrawlPageStatus } from "../../common/constants/crawl-page-status.constant";
 import { CrawlPageQueryDto } from "./crawl-page.dto";
 import {
   extractMainContent,

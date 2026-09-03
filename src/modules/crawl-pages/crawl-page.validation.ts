@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { CrawlPageStatus } from "@prisma/client";
+import { CRAWL_PAGE_STATUS } from "../../common/constants/crawl-page-status.constant";
 
 const parseBooleanQuery = (val: unknown) => {
   if (val === undefined || val === null || val === "") return undefined;
@@ -15,7 +15,7 @@ const parseNumberQuery = (val: unknown) => {
 };
 
 export const crawlPageQuerySchema = z.object({
-  status: z.nativeEnum(CrawlPageStatus).optional(),
+  status: z.nativeEnum(CRAWL_PAGE_STATUS).optional(),
   statusCode: z.preprocess(parseNumberQuery, z.number().int().optional()),
   search: z.string().trim().optional(),
 

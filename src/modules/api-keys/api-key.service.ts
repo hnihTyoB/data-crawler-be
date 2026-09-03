@@ -2,7 +2,7 @@ import crypto from "crypto";
 import { ApiKeyRepository } from "./api-key.repository";
 import { AppError } from "../../common/errors/app-error";
 import { ERROR_CODE } from "../../common/errors/error-code";
-import type { ApiKey } from "@prisma/client";
+import type { ApiKey } from "../../common/types/database.types";
 import {
   toPublicApiKey,
   type CreatedApiKey,

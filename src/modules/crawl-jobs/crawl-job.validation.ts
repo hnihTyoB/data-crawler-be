@@ -2,6 +2,7 @@ import { z } from "zod";
 import { EXPORT_TYPE } from "../../common/constants/export-type.constant";
 import { JOB_STATUS } from "../../common/constants/job-status.constant";
 import { CRAWL_MODE } from "../../common/constants/crawl-mode.constant";
+import { ASSET_TYPES } from "../../common/constants";
 
 export const createCrawlJobSchema = z
   .object({
@@ -66,4 +67,10 @@ export const listCrawlJobsQuerySchema = z.object({
   order: z.enum(["asc", "desc"]).optional(),
   page: z.coerce.number().int().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+export const getAssetsQuerySchema = z.object({
+  assetType: z.nativeEnum(ASSET_TYPES).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(500).default(50),
 });

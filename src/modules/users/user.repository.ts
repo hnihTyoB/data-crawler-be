@@ -2,6 +2,7 @@ import { prisma } from "../../database/prisma.client";
 import { UserRole, Prisma, User } from "@prisma/client";
 import { UserQueryDto } from "./user.dto";
 import { envConfig } from "../../config/env.config";
+import { ROLES } from "../../common/constants/role.constant";
 
 export class UserRepository {
   async findAll(query: UserQueryDto = {}) {
@@ -88,7 +89,7 @@ export class UserRepository {
         passwordHash: data.passwordHash,
         fullName: data.fullName,
         avatarUrl: data.avatarUrl,
-        role: data.role ?? "CRAWLER_USER",
+        role: data.role ?? ROLES.CRAWLER_USER,
         maxPagesLimit: data.maxPagesLimit ?? envConfig.quota.defaultMaxPages,
         maxJobsPerDayLimit:
           data.maxJobsPerDayLimit ?? envConfig.quota.defaultMaxJobsPerDay,

@@ -272,6 +272,7 @@ export class CrawlPageRepository {
     contentHash?: string | null;
     dataQualityScore?: number | null;
     warnings?: string[];
+    hasSensitiveData?: boolean;
   }) {
     return prisma.crawlPage.upsert({
       where: { jobId_url: { jobId: data.jobId, url: data.url } },
@@ -291,6 +292,7 @@ export class CrawlPageRepository {
         contentHash: data.contentHash,
         dataQualityScore: data.dataQualityScore,
         warnings: data.warnings,
+        hasSensitiveData: data.hasSensitiveData,
       },
     });
   }

@@ -166,26 +166,21 @@ export class CrawlJobRepository {
       failedPages?: number;
     },
   ) {
-    const currentJob = await prisma.crawlJob.findUnique({
-      where: { id },
-      select: { status: true },
+    await prisma.crawlJob.updateMany({
+      where: {
+        id,
+        ...(status !== JOB_STATUS.CANCELED
+          ? { status: { not: JOB_STATUS.CANCELED } }
+          : {}),
+      },
+      data: { status, ...extra },
     });
 
-    if (
-      currentJob?.status === JOB_STATUS.CANCELED &&
-      status !== JOB_STATUS.CANCELED
-    ) {
-      return prisma.crawlJob.findUnique({
-        where: { id },
-        include: {
-          exports: true,
-        },
-      });
-    }
-
-    return prisma.crawlJob.update({
+    return prisma.crawlJob.findUnique({
       where: { id },
-      data: { status, ...extra },
+      include: {
+        exports: true,
+      },
     });
   }
 

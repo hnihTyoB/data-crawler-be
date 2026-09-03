@@ -170,4 +170,89 @@ describe("AuthService registration mail failures", () => {
     expect(mailService.sendVerificationEmail).toHaveBeenCalledTimes(1);
     expect(repository.createUser).not.toHaveBeenCalled();
   });
+
+  describe("AuthService forgotPassword security", () => {
+    const activeUser = {
+      id: "user-active",
+      email: "active@example.com",
+      fullName: "Active User",
+      role: "CRAWLER_USER",
+      isActive: true,
+      passwordHash: "hash",
+      createdAt: new Date(),
+    };
+
+    it("sends password reset email internally and returns only { success: true } without leaking token or userId", async () => {
+      const service = new AuthService();
+      const repository = {
+        findByEmail: jest.fn().mockResolvedValue(activeUser),
+      };
+      const mailService = {
+        sendPasswordResetEmail: jest.fn().mockResolvedValue(undefined),
+      };
+      const mutableService = service as unknown as {
+        repository: typeof repository;
+        mailService: typeof mailService;
+      };
+      mutableService.repository = repository;
+      mutableService.mailService = mailService;
+
+      const result = await service.forgotPassword({ email: activeUser.email });
+
+      expect(result).toEqual({ success: true });
+      expect((result as Record<string, unknown>).resetToken).toBeUndefined();
+      expect((result as Record<string, unknown>).userId).toBeUndefined();
+      expect(mailService.sendPasswordResetEmail).toHaveBeenCalledTimes(1);
+      expect(mailService.sendPasswordResetEmail).toHaveBeenCalledWith(
+        activeUser.email,
+        expect.any(String),
+      );
+    });
+
+    it("returns { success: true } and does not call mail service if user is not found", async () => {
+      const service = new AuthService();
+      const repository = {
+        findByEmail: jest.fn().mockResolvedValue(null),
+      };
+      const mailService = {
+        sendPasswordResetEmail: jest.fn(),
+      };
+      const mutableService = service as unknown as {
+        repository: typeof repository;
+        mailService: typeof mailService;
+      };
+      mutableService.repository = repository;
+      mutableService.mailService = mailService;
+
+      const result = await service.forgotPassword({
+        email: "nonexistent@example.com",
+      });
+
+      expect(result).toEqual({ success: true });
+      expect(mailService.sendPasswordResetEmail).not.toHaveBeenCalled();
+    });
+
+    it("returns { success: true } and does not call mail service if user is inactive", async () => {
+      const service = new AuthService();
+      const repository = {
+        findByEmail: jest
+          .fn()
+          .mockResolvedValue({ ...activeUser, isActive: false }),
+      };
+      const mailService = {
+        sendPasswordResetEmail: jest.fn(),
+      };
+      const mutableService = service as unknown as {
+        repository: typeof repository;
+        mailService: typeof mailService;
+      };
+      mutableService.repository = repository;
+      mutableService.mailService = mailService;
+
+      const result = await service.forgotPassword({ email: activeUser.email });
+
+      expect(result).toEqual({ success: true });
+      expect(mailService.sendPasswordResetEmail).not.toHaveBeenCalled();
+    });
+  });
 });

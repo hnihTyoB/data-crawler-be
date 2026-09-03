@@ -1,4 +1,4 @@
-import { CrawlJob, CrawlPage } from "@prisma/client";
+import { CrawlJob, CrawlPage } from "../../common/types/database.types";
 import path from "path";
 import {
   ensureJobExportStructure,

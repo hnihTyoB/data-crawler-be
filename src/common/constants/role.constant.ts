@@ -5,3 +5,4 @@ export const ROLES = {
 } as const;
 
 export type Role = keyof typeof ROLES;
+export type UserRole = Role;

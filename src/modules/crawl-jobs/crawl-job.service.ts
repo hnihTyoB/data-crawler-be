@@ -1,5 +1,6 @@
 import { CrawlJobRepository } from "./crawl-job.repository";
 import { CrawlExportRepository } from "../crawl-exports/crawl-export.repository";
+import { CrawlScheduleRepository } from "../crawl-schedules/crawl-schedule.repository";
 import { UserRepository } from "../users/user.repository";
 import { AppError } from "../../common/errors/app-error";
 import { ERROR_CODE } from "../../common/errors/error-code";
@@ -21,6 +22,8 @@ import { getErrorMessage } from "../../common/helpers/error-mapping.helper";
 export class CrawlJobService {
   private readonly repository = new CrawlJobRepository();
   private readonly userRepository = new UserRepository();
+  private readonly scheduleRepository = new CrawlScheduleRepository();
+  private readonly exportRepository = new CrawlExportRepository();
 
   async create(userId: string, payload: CreateCrawlJobDto) {
     const isUrlList = payload.mode === CRAWL_MODE.URL_LIST;
@@ -39,6 +42,22 @@ export class CrawlJobService {
 
     if (!user) {
       throw new AppError("User not found", 404, ERROR_CODE.NOT_FOUND);
+    }
+
+    if (payload.scheduleId) {
+      const schedule = await this.scheduleRepository.findById(
+        payload.scheduleId,
+      );
+      if (
+        !schedule ||
+        (user.role !== ROLES.ADMIN && schedule.userId !== userId)
+      ) {
+        throw new AppError(
+          "Crawl schedule not found",
+          404,
+          ERROR_CODE.CRAWL_SCHEDULE_NOT_FOUND,
+        );
+      }
     }
 
     // SSRF validation with bounded concurrency for URL_LIST
@@ -221,8 +240,7 @@ export class CrawlJobService {
       );
     }
 
-    const exportRepository = new CrawlExportRepository();
-    const exports = await exportRepository.findByJobId(jobId);
+    const exports = await this.exportRepository.findByJobId(jobId);
     const storage = StorageFactory.getStorageService();
 
     for (const exportRecord of exports) {
@@ -254,8 +272,7 @@ export class CrawlJobService {
       );
     }
 
-    const exportRepository = new CrawlExportRepository();
-    const exports = await exportRepository.findByJobId(jobId);
+    const exports = await this.exportRepository.findByJobId(jobId);
     const storage = StorageFactory.getStorageService();
 
     for (const exp of exports) {

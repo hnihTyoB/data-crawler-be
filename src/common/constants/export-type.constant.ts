@@ -16,3 +16,11 @@ export const EXPORT_MIME_TYPES: Record<ExportType, string> = {
   MARKDOWN: "application/zip",
   ZIP: "application/zip",
 };
+export const EXPORT_STATUS = {
+  PENDING: "PENDING",
+  PROCESSING: "PROCESSING",
+  COMPLETED: "COMPLETED",
+  FAILED: "FAILED",
+} as const;
+
+export type ExportStatus = keyof typeof EXPORT_STATUS;
