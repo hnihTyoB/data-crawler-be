@@ -1,5 +1,5 @@
-import { prisma } from '../../database/prisma.client';
-import { WebhookConfig, WebhookDelivery, Prisma } from '@prisma/client';
+import { prisma } from "../../database/prisma.client";
+import { WebhookConfig, WebhookDelivery, Prisma } from "@prisma/client";
 
 export class WebhookRepository {
   createConfig(data: {
@@ -21,7 +21,7 @@ export class WebhookRepository {
   listConfigsByUser(userId: string): Promise<WebhookConfig[]> {
     return prisma.webhookConfig.findMany({
       where: { userId },
-      orderBy: { createdAt: 'desc' },
+      orderBy: { createdAt: "desc" },
     });
   }
 
@@ -52,7 +52,10 @@ export class WebhookRepository {
     });
   }
 
-  findActiveConfigsByEvent(userId: string, event: string): Promise<WebhookConfig[]> {
+  findActiveConfigsByEvent(
+    userId: string,
+    event: string,
+  ): Promise<WebhookConfig[]> {
     return prisma.webhookConfig.findMany({
       where: {
         userId,
@@ -91,7 +94,10 @@ export class WebhookRepository {
     });
   }
 
-  updateDelivery(id: string, data: Prisma.WebhookDeliveryUpdateInput): Promise<WebhookDelivery> {
+  updateDelivery(
+    id: string,
+    data: Prisma.WebhookDeliveryUpdateInput,
+  ): Promise<WebhookDelivery> {
     return prisma.webhookDelivery.update({
       where: { id },
       data,
@@ -131,7 +137,7 @@ export class WebhookRepository {
           },
         },
         orderBy: {
-          createdAt: 'desc',
+          createdAt: "desc",
         },
         skip,
         take: limit,

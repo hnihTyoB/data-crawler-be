@@ -4,7 +4,7 @@
  */
 
 /** Phiên bản hiện tại của Data Contract schema */
-export const DATA_CONTRACT_SCHEMA_VERSION = '1.0.0';
+export const DATA_CONTRACT_SCHEMA_VERSION = "1.0.0";
 
 /** Ngưỡng số từ tối thiểu; dưới ngưỡng này page bị gắn cảnh báo TOO_SHORT */
 export const DATA_QUALITY_MIN_WORD_COUNT = 50;
@@ -16,4 +16,4 @@ export const DATA_QUALITY_MIN_SCORE = 30;
  * Thuật toán hash dùng để tạo contentHash cho nội dung page.
  * Dùng 'sha256' để đảm bảo đủ entropy cho việc phát hiện duplicate.
  */
-export const DATA_CONTRACT_HASH_ALGORITHM = 'sha256';
+export const DATA_CONTRACT_HASH_ALGORITHM = "sha256";

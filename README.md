@@ -4,16 +4,16 @@ Backend API cho hệ thống crawl dữ liệu web. Người dùng dán link, h�
 
 ## Tech Stack
 
-| Thành phần      | Công nghệ                              |
-| --------------- | -------------------------------------- |
-| Runtime         | Node.js + TypeScript                   |
-| Framework       | Express.js                             |
-| ORM             | Prisma (Code First Migration)          |
-| Database        | PostgreSQL                             |
-| Queue / Cache   | Redis + BullMQ                         |
-| Crawl Engine    | Firecrawl API                          |
-| Export          | Archiver, ExcelJS, json2csv, Turndown  |
-| Package Manager | pnpm@9.15.0                            |
+| Thành phần      | Công nghệ                             |
+| --------------- | ------------------------------------- |
+| Runtime         | Node.js + TypeScript                  |
+| Framework       | Express.js                            |
+| ORM             | Prisma (Code First Migration)         |
+| Database        | PostgreSQL                            |
+| Queue / Cache   | Redis + BullMQ                        |
+| Crawl Engine    | Firecrawl API                         |
+| Export          | Archiver, ExcelJS, json2csv, Turndown |
+| Package Manager | pnpm@9.15.0                           |
 
 ## Kiến trúc Service Layer
 
@@ -111,10 +111,10 @@ docker ps
 
 Hai container cần chạy:
 
-| Container            | Service    | Port   |
-| -------------------- | ---------- | ------ |
-| `crawl_data_postgres`| PostgreSQL | `5432` |
-| `crawl_data_redis`   | Redis      | `6379` |
+| Container             | Service    | Port   |
+| --------------------- | ---------- | ------ |
+| `crawl_data_postgres` | PostgreSQL | `5432` |
+| `crawl_data_redis`    | Redis      | `6379` |
 
 > DB name mặc định trong Docker là `crawl_data_db` — đảm bảo `DB_NAME` trong `.env` khớp với giá trị này.
 
@@ -129,6 +129,7 @@ pnpm db:migrate:init
 ```
 
 Lệnh này sẽ:
+
 1. Đọc `prisma/schema.prisma`
 2. Tạo folder migration đầu tiên trong `prisma/migrations/`
 3. Apply migration xuống PostgreSQL
@@ -153,11 +154,11 @@ pnpm db:seed
 
 Seed tạo 3 tài khoản mặc định để test:
 
-| Email                 | Password         | Role          |
-| --------------------- | ---------------- | ------------- |
-| `admin@crawl.local`   | `Admin@123456`   | ADMIN         |
-| `crawl@crawl.local`   | `Crawler@123456` | CRAWLER_USER  |
-| `viewer@crawl.local`  | `Viewer@123456`  | VIEWER        |
+| Email                | Password         | Role         |
+| -------------------- | ---------------- | ------------ |
+| `admin@crawl.local`  | `Admin@123456`   | ADMIN        |
+| `crawl@crawl.local`  | `Crawler@123456` | CRAWLER_USER |
+| `viewer@crawl.local` | `Viewer@123456`  | VIEWER       |
 
 ---
 
@@ -212,20 +213,20 @@ pnpm worker
 
 ## Các lệnh hữu ích
 
-| Lệnh                       | Mô tả                                                      |
-| -------------------------- | ---------------------------------------------------------- |
-| `pnpm db:migrate:init`     | Tạo migration lần đầu (`--name init`)                      |
-| `pnpm db:migrate`          | Tạo migration mới sau khi sửa `schema.prisma`              |
-| `pnpm db:migrate:deploy`   | Apply migration lên staging/production (không dùng dev)    |
-| `pnpm db:migrate:reset`    | Xóa toàn bộ DB và chạy lại migration — **chỉ dùng local** |
-| `pnpm db:migrate:status`   | Xem trạng thái các migration đã apply                      |
-| `pnpm prisma:generate`     | Regenerate Prisma Client sau khi sửa schema thủ công       |
-| `pnpm prisma:studio`       | Mở Prisma Studio — GUI quản lý dữ liệu trực quan          |
-| `pnpm db:seed`             | Chạy seed tạo dữ liệu mẫu                                  |
-| `pnpm swagger`             | Regenerate file `src/docs/swagger.json`                    |
-| `pnpm build`               | Build production bundle ra thư mục `dist/`                 |
-| `pnpm lint`                | Kiểm tra lỗi ESLint                                        |
-| `pnpm format`              | Format code bằng Prettier                                  |
+| Lệnh                     | Mô tả                                                     |
+| ------------------------ | --------------------------------------------------------- |
+| `pnpm db:migrate:init`   | Tạo migration lần đầu (`--name init`)                     |
+| `pnpm db:migrate`        | Tạo migration mới sau khi sửa `schema.prisma`             |
+| `pnpm db:migrate:deploy` | Apply migration lên staging/production (không dùng dev)   |
+| `pnpm db:migrate:reset`  | Xóa toàn bộ DB và chạy lại migration — **chỉ dùng local** |
+| `pnpm db:migrate:status` | Xem trạng thái các migration đã apply                     |
+| `pnpm prisma:generate`   | Regenerate Prisma Client sau khi sửa schema thủ công      |
+| `pnpm prisma:studio`     | Mở Prisma Studio — GUI quản lý dữ liệu trực quan          |
+| `pnpm db:seed`           | Chạy seed tạo dữ liệu mẫu                                 |
+| `pnpm swagger`           | Regenerate file `src/docs/swagger.json`                   |
+| `pnpm build`             | Build production bundle ra thư mục `dist/`                |
+| `pnpm lint`              | Kiểm tra lỗi ESLint                                       |
+| `pnpm format`            | Format code bằng Prettier                                 |
 
 ---
 
@@ -300,11 +301,11 @@ Hệ thống hỗ trợ chuẩn hóa dữ liệu đầu ra **Data Contract v1**,
 
 ### 8.1 Mô hình Hai Lớp Output (Clean vs. Raw Output Model)
 
-| Lớp Output | Trường Dữ Liệu | Đặc Điểm & Mô Tả | Đối Tượng Sử Dụng |
-| :--- | :--- | :--- | :--- |
-| **Raw Output** | `rawMarkdown` | Nội dung Markdown thô nguyên bản thu thập từ crawler, giữ nguyên menu, header, sidebar và footer. | FE Debug / Reconstruct trang gốc |
-| **Clean Output** | `mainContent` | Thân bài chính đã qua thuật toán lọc nhiễu tự động (`extractMainContent`), loại bỏ menu nav, liên kết mạng xã hội, bài viết liên quan và copyright footer. Vẫn giữ cú pháp Markdown. | **AI Agent / LLM Prompt Context / RAG** |
-| **Clean Text** | `cleanText` | Plain text thuần túy đã xóa sạch toàn bộ ký tự định dạng Markdown (`stripMarkdown`). | Đếm từ (`wordCount`) & Hash (`contentHash`) |
+| Lớp Output       | Trường Dữ Liệu | Đặc Điểm & Mô Tả                                                                                                                                                                     | Đối Tượng Sử Dụng                           |
+| :--------------- | :------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | :------------------------------------------ |
+| **Raw Output**   | `rawMarkdown`  | Nội dung Markdown thô nguyên bản thu thập từ crawler, giữ nguyên menu, header, sidebar và footer.                                                                                    | FE Debug / Reconstruct trang gốc            |
+| **Clean Output** | `mainContent`  | Thân bài chính đã qua thuật toán lọc nhiễu tự động (`extractMainContent`), loại bỏ menu nav, liên kết mạng xã hội, bài viết liên quan và copyright footer. Vẫn giữ cú pháp Markdown. | **AI Agent / LLM Prompt Context / RAG**     |
+| **Clean Text**   | `cleanText`    | Plain text thuần túy đã xóa sạch toàn bộ ký tự định dạng Markdown (`stripMarkdown`).                                                                                                 | Đếm từ (`wordCount`) & Hash (`contentHash`) |
 
 ### 8.2 API Endpoints Preview & Assets
 
@@ -321,6 +322,7 @@ Hệ thống hỗ trợ chuẩn hóa dữ liệu đầu ra **Data Contract v1**,
 ### 8.3 Chỉ số Chất lượng Dữ liệu & Cảnh báo (Quality Metrics & Warnings)
 
 Mỗi bản ghi trang đã crawl trả về đầy đủ các trường đo lường chất lượng:
+
 - **`normalizedUrl`**: URL đã loại bỏ các tham số tracking (`utm_*`, `fbclid`, `gclid`), loại bỏ fragment và chuẩn hóa host/scheme để tránh trùng lặp.
 - **`wordCount`**: Số từ tính trên `cleanText`.
 - **`contentHash`**: Mã SHA-256 tính từ `cleanText` phục vụ deduplication trên Vector DB.
@@ -348,5 +350,3 @@ export-job-c4b8e21a.zip
 ```
 
 Xem chi tiết Data Contract đầy đủ tại [DATA_CONTRACT_V1.md](docs/DATA_CONTRACT_V1.md).
-
-

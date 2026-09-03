@@ -1,5 +1,5 @@
-import * as cheerio from 'cheerio';
-import { ExtractionFieldDto } from '../extraction-templates/extraction-template.dto';
+import * as cheerio from "cheerio";
+import { ExtractionFieldDto } from "../extraction-templates/extraction-template.dto";
 
 export interface ExtractionResult {
   success: boolean;
@@ -17,7 +17,10 @@ export interface ExtractionResult {
  *
  * Returns success=false if any required field yields no value.
  */
-export function runExtraction(html: string, fields: ExtractionFieldDto[]): ExtractionResult {
+export function runExtraction(
+  html: string,
+  fields: ExtractionFieldDto[],
+): ExtractionResult {
   const $ = cheerio.load(html);
   const data: Record<string, string | null> = {};
   const missingRequired: string[] = [];
@@ -27,7 +30,7 @@ export function runExtraction(html: string, fields: ExtractionFieldDto[]): Extra
 
     let value: string | null = null;
     if (el.length > 0) {
-      if (field.attr === 'innerText') {
+      if (field.attr === "innerText") {
         value = el.text().trim() || null;
       } else {
         value = el.attr(field.attr)?.trim() ?? null;
@@ -36,7 +39,7 @@ export function runExtraction(html: string, fields: ExtractionFieldDto[]): Extra
 
     data[field.name] = value;
 
-    if (field.required && (value === null || value === '')) {
+    if (field.required && (value === null || value === "")) {
       missingRequired.push(field.name);
     }
   }

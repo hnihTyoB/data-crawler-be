@@ -1,26 +1,29 @@
-import { CrawlJobRepository } from './crawl-job.repository';
-import { CrawlExportRepository } from '../crawl-exports/crawl-export.repository';
-import { UserRepository } from '../users/user.repository';
-import { AppError } from '../../common/errors/app-error';
-import { ERROR_CODE } from '../../common/errors/error-code';
-import { validateUrl, extractDomain } from '../../common/helpers/url.helper';
+import { CrawlJobRepository } from "./crawl-job.repository";
+import { CrawlExportRepository } from "../crawl-exports/crawl-export.repository";
+import { UserRepository } from "../users/user.repository";
+import { AppError } from "../../common/errors/app-error";
+import { ERROR_CODE } from "../../common/errors/error-code";
+import { validateUrl, extractDomain } from "../../common/helpers/url.helper";
 import {
   getZonedDateParts,
   createUtcDateFromZonedParts,
-} from '../../common/helpers/schedule-calculator.helper';
-import { crawlQueue } from '../../queues/crawl.queue';
-import { ROLES } from '../../common/constants/role.constant';
-import { JOB_STATUS } from '../../common/constants/job-status.constant';
-import { CreateCrawlJobDto, CrawlJobQueryDto } from './crawl-job.dto';
-import { StorageFactory } from '../../common/storage/storage.factory';
-import { getErrorMessage } from '../../common/helpers/error-mapping.helper';
+} from "../../common/helpers/schedule-calculator.helper";
+import { crawlQueue } from "../../queues/crawl.queue";
+import { ROLES } from "../../common/constants/role.constant";
+import { JOB_STATUS } from "../../common/constants/job-status.constant";
+import { EXPORT_TYPE } from "../../common/constants/export-type.constant";
+import { DEFAULT_TIMEZONE } from "../../common/constants/timezone.constant";
+import { CRAWL_MODE } from "../../common/constants/crawl-mode.constant";
+import { CreateCrawlJobDto, CrawlJobQueryDto } from "./crawl-job.dto";
+import { StorageFactory } from "../../common/storage/storage.factory";
+import { getErrorMessage } from "../../common/helpers/error-mapping.helper";
 
 export class CrawlJobService {
   private readonly repository = new CrawlJobRepository();
   private readonly userRepository = new UserRepository();
 
   async create(userId: string, payload: CreateCrawlJobDto) {
-    const isUrlList = payload.mode === 'URL_LIST';
+    const isUrlList = payload.mode === CRAWL_MODE.URL_LIST;
 
     // Deduplicate URLs before anything else
     const deduplicatedUrls = isUrlList
@@ -35,13 +38,13 @@ export class CrawlJobService {
     const user = await this.userRepository.findById(userId);
 
     if (!user) {
-      throw new AppError('User not found', 404, ERROR_CODE.NOT_FOUND);
+      throw new AppError("User not found", 404, ERROR_CODE.NOT_FOUND);
     }
 
     // SSRF validation with bounded concurrency for URL_LIST
     if (isUrlList) {
       const { validateUrlAsync } =
-        await import('../../common/helpers/url.helper');
+        await import("../../common/helpers/url.helper");
       const chunkSize = 10;
       for (let i = 0; i < deduplicatedUrls.length; i += chunkSize) {
         const chunk = deduplicatedUrls.slice(i, i + chunkSize);
@@ -75,17 +78,20 @@ export class CrawlJobService {
       }
 
       // Timezone UTC+7 start of day calculation
-      const nowZoned = getZonedDateParts(new Date(), 'Asia/Ho_Chi_Minh');
+      const nowZoned = getZonedDateParts(new Date(), DEFAULT_TIMEZONE);
       const startOfDay = createUtcDateFromZonedParts(
         nowZoned.year,
         nowZoned.month,
         nowZoned.day,
         0,
         0,
-        'Asia/Ho_Chi_Minh',
+        DEFAULT_TIMEZONE,
       );
 
-      const jobsTodayCount = await this.repository.countJobsSince(userId, startOfDay);
+      const jobsTodayCount = await this.repository.countJobsSince(
+        userId,
+        startOfDay,
+      );
 
       if (jobsTodayCount >= user.maxJobsPerDayLimit) {
         throw new AppError(
@@ -120,9 +126,9 @@ export class CrawlJobService {
 
     const job = await this.repository.create({
       userId,
-      startUrl: isUrlList ? (deduplicatedUrls[0] ?? '') : parsed!.href,
+      startUrl: isUrlList ? (deduplicatedUrls[0] ?? "") : parsed!.href,
       domain,
-      mode: payload.mode ?? 'SCRAPE',
+      mode: payload.mode ?? CRAWL_MODE.SCRAPE,
       maxPages: isUrlList ? deduplicatedUrls.length : payload.maxPages,
       maxDepth: payload.maxDepth,
       urls: deduplicatedUrls,
@@ -131,13 +137,13 @@ export class CrawlJobService {
 
     if (!crawlQueue) {
       throw new AppError(
-        'Redis is not enabled. Start Docker and set REDIS_ENABLED=true in .env',
+        "Redis is not enabled. Start Docker and set REDIS_ENABLED=true in .env",
         503,
         ERROR_CODE.INTERNAL_SERVER_ERROR,
       );
     }
 
-    await crawlQueue.add('crawl-job', { jobId: job.id });
+    await crawlQueue.add("crawl-job", { jobId: job.id });
 
     return job;
   }
@@ -154,7 +160,7 @@ export class CrawlJobService {
 
     if (!job) {
       throw new AppError(
-        'Crawl job not found',
+        "Crawl job not found",
         404,
         ERROR_CODE.CRAWL_JOB_NOT_FOUND,
       );
@@ -162,7 +168,7 @@ export class CrawlJobService {
 
     if (role !== ROLES.ADMIN && job.userId !== userId) {
       throw new AppError(
-        'Crawl job not found',
+        "Crawl job not found",
         404,
         ERROR_CODE.CRAWL_JOB_NOT_FOUND,
       );
@@ -176,7 +182,7 @@ export class CrawlJobService {
 
     if (job.status === JOB_STATUS.COMPLETED) {
       throw new AppError(
-        'Completed job cannot be canceled',
+        "Completed job cannot be canceled",
         400,
         ERROR_CODE.CRAWL_JOB_ALREADY_COMPLETED,
       );
@@ -193,9 +199,9 @@ export class CrawlJobService {
     // asyncCrawlUrl() returns, so it may be null if the job was canceled
     // before the worker had a chance to persist it (e.g. still PENDING/QUEUED).
     // In that case the worker's pre-run CANCELED check will catch it.
-    if (job.mode === 'CRAWL' && job.firecrawlJobId) {
+    if (job.mode === CRAWL_MODE.CRAWL && job.firecrawlJobId) {
       const { FirecrawlService } =
-        await import('../firecrawl/firecrawl.service');
+        await import("../firecrawl/firecrawl.service");
       const firecrawlService = new FirecrawlService();
       // Fire-and-forget — cancelCrawl() handles its own error logging internally
       void firecrawlService.cancelCrawl(job.firecrawlJobId);
@@ -207,9 +213,9 @@ export class CrawlJobService {
   async getDownloadFile(userId: string, role: string, jobId: string) {
     const job = await this.findById(userId, role, jobId);
 
-    if (job.status !== 'COMPLETED') {
+    if (job.status !== JOB_STATUS.COMPLETED) {
       throw new AppError(
-        'Crawl job is not completed yet',
+        "Crawl job is not completed yet",
         400,
         ERROR_CODE.CRAWL_JOB_NOT_COMPLETED,
       );
@@ -221,25 +227,28 @@ export class CrawlJobService {
 
     for (const exportRecord of exports) {
       if (
-        exportRecord.exportType === 'ZIP' &&
-        exportRecord.status === 'COMPLETED' &&
+        exportRecord.exportType === EXPORT_TYPE.ZIP &&
+        exportRecord.status === JOB_STATUS.COMPLETED &&
         (await storage.exists(exportRecord.filePath))
       ) {
         return exportRecord;
       }
     }
 
-    const { ExportService } = await import('../exports/export.service');
+    const { ExportService } = await import("../exports/export.service");
     const exportService = new ExportService();
-    return exportService.generate(job, 'ZIP');
+    return exportService.generate(job, EXPORT_TYPE.ZIP);
   }
 
   async delete(userId: string, role: string, jobId: string) {
     const job = await this.findById(userId, role, jobId);
 
-    if (job.status === JOB_STATUS.RUNNING || job.status === JOB_STATUS.PROCESSING_EXPORT) {
+    if (
+      job.status === JOB_STATUS.RUNNING ||
+      job.status === JOB_STATUS.PROCESSING_EXPORT
+    ) {
       throw new AppError(
-        'Cannot delete a job that is currently running. Cancel it first.',
+        "Cannot delete a job that is currently running. Cancel it first.",
         400,
         ERROR_CODE.CRAWL_JOB_NOT_COMPLETED,
       );
@@ -260,7 +269,7 @@ export class CrawlJobService {
     }
 
     await this.repository.delete(jobId);
-    return { success: true, message: 'Crawl job deleted successfully' };
+    return { success: true, message: "Crawl job deleted successfully" };
   }
 
   async rerun(userId: string, role: string, jobId: string) {
@@ -275,7 +284,13 @@ export class CrawlJobService {
     });
   }
 
-  async getLogs(userId: string, role: string, jobId: string, page = 1, limit = 50) {
+  async getLogs(
+    userId: string,
+    role: string,
+    jobId: string,
+    page = 1,
+    limit = 50,
+  ) {
     await this.findById(userId, role, jobId);
     return this.repository.findLogsByJobId(jobId, page, limit);
   }

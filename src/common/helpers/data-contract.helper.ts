@@ -1,5 +1,5 @@
-import crypto from 'crypto';
-import { CrawlPage, CrawlAsset } from '@prisma/client';
+import crypto from "crypto";
+import { CrawlPage, CrawlAsset } from "@prisma/client";
 import {
   CrawlPageRecord,
   DataQualityWarning,
@@ -7,13 +7,13 @@ import {
   ImageRecord,
   TableRecord,
   PagesJsonEnvelope,
-} from '../types/data-contract.types';
+} from "../types/data-contract.types";
 import {
   DATA_CONTRACT_SCHEMA_VERSION,
   DATA_QUALITY_MIN_WORD_COUNT,
   DATA_QUALITY_MIN_SCORE,
   DATA_CONTRACT_HASH_ALGORITHM,
-} from '../constants/data-contract.constant';
+} from "../constants/data-contract.constant";
 
 // ─────────────────────────────────────────────
 // URL Normalization
@@ -30,24 +30,24 @@ import {
 export function normalizeUrl(rawUrl: string): string {
   try {
     const parsed = new URL(rawUrl);
-    parsed.hash = '';
+    parsed.hash = "";
     parsed.hostname = parsed.hostname.toLowerCase();
     parsed.protocol = parsed.protocol.toLowerCase();
 
     // Bỏ trailing slash ở pathname (trừ root '/')
-    if (parsed.pathname !== '/' && parsed.pathname.endsWith('/')) {
+    if (parsed.pathname !== "/" && parsed.pathname.endsWith("/")) {
       parsed.pathname = parsed.pathname.slice(0, -1);
     }
 
     // Filter out common tracking query parameters
     const trackingParams = [
-      'utm_source',
-      'utm_medium',
-      'utm_campaign',
-      'utm_term',
-      'utm_content',
-      'fbclid',
-      'gclid',
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_term",
+      "utm_content",
+      "fbclid",
+      "gclid",
     ];
     const filteredEntries = [...parsed.searchParams.entries()]
       .filter(([key]) => !trackingParams.includes(key.toLowerCase()))
@@ -55,7 +55,9 @@ export function normalizeUrl(rawUrl: string): string {
 
     // Sắp xếp query params
     const sortedParams = new URLSearchParams(filteredEntries);
-    parsed.search = sortedParams.toString() ? `?${sortedParams.toString()}` : '';
+    parsed.search = sortedParams.toString()
+      ? `?${sortedParams.toString()}`
+      : "";
 
     return parsed.toString();
   } catch {
@@ -74,28 +76,30 @@ export function normalizeUrl(rawUrl: string): string {
  */
 export function stripMarkdown(markdown: string): string {
   return markdown
-    .replace(/```[\s\S]*?```/g, '') // code blocks
-    .replace(/`[^`]*`/g, '')        // inline code
-    .replace(/!\[.*?\]\(.*?\)/g, '') // images
-    .replace(/\[([^\]]+)\]\(.*?\)/g, '$1') // links → link text
-    .replace(/^#{1,6}\s+/gm, '')    // headings
-    .replace(/(\*\*|__)(.*?)\1/g, '$2') // bold
-    .replace(/(\*|_)(.*?)\1/g, '$2')   // italic
-    .replace(/^>\s+/gm, '')          // blockquotes
-    .replace(/^[-*]{3,}$/gm, '')     // horizontal rules
-    .replace(/^\s*[-*+]\s+/gm, '')   // unordered list markers
-    .replace(/^\s*\d+\.\s+/gm, '')   // ordered list markers
-    .replace(/\n{3,}/g, '\n\n')      // collapse excessive newlines
+    .replace(/```[\s\S]*?```/g, "") // code blocks
+    .replace(/`[^`]*`/g, "") // inline code
+    .replace(/!\[.*?\]\(.*?\)/g, "") // images
+    .replace(/\[([^\]]+)\]\(.*?\)/g, "$1") // links → link text
+    .replace(/^#{1,6}\s+/gm, "") // headings
+    .replace(/(\*\*|__)(.*?)\1/g, "$2") // bold
+    .replace(/(\*|_)(.*?)\1/g, "$2") // italic
+    .replace(/^>\s+/gm, "") // blockquotes
+    .replace(/^[-*]{3,}$/gm, "") // horizontal rules
+    .replace(/^\s*[-*+]\s+/gm, "") // unordered list markers
+    .replace(/^\s*\d+\.\s+/gm, "") // ordered list markers
+    .replace(/\n{3,}/g, "\n\n") // collapse excessive newlines
     .trim();
 }
 
 /**
  * Lọc bỏ các khối menu điều hướng (nav) và bản quyền footer (copyright).
  */
-export function extractMainContent(markdown: string | null | undefined): string {
-  if (!markdown) return '';
+export function extractMainContent(
+  markdown: string | null | undefined,
+): string {
+  if (!markdown) return "";
 
-  const lines = markdown.split('\n');
+  const lines = markdown.split("\n");
 
   // Count line frequency to detect repeated boilerplate
   const lineFrequency = new Map<string, number>();
@@ -107,18 +111,52 @@ export function extractMainContent(markdown: string | null | undefined): string 
   }
 
   const NAV_KEYWORDS = [
-    'home', 'about', 'about us', 'contact', 'contact us',
-    'privacy', 'privacy policy', 'terms', 'terms of service',
-    'terms of use', 'careers', 'login', 'signin', 'signup',
-    'register', 'copyright', 'help', 'faq', 'blog', 'news',
-    'search', 'cart', 'checkout', 'account', 'profile',
-    'settings', 'logout', 'sign out', 'subscribe', 'newsletter',
+    "home",
+    "about",
+    "about us",
+    "contact",
+    "contact us",
+    "privacy",
+    "privacy policy",
+    "terms",
+    "terms of service",
+    "terms of use",
+    "careers",
+    "login",
+    "signin",
+    "signup",
+    "register",
+    "copyright",
+    "help",
+    "faq",
+    "blog",
+    "news",
+    "search",
+    "cart",
+    "checkout",
+    "account",
+    "profile",
+    "settings",
+    "logout",
+    "sign out",
+    "subscribe",
+    "newsletter",
   ];
 
   const SOCIAL_KEYWORDS = [
-    'twitter', 'facebook', 'instagram', 'linkedin', 'youtube',
-    'tiktok', 'pinterest', 'snapchat', 'reddit', 'github',
-    'telegram', 'whatsapp', 'zalo',
+    "twitter",
+    "facebook",
+    "instagram",
+    "linkedin",
+    "youtube",
+    "tiktok",
+    "pinterest",
+    "snapchat",
+    "reddit",
+    "github",
+    "telegram",
+    "whatsapp",
+    "zalo",
   ];
 
   const SIDEBAR_PATTERNS = [
@@ -132,8 +170,8 @@ export function extractMainContent(markdown: string | null | undefined): string 
     /^\*?\*?©/,
     /copyright\s*©/i,
     /all rights reserved/i,
-    /^\s*\+?\d[\d\s\-().]{6,}\d\s*$/,  // phone numbers
-    /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\s*$/,  // standalone email
+    /^\s*\+?\d[\d\s\-().]{6,}\d\s*$/, // phone numbers
+    /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\s*$/, // standalone email
   ];
 
   const cleanedLines = lines.filter((line) => {
@@ -155,7 +193,7 @@ export function extractMainContent(markdown: string | null | undefined): string 
     }
 
     // Remove nav/social list items: * [Text](url) or - [Text](url)
-    if (trimmed.startsWith('* [') || trimmed.startsWith('- [')) {
+    if (trimmed.startsWith("* [") || trimmed.startsWith("- [")) {
       const match = trimmed.match(/^[\*\-]\s+\[(.*?)\]/);
       if (match) {
         const linkText = match[1].trim().toLowerCase();
@@ -173,7 +211,7 @@ export function extractMainContent(markdown: string | null | undefined): string 
     return true;
   });
 
-  return cleanedLines.join('\n').trim();
+  return cleanedLines.join("\n").trim();
 }
 
 /**
@@ -190,7 +228,10 @@ export function countWords(text: string): number {
  */
 export function hashContent(text: string): string | null {
   if (!text.trim()) return null;
-  return crypto.createHash(DATA_CONTRACT_HASH_ALGORITHM).update(text).digest('hex');
+  return crypto
+    .createHash(DATA_CONTRACT_HASH_ALGORITHM)
+    .update(text)
+    .digest("hex");
 }
 
 // ─────────────────────────────────────────────
@@ -237,18 +278,18 @@ export function detectWarnings(params: {
 }): DataQualityWarning[] {
   const warnings: DataQualityWarning[] = [];
 
-  if (!params.title) warnings.push('MISSING_TITLE');
-  if (!params.description) warnings.push('MISSING_DESCRIPTION');
+  if (!params.title) warnings.push("MISSING_TITLE");
+  if (!params.description) warnings.push("MISSING_DESCRIPTION");
   if (params.wordCount < DATA_QUALITY_MIN_WORD_COUNT && params.wordCount > 0) {
-    warnings.push('TOO_SHORT');
+    warnings.push("TOO_SHORT");
   }
-  if (params.isDuplicateContent) warnings.push('DUPLICATE_CONTENT');
-  if (params.isNavNoise) warnings.push('NAV_NOISE');
+  if (params.isDuplicateContent) warnings.push("DUPLICATE_CONTENT");
+  if (params.isNavNoise) warnings.push("NAV_NOISE");
   if (
     params.dataQualityScore !== null &&
     params.dataQualityScore < DATA_QUALITY_MIN_SCORE
   ) {
-    warnings.push('LOW_QUALITY_SCORE');
+    warnings.push("LOW_QUALITY_SCORE");
   }
 
   return warnings;
@@ -262,22 +303,28 @@ export function detectWarnings(params: {
  * Chuyển đổi danh sách CrawlAsset sang LinkRecord[].
  * Phân loại internal/external dựa vào domain của startUrl (job's domain).
  */
-export function transformLinks(assets: CrawlAsset[], jobDomain: string): LinkRecord[] {
+export function transformLinks(
+  assets: CrawlAsset[],
+  jobDomain: string,
+): LinkRecord[] {
   return assets
-    .filter((a) => a.assetType === 'LINK')
+    .filter((a) => a.assetType === "LINK")
     .map((a) => {
-      let type: 'internal' | 'external' = 'external';
+      let type: "internal" | "external" = "external";
       try {
         const linkHostname = new URL(a.url).hostname;
-        if (linkHostname === jobDomain || linkHostname.endsWith(`.${jobDomain}`)) {
-          type = 'internal';
+        if (
+          linkHostname === jobDomain ||
+          linkHostname.endsWith(`.${jobDomain}`)
+        ) {
+          type = "internal";
         }
       } catch {
         // URL không hợp lệ → giữ external
       }
       return {
         url: a.url,
-        sourceUrl: a.sourceUrl ?? '',
+        sourceUrl: a.sourceUrl ?? "",
         type,
       };
     });
@@ -290,7 +337,7 @@ export function transformImages(assets: CrawlAsset[]): ImageRecord[] {
   const seenUrls = new Set<string>();
   return assets
     .filter((a) => {
-      if (a.assetType !== 'IMAGE') return false;
+      if (a.assetType !== "IMAGE") return false;
       if (seenUrls.has(a.url)) return false;
       seenUrls.add(a.url);
       return true;
@@ -305,10 +352,12 @@ export function transformImages(assets: CrawlAsset[]): ImageRecord[] {
 
 function inferImageType(imageUrl: string): string {
   try {
-    const extension = new URL(imageUrl).pathname.match(/\.([a-zA-Z0-9]+)$/)?.[1];
-    return extension?.toLowerCase() ?? 'unknown';
+    const extension = new URL(imageUrl).pathname.match(
+      /\.([a-zA-Z0-9]+)$/,
+    )?.[1];
+    return extension?.toLowerCase() ?? "unknown";
   } catch {
-    return 'unknown';
+    return "unknown";
   }
 }
 
@@ -331,11 +380,13 @@ export interface TransformPageOptions {
  *
  * Lưu ý: Hàm này sẽ thêm contentHash vào seenContentHashes nếu không phải duplicate.
  */
-export function transformPageToRecord(options: TransformPageOptions): CrawlPageRecord {
+export function transformPageToRecord(
+  options: TransformPageOptions,
+): CrawlPageRecord {
   const { page, assets, tables = [], jobDomain, seenContentHashes } = options;
 
   const normalizedUrl = page.normalizedUrl || normalizeUrl(page.url);
-  const isSuccess = page.status === 'SUCCESS';
+  const isSuccess = page.status === "SUCCESS";
 
   // Clean text từ markdownContent
   const rawMarkdown = page.markdownContent ?? null;
@@ -345,12 +396,15 @@ export function transformPageToRecord(options: TransformPageOptions): CrawlPageR
   const contentHash = cleanText ? hashContent(cleanText) : null;
 
   // Determine Nav Noise
-  const originalLinesCount = rawMarkdown ? rawMarkdown.split('\n').length : 0;
-  const mainLinesCount = mainContent ? mainContent.split('\n').length : 0;
-  const isNavNoise = originalLinesCount > 10 && (originalLinesCount - mainLinesCount) / originalLinesCount > 0.3;
+  const originalLinesCount = rawMarkdown ? rawMarkdown.split("\n").length : 0;
+  const mainLinesCount = mainContent ? mainContent.split("\n").length : 0;
+  const isNavNoise =
+    originalLinesCount > 10 &&
+    (originalLinesCount - mainLinesCount) / originalLinesCount > 0.3;
 
   // Phát hiện duplicate
-  const isDuplicateContent = contentHash !== null && seenContentHashes.has(contentHash);
+  const isDuplicateContent =
+    contentHash !== null && seenContentHashes.has(contentHash);
   if (contentHash && !isDuplicateContent) {
     seenContentHashes.add(contentHash);
   }
@@ -379,7 +433,7 @@ export function transformPageToRecord(options: TransformPageOptions): CrawlPageR
     jobId: page.jobId,
     url: page.url,
     normalizedUrl,
-    status: page.status as CrawlPageRecord['status'],
+    status: page.status as CrawlPageRecord["status"],
     statusCode: page.statusCode ?? null,
     errorMessage: page.errorMessage ?? null,
     title: page.title ?? null,

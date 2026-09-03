@@ -1,31 +1,31 @@
-import { CrawlJobRepository } from '../../modules/crawl-jobs/crawl-job.repository';
-import { CrawlPageRepository } from '../../modules/crawl-pages/crawl-page.repository';
-import { CrawlAssetRepository } from '../../modules/crawl-assets/crawl-asset.repository';
-import { FirecrawlService } from '../../modules/firecrawl/firecrawl.service';
-import { CrawlPageProcessorService } from '../../modules/crawl-pages/crawl-page-processor.service';
-import { SensitiveScanService } from '../../modules/crawl-pages/sensitive-scan.service';
-import * as urlHelper from '../../common/helpers/url.helper';
+import { CrawlJobRepository } from "../../modules/crawl-jobs/crawl-job.repository";
+import { CrawlPageRepository } from "../../modules/crawl-pages/crawl-page.repository";
+import { CrawlAssetRepository } from "../../modules/crawl-assets/crawl-asset.repository";
+import { FirecrawlService } from "../../modules/firecrawl/firecrawl.service";
+import { CrawlPageProcessorService } from "../../modules/crawl-pages/crawl-page-processor.service";
+import { SensitiveScanService } from "../../modules/crawl-pages/sensitive-scan.service";
+import * as urlHelper from "../../common/helpers/url.helper";
 
-jest.mock('../../modules/crawl-jobs/crawl-job.repository');
-jest.mock('../../modules/crawl-pages/crawl-page.repository');
-jest.mock('../../modules/crawl-assets/crawl-asset.repository');
-jest.mock('../../modules/firecrawl/firecrawl.service');
-jest.mock('../../modules/crawl-pages/crawl-page-processor.service');
-jest.mock('../../modules/crawl-pages/sensitive-scan.service');
-jest.mock('../../common/helpers/url.helper');
+jest.mock("../../modules/crawl-jobs/crawl-job.repository");
+jest.mock("../../modules/crawl-pages/crawl-page.repository");
+jest.mock("../../modules/crawl-assets/crawl-asset.repository");
+jest.mock("../../modules/firecrawl/firecrawl.service");
+jest.mock("../../modules/crawl-pages/crawl-page-processor.service");
+jest.mock("../../modules/crawl-pages/sensitive-scan.service");
+jest.mock("../../common/helpers/url.helper");
 
-import { processCrawlJob } from '../crawl.worker.processor';
+import { processCrawlJob } from "../crawl.worker.processor";
 
 // ── Factories ──────────────────────────────────────────────────────────────
 
 function makeJob(overrides: Record<string, any> = {}): any {
   return {
-    id: 'job-1',
-    userId: 'user-1',
-    startUrl: 'https://example.com',
-    domain: 'example.com',
-    mode: 'SCRAPE',
-    status: 'PENDING',
+    id: "job-1",
+    userId: "user-1",
+    startUrl: "https://example.com",
+    domain: "example.com",
+    mode: "SCRAPE",
+    status: "PENDING",
     maxPages: 20,
     maxDepth: 1,
     urls: [],
@@ -35,12 +35,12 @@ function makeJob(overrides: Record<string, any> = {}): any {
 
 function makePage(overrides: Record<string, any> = {}): any {
   return {
-    id: 'page-1',
-    jobId: 'job-1',
-    url: 'https://example.com',
-    title: 'Example',
-    markdownContent: '# Content',
-    status: 'SUCCESS',
+    id: "page-1",
+    jobId: "job-1",
+    url: "https://example.com",
+    title: "Example",
+    markdownContent: "# Content",
+    status: "SUCCESS",
     statusCode: 200,
     hasSensitiveData: false,
     crawledAt: new Date(),
@@ -116,7 +116,10 @@ beforeEach(() => {
   // Default happy-path stubs
   (urlHelper.validateUrlAsync as jest.Mock).mockResolvedValue(undefined);
   mockJobRepo.findById.mockResolvedValue(makeJob() as any);
-  mockJobRepo.findByIdWithPages.mockResolvedValue({ ...makeJob(), pages: [] } as any);
+  mockJobRepo.findByIdWithPages.mockResolvedValue({
+    ...makeJob(),
+    pages: [],
+  } as any);
   mockJobRepo.updateStatus.mockResolvedValue(undefined as any);
   mockJobRepo.updateProgress.mockResolvedValue(undefined as any);
   mockJobRepo.updateDiffReport.mockResolvedValue(undefined as any);
@@ -126,230 +129,308 @@ beforeEach(() => {
   mockPageRepo.upsert.mockResolvedValue(makePage() as any);
   mockPageRepo.update.mockResolvedValue(undefined as any);
   mockAssetRepo.createMany.mockResolvedValue(undefined as any);
-  mockPageProcessor.normalize.mockReturnValue({ url: 'https://example.com', jobId: 'job-1' } as any);
-  mockPageProcessor.normalizeFailedPage.mockReturnValue({ url: 'https://example.com', jobId: 'job-1' } as any);
+  mockPageProcessor.normalize.mockReturnValue({
+    url: "https://example.com",
+    jobId: "job-1",
+  } as any);
+  mockPageProcessor.normalizeFailedPage.mockReturnValue({
+    url: "https://example.com",
+    jobId: "job-1",
+  } as any);
   mockSensitiveScanner.hasSensitiveData.mockReturnValue(false);
 });
 
 // ── SCRAPE mode ────────────────────────────────────────────────────────────
 
-describe('processCrawlJob — SCRAPE mode', () => {
-  it('marks job RUNNING then COMPLETED on successful scrape', async () => {
+describe("processCrawlJob — SCRAPE mode", () => {
+  it("marks job RUNNING then COMPLETED on successful scrape", async () => {
     mockFirecrawl.scrapePage = jest.fn().mockResolvedValue({
       success: true,
-      url: 'https://example.com',
-      markdown: '# Page',
+      url: "https://example.com",
+      markdown: "# Page",
       metadata: { statusCode: 200 },
     });
 
-    await processCrawlJob(makeBullJob('job-1'));
+    await processCrawlJob(makeBullJob("job-1"));
 
     expect(mockJobRepo.updateStatus).toHaveBeenCalledWith(
-      'job-1', 'RUNNING', expect.objectContaining({ startedAt: expect.any(Date) }),
+      "job-1",
+      "RUNNING",
+      expect.objectContaining({ startedAt: expect.any(Date) }),
     );
     expect(mockJobRepo.updateStatus).toHaveBeenCalledWith(
-      'job-1', 'COMPLETED', expect.objectContaining({ totalPages: 1, successPages: 1, failedPages: 0 }),
+      "job-1",
+      "COMPLETED",
+      expect.objectContaining({
+        totalPages: 1,
+        successPages: 1,
+        failedPages: 0,
+      }),
     );
   });
 
-  it('marks job FAILED when scrape returns success:false', async () => {
+  it("marks job FAILED when scrape returns success:false", async () => {
     mockFirecrawl.scrapePage = jest.fn().mockResolvedValue({
       success: false,
-      url: 'https://example.com',
-      error: 'Timeout',
+      url: "https://example.com",
+      error: "Timeout",
     });
 
-    await processCrawlJob(makeBullJob('job-1'));
+    await processCrawlJob(makeBullJob("job-1"));
 
     expect(mockJobRepo.updateStatus).toHaveBeenCalledWith(
-      'job-1', 'FAILED', expect.objectContaining({ totalPages: 1, failedPages: 1 }),
+      "job-1",
+      "FAILED",
+      expect.objectContaining({ totalPages: 1, failedPages: 1 }),
     );
   });
 
-  it('marks job FAILED when URL validation rejects before crawl', async () => {
+  it("marks job FAILED when URL validation rejects before crawl", async () => {
     (urlHelper.validateUrlAsync as jest.Mock).mockRejectedValue(
-      new Error('URL validation failed before crawl'),
+      new Error("URL validation failed before crawl"),
     );
 
-    await processCrawlJob(makeBullJob('job-1'));
+    await processCrawlJob(makeBullJob("job-1"));
 
     expect(mockJobRepo.updateStatus).toHaveBeenCalledWith(
-      'job-1', 'FAILED', expect.objectContaining({ errorMessage: expect.any(String) }),
+      "job-1",
+      "FAILED",
+      expect.objectContaining({ errorMessage: expect.any(String) }),
     );
     expect(mockFirecrawl.scrapePage).not.toHaveBeenCalled();
   });
 
-  it('skips processing when job is CANCELED', async () => {
-    mockJobRepo.findById = jest.fn().mockResolvedValue(makeJob({ status: 'CANCELED' }));
+  it("skips processing when job is CANCELED", async () => {
+    mockJobRepo.findById = jest
+      .fn()
+      .mockResolvedValue(makeJob({ status: "CANCELED" }));
 
-    await processCrawlJob(makeBullJob('job-1'));
+    await processCrawlJob(makeBullJob("job-1"));
 
     expect(mockJobRepo.updateStatus).not.toHaveBeenCalled();
     expect(mockFirecrawl.scrapePage).not.toHaveBeenCalled();
   });
 
-  it('throws when job not found in DB', async () => {
+  it("throws when job not found in DB", async () => {
     mockJobRepo.findById = jest.fn().mockResolvedValue(null);
 
-    await expect(processCrawlJob(makeBullJob('job-1'))).rejects.toThrow('not found');
+    await expect(processCrawlJob(makeBullJob("job-1"))).rejects.toThrow(
+      "not found",
+    );
   });
 
-  it('flags page hasSensitiveData when scanner detects sensitive content', async () => {
+  it("flags page hasSensitiveData when scanner detects sensitive content", async () => {
     mockFirecrawl.scrapePage = jest.fn().mockResolvedValue({
       success: true,
-      url: 'https://example.com',
-      markdown: 'email: user@example.com',
+      url: "https://example.com",
+      markdown: "email: user@example.com",
       metadata: { statusCode: 200 },
     });
     // normalize must return non-empty content so scanAndFlagPage doesn't early-return
     mockPageProcessor.normalize.mockReturnValue({
-      url: 'https://example.com',
-      jobId: 'job-1',
-      markdownContent: 'email: user@example.com',
-      title: 'Example',
-      description: 'Desc',
+      url: "https://example.com",
+      jobId: "job-1",
+      markdownContent: "email: user@example.com",
+      title: "Example",
+      description: "Desc",
     } as any);
     mockSensitiveScanner.hasSensitiveData.mockReturnValue(true);
 
-    await processCrawlJob(makeBullJob('job-1'));
+    await processCrawlJob(makeBullJob("job-1"));
 
-    expect(mockPageRepo.update).toHaveBeenCalledWith('page-1', { hasSensitiveData: true });
+    expect(mockPageRepo.update).toHaveBeenCalledWith("page-1", {
+      hasSensitiveData: true,
+    });
   });
 });
 
 // ── SITEMAP mode ───────────────────────────────────────────────────────────
 
-describe('processCrawlJob — SITEMAP mode', () => {
+describe("processCrawlJob — SITEMAP mode", () => {
   beforeEach(() => {
-    mockJobRepo.findById = jest.fn().mockResolvedValue(makeJob({ mode: 'SITEMAP' }));
+    mockJobRepo.findById = jest
+      .fn()
+      .mockResolvedValue(makeJob({ mode: "SITEMAP" }));
   });
 
-  it('marks job COMPLETED after batch scrape succeeds', async () => {
-    mockFirecrawl.parseSitemapUrls = jest.fn().mockResolvedValue([
-      'https://example.com/1',
-      'https://example.com/2',
-    ]);
+  it("marks job COMPLETED after batch scrape succeeds", async () => {
+    mockFirecrawl.parseSitemapUrls = jest
+      .fn()
+      .mockResolvedValue(["https://example.com/1", "https://example.com/2"]);
     mockFirecrawl.batchScrapePages = jest.fn().mockResolvedValue({
       success: true,
       pages: [
-        { url: 'https://example.com/1', success: true, markdown: '# P1', metadata: { statusCode: 200 } },
-        { url: 'https://example.com/2', success: true, markdown: '# P2', metadata: { statusCode: 200 } },
+        {
+          url: "https://example.com/1",
+          success: true,
+          markdown: "# P1",
+          metadata: { statusCode: 200 },
+        },
+        {
+          url: "https://example.com/2",
+          success: true,
+          markdown: "# P2",
+          metadata: { statusCode: 200 },
+        },
       ],
       failedUrls: [],
       robotsBlockedUrls: [],
       total: 2,
     });
 
-    await processCrawlJob(makeBullJob('job-1'));
+    await processCrawlJob(makeBullJob("job-1"));
 
     expect(mockJobRepo.updateStatus).toHaveBeenCalledWith(
-      'job-1', 'COMPLETED', expect.objectContaining({ successPages: 2, failedPages: 0, totalPages: 2 }),
+      "job-1",
+      "COMPLETED",
+      expect.objectContaining({
+        successPages: 2,
+        failedPages: 0,
+        totalPages: 2,
+      }),
     );
   });
 
-  it('persists the very first provider progress update for live polling', async () => {
-    mockFirecrawl.parseSitemapUrls = jest.fn().mockResolvedValue([
-      'https://example.com/1',
-      'https://example.com/2',
-    ]);
-    mockFirecrawl.batchScrapePages = jest.fn().mockImplementation(
-      async (_urls, _maxPages, onProgress) => {
+  it("persists the very first provider progress update for live polling", async () => {
+    mockFirecrawl.parseSitemapUrls = jest
+      .fn()
+      .mockResolvedValue(["https://example.com/1", "https://example.com/2"]);
+    mockFirecrawl.batchScrapePages = jest
+      .fn()
+      .mockImplementation(async (_urls, _maxPages, onProgress) => {
         await onProgress?.(1, 2);
         return {
           success: true,
           pages: [
-            { url: 'https://example.com/1', success: true, markdown: '# P1', metadata: { statusCode: 200 } },
-            { url: 'https://example.com/2', success: true, markdown: '# P2', metadata: { statusCode: 200 } },
+            {
+              url: "https://example.com/1",
+              success: true,
+              markdown: "# P1",
+              metadata: { statusCode: 200 },
+            },
+            {
+              url: "https://example.com/2",
+              success: true,
+              markdown: "# P2",
+              metadata: { statusCode: 200 },
+            },
           ],
           failedUrls: [],
           robotsBlockedUrls: [],
           total: 2,
         };
-      },
-    );
+      });
 
-    await processCrawlJob(makeBullJob('job-1'));
+    await processCrawlJob(makeBullJob("job-1"));
 
-    expect(mockJobRepo.updateProgress).toHaveBeenCalledWith('job-1', {
+    expect(mockJobRepo.updateProgress).toHaveBeenCalledWith("job-1", {
       successPages: 1,
       totalPages: 2,
     });
   });
 
-  it('marks job FAILED when sitemap parse throws', async () => {
-    mockFirecrawl.parseSitemapUrls = jest.fn().mockRejectedValue(
-      new Error('Sitemap fetch failed'),
-    );
+  it("marks job FAILED when sitemap parse throws", async () => {
+    mockFirecrawl.parseSitemapUrls = jest
+      .fn()
+      .mockRejectedValue(new Error("Sitemap fetch failed"));
 
-    await processCrawlJob(makeBullJob('job-1'));
+    await processCrawlJob(makeBullJob("job-1"));
 
     expect(mockJobRepo.updateStatus).toHaveBeenCalledWith(
-      'job-1', 'FAILED', expect.objectContaining({ errorMessage: expect.any(String) }),
+      "job-1",
+      "FAILED",
+      expect.objectContaining({ errorMessage: expect.any(String) }),
     );
   });
 
-  it('marks job FAILED when sitemap returns 0 URLs', async () => {
+  it("marks job FAILED when sitemap returns 0 URLs", async () => {
     mockFirecrawl.parseSitemapUrls = jest.fn().mockResolvedValue([]);
 
-    await processCrawlJob(makeBullJob('job-1'));
+    await processCrawlJob(makeBullJob("job-1"));
 
     expect(mockJobRepo.updateStatus).toHaveBeenCalledWith(
-      'job-1', 'FAILED', expect.objectContaining({ errorMessage: expect.stringContaining('no valid URLs') }),
+      "job-1",
+      "FAILED",
+      expect.objectContaining({
+        errorMessage: expect.stringContaining("no valid URLs"),
+      }),
     );
   });
 
-  it('marks job FAILED when batch scrape returns success:false', async () => {
-    mockFirecrawl.parseSitemapUrls = jest.fn().mockResolvedValue(['https://example.com/1']);
+  it("marks job FAILED when batch scrape returns success:false", async () => {
+    mockFirecrawl.parseSitemapUrls = jest
+      .fn()
+      .mockResolvedValue(["https://example.com/1"]);
     mockFirecrawl.batchScrapePages = jest.fn().mockResolvedValue({
       success: false,
-      error: 'Batch failed',
+      error: "Batch failed",
       total: 1,
     });
 
-    await processCrawlJob(makeBullJob('job-1'));
+    await processCrawlJob(makeBullJob("job-1"));
 
     expect(mockJobRepo.updateStatus).toHaveBeenCalledWith(
-      'job-1', 'FAILED', expect.objectContaining({ errorMessage: expect.any(String) }),
+      "job-1",
+      "FAILED",
+      expect.objectContaining({ errorMessage: expect.any(String) }),
     );
   });
 
-  it('counts failed pages correctly when some pages fail in batch', async () => {
-    mockFirecrawl.parseSitemapUrls = jest.fn().mockResolvedValue([
-      'https://example.com/1',
-      'https://example.com/2',
-    ]);
+  it("counts failed pages correctly when some pages fail in batch", async () => {
+    mockFirecrawl.parseSitemapUrls = jest
+      .fn()
+      .mockResolvedValue(["https://example.com/1", "https://example.com/2"]);
     mockFirecrawl.batchScrapePages = jest.fn().mockResolvedValue({
       success: true,
       pages: [
-        { url: 'https://example.com/1', success: true, markdown: '# P1', metadata: { statusCode: 200 } },
-        { url: 'https://example.com/2', success: false, error: 'Timeout', metadata: { statusCode: 408 } },
+        {
+          url: "https://example.com/1",
+          success: true,
+          markdown: "# P1",
+          metadata: { statusCode: 200 },
+        },
+        {
+          url: "https://example.com/2",
+          success: false,
+          error: "Timeout",
+          metadata: { statusCode: 408 },
+        },
       ],
       failedUrls: [],
       robotsBlockedUrls: [],
       total: 2,
     });
     mockPageRepo.upsert
-      .mockResolvedValueOnce(makePage({ id: 'page-1', url: 'https://example.com/1' }))
-      .mockResolvedValueOnce(makePage({ id: 'page-2', url: 'https://example.com/2' }));
+      .mockResolvedValueOnce(
+        makePage({ id: "page-1", url: "https://example.com/1" }),
+      )
+      .mockResolvedValueOnce(
+        makePage({ id: "page-2", url: "https://example.com/2" }),
+      );
 
-    await processCrawlJob(makeBullJob('job-1'));
+    await processCrawlJob(makeBullJob("job-1"));
 
     expect(mockJobRepo.updateStatus).toHaveBeenCalledWith(
-      'job-1', 'COMPLETED', expect.objectContaining({ successPages: 1, failedPages: 1 }),
+      "job-1",
+      "COMPLETED",
+      expect.objectContaining({ successPages: 1, failedPages: 1 }),
     );
   });
 });
 
 // ── URL_LIST mode ──────────────────────────────────────────────────────────
 
-describe('processCrawlJob — URL_LIST mode', () => {
+describe("processCrawlJob — URL_LIST mode", () => {
   beforeEach(() => {
     mockJobRepo.findById = jest.fn().mockResolvedValue(
-      makeJob({ mode: 'URL_LIST', urls: ['https://example.com/a', 'https://example.com/b'] }),
+      makeJob({
+        mode: "URL_LIST",
+        urls: ["https://example.com/a", "https://example.com/b"],
+      }),
     );
   });
 
-  it('skips URL validation for URL_LIST mode', async () => {
+  it("skips URL validation for URL_LIST mode", async () => {
     mockFirecrawl.batchScrapePages = jest.fn().mockResolvedValue({
       success: true,
       pages: [],
@@ -358,36 +439,50 @@ describe('processCrawlJob — URL_LIST mode', () => {
       total: 0,
     });
 
-    await processCrawlJob(makeBullJob('job-1'));
+    await processCrawlJob(makeBullJob("job-1"));
 
     expect(urlHelper.validateUrlAsync).not.toHaveBeenCalled();
   });
 
-  it('marks job FAILED when urls array is empty', async () => {
-    mockJobRepo.findById = jest.fn().mockResolvedValue(
-      makeJob({ mode: 'URL_LIST', urls: [] }),
-    );
+  it("marks job FAILED when urls array is empty", async () => {
+    mockJobRepo.findById = jest
+      .fn()
+      .mockResolvedValue(makeJob({ mode: "URL_LIST", urls: [] }));
 
-    await processCrawlJob(makeBullJob('job-1'));
+    await processCrawlJob(makeBullJob("job-1"));
 
     expect(mockJobRepo.updateStatus).toHaveBeenCalledWith(
-      'job-1', 'FAILED', expect.objectContaining({ errorMessage: expect.stringContaining('at least one URL') }),
+      "job-1",
+      "FAILED",
+      expect.objectContaining({
+        errorMessage: expect.stringContaining("at least one URL"),
+      }),
     );
   });
 
-  it('deduplicates pages from batch result when same URL appears twice', async () => {
+  it("deduplicates pages from batch result when same URL appears twice", async () => {
     mockFirecrawl.batchScrapePages = jest.fn().mockResolvedValue({
       success: true,
       pages: [
-        { url: 'https://example.com/a', success: true, markdown: '# A', metadata: { statusCode: 200 } },
-        { url: 'https://example.com/a', success: true, markdown: '# A dup', metadata: { statusCode: 200 } },
+        {
+          url: "https://example.com/a",
+          success: true,
+          markdown: "# A",
+          metadata: { statusCode: 200 },
+        },
+        {
+          url: "https://example.com/a",
+          success: true,
+          markdown: "# A dup",
+          metadata: { statusCode: 200 },
+        },
       ],
       failedUrls: [],
       robotsBlockedUrls: [],
       total: 2,
     });
 
-    await processCrawlJob(makeBullJob('job-1'));
+    await processCrawlJob(makeBullJob("job-1"));
 
     // Second identical URL is skipped by seenUrls Set — create called only once
     expect(mockPageRepo.upsert).toHaveBeenCalledTimes(1);

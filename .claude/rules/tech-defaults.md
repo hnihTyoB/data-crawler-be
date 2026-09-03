@@ -6,12 +6,12 @@
 
 ## 1. Môi Trường & Phiên Bản Chuẩn (Core Runtime)
 
-| Thành phần | Phiên bản / Thư viện | Ghi chú quy ước |
-| :--- | :--- | :--- |
-| **Node.js** | `>= 20.x` | Sử dụng cú pháp ES2022+ hiện đại |
-| **Package Manager** | `pnpm@9.15.0` | Không dùng npm hay yarn để tránh lệch pnpm-lock |
-| **Ngôn ngữ** | `TypeScript 5.7` | `strict: true`, không dùng kiểu `any` vô căn cứ |
-| **Web Framework** | `Express.js 4.21` | Tách rời App configuration và Server listener |
+| Thành phần          | Phiên bản / Thư viện | Ghi chú quy ước                                 |
+| :------------------ | :------------------- | :---------------------------------------------- |
+| **Node.js**         | `>= 20.x`            | Sử dụng cú pháp ES2022+ hiện đại                |
+| **Package Manager** | `pnpm@9.15.0`        | Không dùng npm hay yarn để tránh lệch pnpm-lock |
+| **Ngôn ngữ**        | `TypeScript 5.7`     | `strict: true`, không dùng kiểu `any` vô căn cứ |
+| **Web Framework**   | `Express.js 4.21`    | Tách rời App configuration và Server listener   |
 
 ---
 

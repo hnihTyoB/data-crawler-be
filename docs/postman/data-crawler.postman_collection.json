@@ -769,15 +769,8 @@
             ],
             "url": {
               "raw": "{{base_url}}/crawl-jobs/:id/pages/preview?minQualityScore=50",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "crawl-jobs",
-                ":id",
-                "pages",
-                "preview"
-              ],
+              "host": ["{{base_url}}"],
+              "path": ["crawl-jobs", ":id", "pages", "preview"],
               "query": [
                 {
                   "key": "minQualityScore",
@@ -825,14 +818,8 @@
             ],
             "url": {
               "raw": "{{base_url}}/crawl-jobs/:id/assets?assetType=IMAGE",
-              "host": [
-                "{{base_url}}"
-              ],
-              "path": [
-                "crawl-jobs",
-                ":id",
-                "assets"
-              ],
+              "host": ["{{base_url}}"],
+              "path": ["crawl-jobs", ":id", "assets"],
               "query": [
                 {
                   "key": "assetType",
@@ -1311,10 +1298,21 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
-              { "key": "Content-Type", "value": "application/json", "type": "text" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n    \"exportType\": \"ZIP\"\n}" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"exportType\": \"ZIP\"\n}"
+            },
             "url": {
               "raw": "{{base_url}}/crawl-jobs/:id/exports",
               "host": ["{{base_url}}"],
@@ -1341,7 +1339,13 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/exports/:exportId/download",
               "host": ["{{base_url}}"],
@@ -1370,10 +1374,21 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
-              { "key": "Content-Type", "value": "application/json", "type": "text" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n    \"exportType\": \"JSON\"\n}" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"exportType\": \"JSON\"\n}"
+            },
             "url": {
               "raw": "{{base_url}}/crawl-jobs/:id/exports",
               "host": ["{{base_url}}"],
@@ -1400,7 +1415,13 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/exports/:exportId/download",
               "host": ["{{base_url}}"],
@@ -1429,10 +1450,21 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
-              { "key": "Content-Type", "value": "application/json", "type": "text" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n    \"exportType\": \"CSV\"\n}" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"exportType\": \"CSV\"\n}"
+            },
             "url": {
               "raw": "{{base_url}}/crawl-jobs/:id/exports",
               "host": ["{{base_url}}"],
@@ -1459,7 +1491,13 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/exports/:exportId/download",
               "host": ["{{base_url}}"],
@@ -1488,10 +1526,21 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
-              { "key": "Content-Type", "value": "application/json", "type": "text" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n    \"exportType\": \"XLSX\"\n}" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"exportType\": \"XLSX\"\n}"
+            },
             "url": {
               "raw": "{{base_url}}/crawl-jobs/:id/exports",
               "host": ["{{base_url}}"],
@@ -1518,7 +1567,13 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/exports/:exportId/download",
               "host": ["{{base_url}}"],
@@ -1547,10 +1602,21 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Authorization", "value": "Bearer {{token}}", "type": "text" },
-              { "key": "Content-Type", "value": "application/json", "type": "text" }
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json",
+                "type": "text"
+              }
             ],
-            "body": { "mode": "raw", "raw": "{\n    \"exportType\": \"MARKDOWN\"\n}" },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"exportType\": \"MARKDOWN\"\n}"
+            },
             "url": {
               "raw": "{{base_url}}/crawl-jobs/:id/exports",
               "host": ["{{base_url}}"],
@@ -1576,7 +1642,13 @@
           ],
           "request": {
             "method": "GET",
-            "header": [{ "key": "Authorization", "value": "Bearer {{token}}", "type": "text" }],
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}",
+                "type": "text"
+              }
+            ],
             "url": {
               "raw": "{{base_url}}/exports/:exportId/download",
               "host": ["{{base_url}}"],

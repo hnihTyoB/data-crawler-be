@@ -1,4 +1,5 @@
-import { CrawlJobStatus, CrawlMode } from '@prisma/client';
+import { JobStatus } from "../../common/constants/job-status.constant";
+import { CrawlMode } from "../../common/constants/crawl-mode.constant";
 
 export interface CreateCrawlJobDto {
   startUrl?: string;
@@ -10,17 +11,17 @@ export interface CreateCrawlJobDto {
 }
 
 export interface CrawlJobQueryDto {
-  status?: CrawlJobStatus;
+  status?: JobStatus;
   mode?: CrawlMode;
   search?: string;
   sortBy?: string;
-  order?: 'asc' | 'desc';
+  order?: "asc" | "desc";
   page?: string | number;
   limit?: string | number;
 }
 
 export interface UpdateCrawlJobStatusDto {
-  status: CrawlJobStatus;
+  status: JobStatus;
   errorMessage?: string;
   startedAt?: Date;
   finishedAt?: Date;

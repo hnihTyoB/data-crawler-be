@@ -20,6 +20,7 @@ Khi xây dựng hoặc sửa đổi tính năng trong `data-crawler-be`, thực 
 ## 2. Quy Chuẩn Commit Git
 
 Áp dụng chuẩn Conventional Commits:
+
 - `feat(<module>):` Thêm chức năng mới
 - `fix(<module>):` Sửa lỗi nghiệp vụ hoặc kỹ thuật
 - `refactor(<module>):` Tối ưu hóa code mà không thay đổi tính năng

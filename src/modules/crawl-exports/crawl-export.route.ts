@@ -1,15 +1,29 @@
-import { Router } from 'express';
-import { CrawlExportController } from './crawl-export.controller';
-import { authMiddleware } from '../../middlewares/auth.middleware';
-import { requireRole } from '../../middlewares/role.middleware';
-import { ROLES } from '../../common/constants/role.constant';
+import { Router } from "express";
+import { CrawlExportController } from "./crawl-export.controller";
+import { authMiddleware } from "../../middlewares/auth.middleware";
+import { requireRole } from "../../middlewares/role.middleware";
+import { ROLES } from "../../common/constants/role.constant";
 
 const router = Router();
 const controller = new CrawlExportController();
 
-router.get('/', authMiddleware, requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER), controller.findAll);
-router.get('/:exportId/download', authMiddleware, requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER), controller.download);
-router.delete('/:exportId', authMiddleware, requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER), controller.delete);
+router.get(
+  "/",
+  authMiddleware,
+  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER),
+  controller.findAll,
+);
+router.get(
+  "/:exportId/download",
+  authMiddleware,
+  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER),
+  controller.download,
+);
+router.delete(
+  "/:exportId",
+  authMiddleware,
+  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER),
+  controller.delete,
+);
 
 export default router;
-

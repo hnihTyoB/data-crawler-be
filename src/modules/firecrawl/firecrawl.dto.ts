@@ -41,7 +41,7 @@ export interface CrawlErrorItem {
 
 /** Result of polling checkCrawlStatus(). */
 export interface CrawlStatusResult {
-  status: 'scraping' | 'completed' | 'failed' | 'cancelled';
+  status: "scraping" | "completed" | "failed" | "cancelled";
   completed: number;
   total: number;
   pages: FirecrawlPageResult[];

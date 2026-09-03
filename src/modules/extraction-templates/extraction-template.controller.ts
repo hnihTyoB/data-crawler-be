@@ -1,5 +1,5 @@
-import { Request, Response, NextFunction } from 'express';
-import { ExtractionTemplateService } from './extraction-template.service';
+import { Request, Response, NextFunction } from "express";
+import { ExtractionTemplateService } from "./extraction-template.service";
 
 export class ExtractionTemplateController {
   private readonly service = new ExtractionTemplateService();
@@ -33,7 +33,11 @@ export class ExtractionTemplateController {
 
   update = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await this.service.update(req.user.id, req.params.id, req.body);
+      const result = await this.service.update(
+        req.user.id,
+        req.params.id,
+        req.body,
+      );
       res.json({ success: true, data: result });
     } catch (err) {
       next(err);

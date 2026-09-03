@@ -79,4 +79,3 @@ export interface VerifyEmailDto {
 export interface ResendVerificationDto {
   email: string;
 }
-

@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
-import { CrawlScheduleService } from './crawl-schedule.service';
-import { CrawlScheduleQueryDto } from './crawl-schedule.dto';
+import { Request, Response, NextFunction } from "express";
+import { CrawlScheduleService } from "./crawl-schedule.service";
+import { CrawlScheduleQueryDto } from "./crawl-schedule.dto";
 
 export class CrawlScheduleController {
   private readonly service = new CrawlScheduleService();
@@ -13,7 +13,7 @@ export class CrawlScheduleController {
         req.body,
       );
       res.status(201).json({
-        message: 'Crawl schedule created successfully',
+        message: "Crawl schedule created successfully",
         data: schedule,
       });
     } catch (error) {
@@ -56,7 +56,7 @@ export class CrawlScheduleController {
         req.body,
       );
       res.json({
-        message: 'Crawl schedule updated successfully',
+        message: "Crawl schedule updated successfully",
         data: updated,
       });
     } catch (error) {
@@ -66,13 +66,9 @@ export class CrawlScheduleController {
 
   delete = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.service.delete(
-        req.user!.id,
-        req.user!.role,
-        req.params.id,
-      );
+      await this.service.delete(req.user!.id, req.user!.role, req.params.id);
       res.json({
-        message: 'Crawl schedule deleted successfully',
+        message: "Crawl schedule deleted successfully",
       });
     } catch (error) {
       next(error);
@@ -87,7 +83,7 @@ export class CrawlScheduleController {
         req.params.id,
       );
       res.status(201).json({
-        message: 'Scheduled crawl triggered successfully',
+        message: "Scheduled crawl triggered successfully",
         data: job,
       });
     } catch (error) {
@@ -98,7 +94,9 @@ export class CrawlScheduleController {
   getHistory = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const page = req.query.page ? parseInt(req.query.page as string, 10) : 1;
-      const limit = req.query.limit ? parseInt(req.query.limit as string, 10) : 20;
+      const limit = req.query.limit
+        ? parseInt(req.query.limit as string, 10)
+        : 20;
       const history = await this.service.getScheduleHistory(
         req.user!.id,
         req.user!.role,

@@ -1,7 +1,8 @@
-export const DEFAULT_TIMEZONE = 'Asia/Ho_Chi_Minh'; // Vietnam UTC+7
+import { DEFAULT_TIMEZONE } from "../constants/timezone.constant";
+export { DEFAULT_TIMEZONE };
 
 export interface NextRunParams {
-  frequency: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'CUSTOM';
+  frequency: "DAILY" | "WEEKLY" | "MONTHLY" | "CUSTOM";
   hour?: number;
   minute?: number;
   dayOfWeek?: number | null; // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
@@ -15,8 +16,10 @@ export interface NextRunParams {
  * Checks if a standard 5-part cron expression is structurally valid.
  * Format: "minute hour day-of-month month day-of-week"
  */
-export function isValidCronExpression(cron: string | null | undefined): boolean {
-  if (!cron || typeof cron !== 'string') return false;
+export function isValidCronExpression(
+  cron: string | null | undefined,
+): boolean {
+  if (!cron || typeof cron !== "string") return false;
   const parts = cron.trim().split(/\s+/);
   if (parts.length !== 5) return false;
 
@@ -31,28 +34,30 @@ export function isValidCronExpression(cron: string | null | undefined): boolean 
 }
 
 function isValidCronField(field: string, min: number, max: number): boolean {
-  if (field === '*') return true;
+  if (field === "*") return true;
 
   // Step: */5 or 1-10/2
-  if (field.includes('/')) {
-    const [range, stepStr] = field.split('/');
+  if (field.includes("/")) {
+    const [range, stepStr] = field.split("/");
     const step = parseInt(stepStr, 10);
     if (isNaN(step) || step <= 0) return false;
-    if (range === '*') return true;
+    if (range === "*") return true;
     return isValidCronField(range, min, max);
   }
 
   // Comma separated: 1,2,5
-  if (field.includes(',')) {
-    return field.split(',').every((sub) => isValidCronField(sub, min, max));
+  if (field.includes(",")) {
+    return field.split(",").every((sub) => isValidCronField(sub, min, max));
   }
 
   // Range: 1-5
-  if (field.includes('-')) {
-    const [startStr, endStr] = field.split('-');
+  if (field.includes("-")) {
+    const [startStr, endStr] = field.split("-");
     const start = parseInt(startStr, 10);
     const end = parseInt(endStr, 10);
-    return !isNaN(start) && !isNaN(end) && start >= min && end <= max && start <= end;
+    return (
+      !isNaN(start) && !isNaN(end) && start >= min && end <= max && start <= end
+    );
   }
 
   // Single number
@@ -60,24 +65,32 @@ function isValidCronField(field: string, min: number, max: number): boolean {
   return !isNaN(num) && num >= min && num <= max;
 }
 
-function matchesCronField(field: string, val: number, min: number, max: number): boolean {
-  if (field === '*') return true;
+function matchesCronField(
+  field: string,
+  val: number,
+  min: number,
+  max: number,
+): boolean {
+  if (field === "*") return true;
 
-  if (field.includes(',')) {
-    return field.split(',').some((sub) => matchesCronField(sub, val, min, max));
+  if (field.includes(",")) {
+    return field.split(",").some((sub) => matchesCronField(sub, val, min, max));
   }
 
-  if (field.includes('/')) {
-    const [range, stepStr] = field.split('/');
+  if (field.includes("/")) {
+    const [range, stepStr] = field.split("/");
     const step = parseInt(stepStr, 10);
-    const start = range === '*' ? min : parseInt(range.split('-')[0], 10);
-    const end = range === '*' || !range.includes('-') ? max : parseInt(range.split('-')[1], 10);
+    const start = range === "*" ? min : parseInt(range.split("-")[0], 10);
+    const end =
+      range === "*" || !range.includes("-")
+        ? max
+        : parseInt(range.split("-")[1], 10);
     if (val < start || val > end) return false;
     return (val - start) % step === 0;
   }
 
-  if (field.includes('-')) {
-    const [startStr, endStr] = field.split('-');
+  if (field.includes("-")) {
+    const [startStr, endStr] = field.split("-");
     const start = parseInt(startStr, 10);
     const end = parseInt(endStr, 10);
     return val >= start && val <= end;
@@ -94,41 +107,45 @@ function getDaysInMonth(year: number, monthZeroBased: number): number {
 /**
  * Returns the offset in minutes for a given timezone (e.g. +420 for UTC+7 / Asia/Ho_Chi_Minh).
  */
-export function getTimezoneOffsetMinutes(timezone = DEFAULT_TIMEZONE, date = new Date()): number {
+export function getTimezoneOffsetMinutes(
+  timezone = DEFAULT_TIMEZONE,
+  date = new Date(),
+): number {
   const tz = (timezone || DEFAULT_TIMEZONE).trim();
-  if (tz === 'UTC' || tz === 'Z' || tz === '+00:00' || tz === '+00') {
+  if (tz === "UTC" || tz === "Z" || tz === "+00:00" || tz === "+00") {
     return 0;
   }
   if (
-    tz === 'Asia/Ho_Chi_Minh' ||
-    tz === 'Asia/Saigon' ||
-    tz === 'Asia/Bangkok' ||
-    tz === 'UTC+7' ||
-    tz === '+07:00' ||
-    tz === '+07' ||
-    tz === 'GMT+7'
+    tz === DEFAULT_TIMEZONE ||
+    tz === "Asia/Saigon" ||
+    tz === "Asia/Bangkok" ||
+    tz === "UTC+7" ||
+    tz === "+07:00" ||
+    tz === "+07" ||
+    tz === "GMT+7"
   ) {
     return 420; // 7 hours * 60 min
   }
   try {
-    const dtf = new Intl.DateTimeFormat('en-US', {
+    const dtf = new Intl.DateTimeFormat("en-US", {
       timeZone: tz,
-      year: 'numeric',
-      month: 'numeric',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: 'numeric',
-      second: 'numeric',
+      year: "numeric",
+      month: "numeric",
+      day: "numeric",
+      hour: "numeric",
+      minute: "numeric",
+      second: "numeric",
       hour12: false,
     });
     const parts = dtf.formatToParts(date);
-    const getPart = (type: string) => parseInt(parts.find((p) => p.type === type)?.value ?? '0', 10);
-    const year = getPart('year');
-    const month = getPart('month') - 1;
-    const day = getPart('day');
-    const hour = getPart('hour') % 24;
-    const minute = getPart('minute');
-    const second = getPart('second');
+    const getPart = (type: string) =>
+      parseInt(parts.find((p) => p.type === type)?.value ?? "0", 10);
+    const year = getPart("year");
+    const month = getPart("month") - 1;
+    const day = getPart("day");
+    const hour = getPart("hour") % 24;
+    const minute = getPart("minute");
+    const second = getPart("second");
     const targetUtcTimestamp = Date.UTC(year, month, day, hour, minute, second);
     return Math.round((targetUtcTimestamp - date.getTime()) / 60000);
   } catch {
@@ -183,7 +200,7 @@ export function calculateNextRun(params: NextRunParams): Date {
 
   const currentZoned = getZonedDateParts(from, timezone);
 
-  if (params.frequency === 'DAILY') {
+  if (params.frequency === "DAILY") {
     let targetYear = currentZoned.year;
     let targetMonth = currentZoned.month;
     let targetDay = currentZoned.day;
@@ -205,13 +222,21 @@ export function calculateNextRun(params: NextRunParams): Date {
       }
     }
 
-    return createUtcDateFromZonedParts(targetYear, targetMonth, targetDay, hour, minute, timezone);
+    return createUtcDateFromZonedParts(
+      targetYear,
+      targetMonth,
+      targetDay,
+      hour,
+      minute,
+      timezone,
+    );
   }
 
-  if (params.frequency === 'WEEKLY') {
-    const targetDow = params.dayOfWeek !== undefined && params.dayOfWeek !== null
-      ? Math.max(0, Math.min(6, params.dayOfWeek))
-      : 0; // Default to Sunday (0)
+  if (params.frequency === "WEEKLY") {
+    const targetDow =
+      params.dayOfWeek !== undefined && params.dayOfWeek !== null
+        ? Math.max(0, Math.min(6, params.dayOfWeek))
+        : 0; // Default to Sunday (0)
 
     let daysToAdd = (targetDow - currentZoned.dayOfWeek + 7) % 7;
     const currentTotalMin = currentZoned.hour * 60 + currentZoned.minute;
@@ -235,13 +260,21 @@ export function calculateNextRun(params: NextRunParams): Date {
       }
     }
 
-    return createUtcDateFromZonedParts(targetYear, targetMonth, targetDay, hour, minute, timezone);
+    return createUtcDateFromZonedParts(
+      targetYear,
+      targetMonth,
+      targetDay,
+      hour,
+      minute,
+      timezone,
+    );
   }
 
-  if (params.frequency === 'MONTHLY') {
-    const targetDom = params.dayOfMonth !== undefined && params.dayOfMonth !== null
-      ? Math.max(1, Math.min(31, params.dayOfMonth))
-      : 1;
+  if (params.frequency === "MONTHLY") {
+    const targetDom =
+      params.dayOfMonth !== undefined && params.dayOfMonth !== null
+        ? Math.max(1, Math.min(31, params.dayOfMonth))
+        : 1;
 
     let targetYear = currentZoned.year;
     let targetMonth = currentZoned.month;
@@ -254,7 +287,8 @@ export function calculateNextRun(params: NextRunParams): Date {
 
     const isPastThisMonth =
       currentZoned.day > clampedCurrent ||
-      (currentZoned.day === clampedCurrent && targetTotalMin <= currentTotalMin);
+      (currentZoned.day === clampedCurrent &&
+        targetTotalMin <= currentTotalMin);
 
     if (isPastThisMonth) {
       targetMonth += 1;
@@ -267,10 +301,17 @@ export function calculateNextRun(params: NextRunParams): Date {
     const maxDaysNext = getDaysInMonth(targetYear, targetMonth);
     const finalDay = Math.min(targetDom, maxDaysNext);
 
-    return createUtcDateFromZonedParts(targetYear, targetMonth, finalDay, hour, minute, timezone);
+    return createUtcDateFromZonedParts(
+      targetYear,
+      targetMonth,
+      finalDay,
+      hour,
+      minute,
+      timezone,
+    );
   }
 
-  if (params.frequency === 'CUSTOM') {
+  if (params.frequency === "CUSTOM") {
     const cron = params.cronExpression?.trim();
     if (!cron || !isValidCronExpression(cron)) {
       throw new Error(`Invalid cron expression: "${params.cronExpression}"`);
@@ -295,7 +336,9 @@ export function calculateNextRun(params: NextRunParams): Date {
       const matchHour = matchesCronField(hourStr, curHour, 0, 23);
       const matchDom = matchesCronField(domStr, curDom, 1, 31);
       const matchMon = matchesCronField(monStr, curMon, 1, 12);
-      const matchDow = matchesCronField(dowStr, curDow, 0, 7) || (curDow === 0 && matchesCronField(dowStr, 7, 0, 7));
+      const matchDow =
+        matchesCronField(dowStr, curDow, 0, 7) ||
+        (curDow === 0 && matchesCronField(dowStr, 7, 0, 7));
 
       if (matchMin && matchHour && matchDom && matchMon && matchDow) {
         return createUtcDateFromZonedParts(
@@ -311,7 +354,9 @@ export function calculateNextRun(params: NextRunParams): Date {
       localCursor.setUTCMinutes(localCursor.getUTCMinutes() + 1);
     }
 
-    throw new Error(`Could not find next run within 1 year for cron expression: "${cron}"`);
+    throw new Error(
+      `Could not find next run within 1 year for cron expression: "${cron}"`,
+    );
   }
 
   throw new Error(`Unsupported schedule frequency: ${params.frequency}`);

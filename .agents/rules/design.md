@@ -22,10 +22,10 @@ Route  →  Controller  →  Service  →  Repository  →  Prisma  →  Postgre
 - Mọi endpoint nhận dữ liệu từ client (`body`, `query`, `params`) phải có schema kiểm thực tương ứng bằng Zod.
 - Sử dụng middleware dùng chung:
   ```typescript
-  import { validate } from '../../middlewares/validate.middleware';
-  import { mySchema } from './my.validation';
+  import { validate } from "../../middlewares/validate.middleware";
+  import { mySchema } from "./my.validation";
 
-  router.post('/', validate(mySchema), myController.create);
+  router.post("/", validate(mySchema), myController.create);
   ```
 - DTO type được suy diễn trực tiếp từ schema: `type MyDto = z.infer<typeof mySchema>;`.
 
@@ -35,10 +35,10 @@ Route  →  Controller  →  Service  →  Repository  →  Prisma  →  Postgre
 
 - Bắt buộc dùng `AppError` kèm HTTP status code và mã `ERROR_CODE`:
   ```typescript
-  import { AppError } from '../../common/errors/app-error';
-  import { ERROR_CODE } from '../../common/errors/error-code';
+  import { AppError } from "../../common/errors/app-error";
+  import { ERROR_CODE } from "../../common/errors/error-code";
 
-  throw new AppError('Resource not found', 404, ERROR_CODE.NOT_FOUND);
+  throw new AppError("Resource not found", 404, ERROR_CODE.NOT_FOUND);
   ```
 - Định dạng response lỗi chuẩn:
   ```json
@@ -55,5 +55,6 @@ Route  →  Controller  →  Service  →  Repository  →  Prisma  →  Postgre
 ## 4. Hợp Đồng Dữ Liệu Cào (Data Contract V1)
 
 Bảo toàn hợp đồng dữ liệu quy định tại `docs/DATA_CONTRACT_V1.md`:
+
 - Dữ liệu thô (`raw`): Nguyên bản HTML từ Firecrawl.
 - Dữ liệu sạch (`clean`): Markdown chuẩn hóa qua Turndown, lọc bỏ script/ads/styles, tính toán `dataQualityScore` và `contentHash`.

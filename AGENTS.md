@@ -13,7 +13,8 @@ Route  →  Controller  →  Service  →  Repository  →  Prisma Client  →  
 ```
 
 ### Quy tắc bất biến:
-- **Độc quyền Prisma:** Chỉ duy nhất các file `*.repository.ts` được phép import và gọi `prisma` hoặc `PrismaClient`. Service, Controller, Worker, Helper và Middleware **tuyệt đối không** được gọi Prisma trực tiếp.
+
+- **Độc quyền Prisma:** Chỉ duy nhất các file `*.repository.ts` được phép import và gọi `prisma` hoặc `PrismaClient`. Service, Controller, Worker, Helper và Middleware **tuyệt đối không** được gọi Prisma trực tiếp. Đồng thời, các tầng ngoài Repository (DTO, Service, Controller, Middleware) **không import enum từ `@prisma/client`** (ví dụ: `UserRole`, `CrawlJobStatus`, `CrawlMode`, `ExportType`, `AssetType`), mà phải sử dụng types từ `src/common/constants/`.
 - **Tổ chức Module chuẩn (`src/modules/<feature>/`):**
   - `<feature>.route.ts`: Khai báo endpoints, gắn middleware (`auth`, `role`, `validate`, `rateLimit`).
   - `<feature>.controller.ts`: Nhận HTTP request, trích xuất parameters, gọi Service, trả response HTTP chuẩn.
@@ -23,18 +24,41 @@ Route  →  Controller  →  Service  →  Repository  →  Prisma Client  →  
   - `__tests__/`: Chứa colocated unit/integration tests cho module.
 - **Routing:** Mọi router module mới phải được mount tập trung trong `src/routes/index.ts` với prefix `/api/v1/`.
 - **Mã dùng chung (`src/common/`):** Chỉ đặt vào `src/common/` (errors, helpers, constants, types, storage) khi code thực sự được tái sử dụng qua ít nhất 2 modules.
+- **Chuẩn Hóa Constants & Cấm Tuyệt Đối Hardcode (Zero Hardcode Principle):**
+  - **Tập trung tại `src/common/constants/`:** Mọi chuỗi trạng thái (`JOB_STATUS`), vai trò người dùng (`ROLES`), chế độ thu thập (`CRAWL_MODE`), tần suất lịch (`SCHEDULE_FREQUENCY`), kiểu xuất dữ liệu (`EXPORT_TYPE`), loại tài nguyên (`ASSET_TYPE`), múi giờ (`DEFAULT_TIMEZONE`), v.v. **bắt buộc** phải được định nghĩa trong `src/common/constants/*.constant.ts` dưới dạng object `as const` và export type `keyof typeof CONSTANT`. Barrel export tập trung tại `src/common/constants/index.ts`.
+  - **Cấm hardcode chuỗi / mảng trong code:** Tuyệt đối không viết trực tiếp string literal (ví dụ: `'COMPLETED'`, `'SCRAPE'`, `'ADMIN'`, `'Asia/Ho_Chi_Minh'`) trong Controllers, Services, Workers, DTOs, Repositories, Helpers hoặc Schemas. Luôn dùng `CONSTANT.KEY` hoặc `Object.values(CONSTANT)`.
+  - **Sử dụng trong Zod Validation (`*.validation.ts`):** Luôn dùng `z.nativeEnum(CONSTANT)` thay vì khai báo mảng chuỗi `z.enum(['VAL1', 'VAL2'])`.
+  - **Pattern chuẩn:**
+    ```typescript
+    // 1. Khai báo (src/common/constants/crawl-mode.constant.ts):
+    export const CRAWL_MODE = {
+      SCRAPE: 'SCRAPE',
+      CRAWL: 'CRAWL',
+      SITEMAP: 'SITEMAP',
+      URL_LIST: 'URL_LIST',
+    } as const;
+    export type CrawlMode = keyof typeof CRAWL_MODE;
+
+    // 2. Validation (crawl-job.validation.ts):
+    mode: z.nativeEnum(CRAWL_MODE).optional().default(CRAWL_MODE.SCRAPE)
+
+    // 3. Logic nghiệp vụ (crawl-job.service.ts / crawl.worker.processor.ts):
+    if (job.mode === CRAWL_MODE.URL_LIST) { ... }
+    ```
 
 ---
 
 ## 2. Dữ Liệu & Tích Hợp (Data, Prisma & Workers)
 
 ### A. Cơ sở dữ liệu & Prisma Migrations
+
 - `prisma/schema.prisma` là nguồn chân lý duy nhất (Single Source of Truth) của database schema.
 - Thao tác Prisma thông qua script runner: `node scripts/prisma-run.js <cmd>`. Runner tự động tổng hợp `DATABASE_URL` từ các biến môi trường cấu hình (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`, `DB_SSL`).
 - Mọi thay đổi schema phải sinh migration tương ứng bằng `pnpm db:migrate` và commit đồng thời cả `schema.prisma` lẫn thư mục migration.
 - **CẤM:** Không bao giờ chạy `pnpm db:migrate:reset` trừ khi người dùng yêu cầu rõ ràng việc xóa trắng dữ liệu.
 
 ### B. Hàng đợi bất đồng bộ & Worker (BullMQ + Redis)
+
 - Các tác vụ nặng (thu thập web, gửi webhook, chạy lịch cron) phải chuyển qua hàng đợi BullMQ:
   - `crawl.queue.ts` / `crawl.worker.ts` / `crawl.worker.processor.ts`
   - `webhook.queue.ts` / `webhook.worker.ts`

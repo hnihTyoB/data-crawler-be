@@ -1,23 +1,23 @@
-jest.mock('../../../database/prisma.client', () => ({
+jest.mock("../../../database/prisma.client", () => ({
   prisma: {},
 }));
 
-jest.mock('../crawl-schedule.repository');
-jest.mock('../../crawl-jobs/crawl-job.repository');
-jest.mock('../../../common/helpers/url.helper');
-jest.mock('../../../queues/crawl.queue', () => ({
+jest.mock("../crawl-schedule.repository");
+jest.mock("../../crawl-jobs/crawl-job.repository");
+jest.mock("../../../common/helpers/url.helper");
+jest.mock("../../../queues/crawl.queue", () => ({
   crawlQueue: {
-    add: jest.fn().mockResolvedValue({ id: 'bull-job-1' }),
+    add: jest.fn().mockResolvedValue({ id: "bull-job-1" }),
   },
 }));
 
-import { CrawlScheduleService } from '../crawl-schedule.service';
-import { CrawlScheduleRepository } from '../crawl-schedule.repository';
-import { CrawlJobRepository } from '../../crawl-jobs/crawl-job.repository';
-import * as urlHelper from '../../../common/helpers/url.helper';
-import { crawlQueue } from '../../../queues/crawl.queue';
+import { CrawlScheduleService } from "../crawl-schedule.service";
+import { CrawlScheduleRepository } from "../crawl-schedule.repository";
+import { CrawlJobRepository } from "../../crawl-jobs/crawl-job.repository";
+import * as urlHelper from "../../../common/helpers/url.helper";
+import { crawlQueue } from "../../../queues/crawl.queue";
 
-describe('CrawlScheduleService', () => {
+describe("CrawlScheduleService", () => {
   let service: CrawlScheduleService;
   let mockScheduleRepo: jest.Mocked<CrawlScheduleRepository>;
   let mockJobRepo: jest.Mocked<CrawlJobRepository>;
@@ -43,72 +43,74 @@ describe('CrawlScheduleService', () => {
 
     (CrawlScheduleRepository as jest.Mock).mockReturnValue(mockScheduleRepo);
     (CrawlJobRepository as jest.Mock).mockReturnValue(mockJobRepo);
-    (urlHelper.validateUrl as jest.Mock).mockImplementation((url: string) => new URL(url));
-    (urlHelper.extractDomain as jest.Mock).mockReturnValue('example.com');
+    (urlHelper.validateUrl as jest.Mock).mockImplementation(
+      (url: string) => new URL(url),
+    );
+    (urlHelper.extractDomain as jest.Mock).mockReturnValue("example.com");
     (urlHelper.validateUrlAsync as jest.Mock).mockResolvedValue(undefined);
 
     service = new CrawlScheduleService();
   });
 
   const mockSchedule = {
-    id: 'schedule-1',
-    userId: 'user-1',
-    name: 'Daily Crawl',
-    startUrl: 'https://example.com',
-    domain: 'example.com',
-    mode: 'SCRAPE' as const,
-    frequency: 'DAILY' as const,
+    id: "schedule-1",
+    userId: "user-1",
+    name: "Daily Crawl",
+    startUrl: "https://example.com",
+    domain: "example.com",
+    mode: "SCRAPE" as const,
+    frequency: "DAILY" as const,
     cronExpression: null,
     hour: 2,
     minute: 0,
     dayOfWeek: null,
     dayOfMonth: null,
-    timezone: 'UTC',
+    timezone: "UTC",
     maxPages: 20,
     maxDepth: 1,
     urls: [],
     isActive: true,
     autoDiff: true,
     lastRunAt: null,
-    nextRunAt: new Date('2026-09-03T02:00:00.000Z'),
+    nextRunAt: new Date("2026-09-03T02:00:00.000Z"),
     createdAt: new Date(),
     updatedAt: new Date(),
   };
 
-  describe('create', () => {
-    it('creates a DAILY schedule and computes initial nextRunAt', async () => {
+  describe("create", () => {
+    it("creates a DAILY schedule and computes initial nextRunAt", async () => {
       mockScheduleRepo.create.mockResolvedValue(mockSchedule as any);
 
-      const result = await service.create('user-1', 'CRAWLER_USER', {
-        name: 'Daily Crawl',
-        startUrl: 'https://example.com',
-        frequency: 'DAILY',
+      const result = await service.create("user-1", "CRAWLER_USER", {
+        name: "Daily Crawl",
+        startUrl: "https://example.com",
+        frequency: "DAILY",
         hour: 2,
         minute: 0,
       });
 
       expect(mockScheduleRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          userId: 'user-1',
-          name: 'Daily Crawl',
-          frequency: 'DAILY',
+          userId: "user-1",
+          name: "Daily Crawl",
+          frequency: "DAILY",
           nextRunAt: expect.any(Date),
         }),
       );
-      expect(result.id).toBe('schedule-1');
+      expect(result.id).toBe("schedule-1");
     });
 
-    it('creates a WEEKLY schedule', async () => {
+    it("creates a WEEKLY schedule", async () => {
       mockScheduleRepo.create.mockResolvedValue({
         ...mockSchedule,
-        frequency: 'WEEKLY',
+        frequency: "WEEKLY",
         dayOfWeek: 1,
       } as any);
 
-      await service.create('user-1', 'CRAWLER_USER', {
-        name: 'Weekly Crawl',
-        startUrl: 'https://example.com',
-        frequency: 'WEEKLY',
+      await service.create("user-1", "CRAWLER_USER", {
+        name: "Weekly Crawl",
+        startUrl: "https://example.com",
+        frequency: "WEEKLY",
         dayOfWeek: 1,
         hour: 8,
         minute: 30,
@@ -116,98 +118,108 @@ describe('CrawlScheduleService', () => {
 
       expect(mockScheduleRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          frequency: 'WEEKLY',
+          frequency: "WEEKLY",
           dayOfWeek: 1,
         }),
       );
     });
 
-    it('validates URLs for URL_LIST mode', async () => {
+    it("validates URLs for URL_LIST mode", async () => {
       mockScheduleRepo.create.mockResolvedValue({
         ...mockSchedule,
-        mode: 'URL_LIST',
+        mode: "URL_LIST",
       } as any);
 
-      await service.create('user-1', 'CRAWLER_USER', {
-        name: 'List Schedule',
-        startUrl: 'https://example.com/1',
-        mode: 'URL_LIST',
-        urls: ['https://example.com/1', 'https://example.com/2'],
+      await service.create("user-1", "CRAWLER_USER", {
+        name: "List Schedule",
+        startUrl: "https://example.com/1",
+        mode: "URL_LIST",
+        urls: ["https://example.com/1", "https://example.com/2"],
       });
 
       expect(urlHelper.validateUrlAsync).toHaveBeenCalledTimes(2);
       expect(mockScheduleRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          mode: 'URL_LIST',
-          urls: ['https://example.com/1', 'https://example.com/2'],
+          mode: "URL_LIST",
+          urls: ["https://example.com/1", "https://example.com/2"],
         }),
       );
     });
   });
 
-  describe('findById', () => {
-    it('returns schedule for owner', async () => {
+  describe("findById", () => {
+    it("returns schedule for owner", async () => {
       mockScheduleRepo.findById.mockResolvedValue(mockSchedule as any);
 
-      const result = await service.findById('user-1', 'CRAWLER_USER', 'schedule-1');
-      expect(result.id).toBe('schedule-1');
+      const result = await service.findById(
+        "user-1",
+        "CRAWLER_USER",
+        "schedule-1",
+      );
+      expect(result.id).toBe("schedule-1");
     });
 
-    it('returns schedule for admin regardless of owner', async () => {
+    it("returns schedule for admin regardless of owner", async () => {
       mockScheduleRepo.findById.mockResolvedValue(mockSchedule as any);
 
-      const result = await service.findById('admin-1', 'ADMIN', 'schedule-1');
-      expect(result.id).toBe('schedule-1');
+      const result = await service.findById("admin-1", "ADMIN", "schedule-1");
+      expect(result.id).toBe("schedule-1");
     });
 
-    it('throws 404 when schedule does not exist', async () => {
+    it("throws 404 when schedule does not exist", async () => {
       mockScheduleRepo.findById.mockResolvedValue(null);
 
       await expect(
-        service.findById('user-1', 'CRAWLER_USER', 'non-existent'),
-      ).rejects.toThrow('not found');
+        service.findById("user-1", "CRAWLER_USER", "non-existent"),
+      ).rejects.toThrow("not found");
     });
 
-    it('throws 404 when user does not own the schedule', async () => {
+    it("throws 404 when user does not own the schedule", async () => {
       mockScheduleRepo.findById.mockResolvedValue(mockSchedule as any);
 
       await expect(
-        service.findById('other-user', 'CRAWLER_USER', 'schedule-1'),
-      ).rejects.toThrow('not found');
+        service.findById("other-user", "CRAWLER_USER", "schedule-1"),
+      ).rejects.toThrow("not found");
     });
   });
 
-  describe('triggerRun', () => {
-    it('creates CrawlJob, enqueues to BullMQ, and updates nextRunAt', async () => {
+  describe("triggerRun", () => {
+    it("creates CrawlJob, enqueues to BullMQ, and updates nextRunAt", async () => {
       mockScheduleRepo.findById.mockResolvedValue(mockSchedule as any);
-      mockJobRepo.create.mockResolvedValue({ id: 'job-created-1' } as any);
+      mockJobRepo.create.mockResolvedValue({ id: "job-created-1" } as any);
       mockScheduleRepo.updateNextRun.mockResolvedValue({} as any);
 
-      const job = await service.triggerRun('user-1', 'CRAWLER_USER', 'schedule-1');
+      const job = await service.triggerRun(
+        "user-1",
+        "CRAWLER_USER",
+        "schedule-1",
+      );
 
       expect(mockJobRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          userId: 'user-1',
-          startUrl: 'https://example.com',
-          scheduleId: 'schedule-1',
+          userId: "user-1",
+          startUrl: "https://example.com",
+          scheduleId: "schedule-1",
         }),
       );
-      expect(crawlQueue?.add).toHaveBeenCalledWith('crawl-job', { jobId: 'job-created-1' });
+      expect(crawlQueue?.add).toHaveBeenCalledWith("crawl-job", {
+        jobId: "job-created-1",
+      });
       expect(mockScheduleRepo.updateNextRun).toHaveBeenCalledWith(
-        'schedule-1',
+        "schedule-1",
         expect.any(Date),
         expect.any(Date),
       );
-      expect(job.id).toBe('job-created-1');
+      expect(job.id).toBe("job-created-1");
     });
   });
 
-  describe('processDueSchedules', () => {
-    it('finds and triggers all due active schedules', async () => {
+  describe("processDueSchedules", () => {
+    it("finds and triggers all due active schedules", async () => {
       mockScheduleRepo.findDueSchedules.mockResolvedValue([
         { ...mockSchedule, user: { isActive: true, deletedAt: null } },
       ] as any);
-      mockJobRepo.create.mockResolvedValue({ id: 'job-due-1' } as any);
+      mockJobRepo.create.mockResolvedValue({ id: "job-due-1" } as any);
 
       const count = await service.processDueSchedules();
 
@@ -215,16 +227,22 @@ describe('CrawlScheduleService', () => {
       expect(mockScheduleRepo.claimDueSchedule).toHaveBeenCalled();
       expect(mockJobRepo.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          scheduleId: 'schedule-1',
+          scheduleId: "schedule-1",
         }),
       );
-      expect(crawlQueue?.add).toHaveBeenCalledWith('crawl-job', { jobId: 'job-due-1' });
+      expect(crawlQueue?.add).toHaveBeenCalledWith("crawl-job", {
+        jobId: "job-due-1",
+      });
     });
 
-    it('skips schedule when user is inactive or deleted', async () => {
+    it("skips schedule when user is inactive or deleted", async () => {
       mockScheduleRepo.findDueSchedules.mockResolvedValue([
         { ...mockSchedule, user: { isActive: false, deletedAt: null } },
-        { ...mockSchedule, id: 'schedule-2', user: { isActive: true, deletedAt: new Date() } },
+        {
+          ...mockSchedule,
+          id: "schedule-2",
+          user: { isActive: true, deletedAt: new Date() },
+        },
       ] as any);
 
       const count = await service.processDueSchedules();
@@ -234,7 +252,7 @@ describe('CrawlScheduleService', () => {
       expect(mockJobRepo.create).not.toHaveBeenCalled();
     });
 
-    it('skips schedule when another worker instance already claimed it', async () => {
+    it("skips schedule when another worker instance already claimed it", async () => {
       mockScheduleRepo.findDueSchedules.mockResolvedValue([
         { ...mockSchedule, user: { isActive: true, deletedAt: null } },
       ] as any);

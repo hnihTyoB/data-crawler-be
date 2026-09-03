@@ -1,8 +1,8 @@
-import { WebhookConfig } from '@prisma/client';
-import { WebhookRepository } from './webhook.repository';
-import { encrypt } from './webhook-crypto.helper';
-import { AppError } from '../../common/errors/app-error';
-import { ERROR_CODE } from '../../common/errors/error-code';
+import { WebhookConfig } from "@prisma/client";
+import { WebhookRepository } from "./webhook.repository";
+import { encrypt } from "./webhook-crypto.helper";
+import { AppError } from "../../common/errors/app-error";
+import { ERROR_CODE } from "../../common/errors/error-code";
 
 export class WebhookConfigService {
   private readonly repository = new WebhookRepository();
@@ -12,7 +12,7 @@ export class WebhookConfigService {
     url: string,
     plainSecret: string,
     events: string[],
-  ): Promise<Omit<WebhookConfig, 'encryptedSecret'>> {
+  ): Promise<Omit<WebhookConfig, "encryptedSecret">> {
     const encryptedSecret = encrypt(plainSecret);
 
     const config = await this.repository.createConfig({
@@ -26,16 +26,25 @@ export class WebhookConfigService {
     return rest;
   }
 
-  async list(userId: string): Promise<Omit<WebhookConfig, 'encryptedSecret'>[]> {
+  async list(
+    userId: string,
+  ): Promise<Omit<WebhookConfig, "encryptedSecret">[]> {
     const configs = await this.repository.listConfigsByUser(userId);
     return configs.map(({ encryptedSecret: _, ...rest }) => rest);
   }
 
-  async delete(configId: string, userId: string): Promise<Omit<WebhookConfig, 'encryptedSecret'>> {
+  async delete(
+    configId: string,
+    userId: string,
+  ): Promise<Omit<WebhookConfig, "encryptedSecret">> {
     const config = await this.repository.findConfigById(configId);
 
     if (!config || config.userId !== userId) {
-      throw new AppError('Webhook configuration not found', 404, ERROR_CODE.WEBHOOK_CONFIG_NOT_FOUND);
+      throw new AppError(
+        "Webhook configuration not found",
+        404,
+        ERROR_CODE.WEBHOOK_CONFIG_NOT_FOUND,
+      );
     }
 
     const deleted = await this.repository.deleteConfig(configId);
@@ -52,11 +61,15 @@ export class WebhookConfigService {
       events?: string[];
       isActive?: boolean;
     },
-  ): Promise<Omit<WebhookConfig, 'encryptedSecret'>> {
+  ): Promise<Omit<WebhookConfig, "encryptedSecret">> {
     const config = await this.repository.findConfigById(configId);
 
     if (!config || config.userId !== userId) {
-      throw new AppError('Webhook configuration not found', 404, ERROR_CODE.WEBHOOK_CONFIG_NOT_FOUND);
+      throw new AppError(
+        "Webhook configuration not found",
+        404,
+        ERROR_CODE.WEBHOOK_CONFIG_NOT_FOUND,
+      );
     }
 
     const updatePayload: {
@@ -67,7 +80,8 @@ export class WebhookConfigService {
     } = {};
 
     if (data.url !== undefined) updatePayload.url = data.url;
-    if (data.secret !== undefined) updatePayload.encryptedSecret = encrypt(data.secret);
+    if (data.secret !== undefined)
+      updatePayload.encryptedSecret = encrypt(data.secret);
     if (data.events !== undefined) updatePayload.events = data.events;
     if (data.isActive !== undefined) updatePayload.isActive = data.isActive;
 
@@ -80,26 +94,31 @@ export class WebhookConfigService {
     const config = await this.repository.findConfigById(configId);
 
     if (!config || config.userId !== userId) {
-      throw new AppError('Webhook configuration not found', 404, ERROR_CODE.WEBHOOK_CONFIG_NOT_FOUND);
+      throw new AppError(
+        "Webhook configuration not found",
+        404,
+        ERROR_CODE.WEBHOOK_CONFIG_NOT_FOUND,
+      );
     }
 
     const timestamp = new Date().toISOString();
     const payload = {
-      event: 'test.ping',
+      event: "test.ping",
       timestamp,
-      message: 'This is a test webhook delivery from DataCrawler.',
+      message: "This is a test webhook delivery from DataCrawler.",
     };
 
     const delivery = await this.repository.createDelivery({
       webhookConfigId: config.id,
-      crawlJobId: '00000000-0000-0000-0000-000000000000',
-      event: 'test.ping',
+      crawlJobId: "00000000-0000-0000-0000-000000000000",
+      event: "test.ping",
       payload,
-      status: 'PENDING',
+      status: "PENDING",
       attempt: 1,
     });
 
-    const { WebhookDeliveryService } = await import('./webhook-delivery.service');
+    const { WebhookDeliveryService } =
+      await import("./webhook-delivery.service");
     const deliveryService = new WebhookDeliveryService();
 
     try {

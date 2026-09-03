@@ -1,6 +1,6 @@
-import { Request, Response, NextFunction } from 'express';
-import { AuditLogService } from './audit-log.service';
-import { AuditLogQueryDto } from './audit-log.dto';
+import { Request, Response, NextFunction } from "express";
+import { AuditLogService } from "./audit-log.service";
+import { AuditLogQueryDto } from "./audit-log.dto";
 
 export class AuditLogController {
   private readonly service = new AuditLogService();

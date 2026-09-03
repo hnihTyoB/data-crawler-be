@@ -1,25 +1,28 @@
-import { Request, Response, NextFunction } from 'express';
-import jwt from 'jsonwebtoken';
-import { jwtConfig } from '../config/jwt.config';
-import { AppError } from '../common/errors/app-error';
-import { ERROR_CODE } from '../common/errors/error-code';
-import { UserRepository } from '../modules/users/user.repository';
-import { UserRole } from '@prisma/client';
+import { Request, Response, NextFunction } from "express";
+import jwt from "jsonwebtoken";
+import { jwtConfig } from "../config/jwt.config";
+import { AppError } from "../common/errors/app-error";
+import { ERROR_CODE } from "../common/errors/error-code";
+import { UserRepository } from "../modules/users/user.repository";
 
 const userRepository = new UserRepository();
 
-export async function authMiddleware(req: Request, res: Response, next: NextFunction): Promise<void> {
+export async function authMiddleware(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> {
   let token: string | undefined = req.cookies?.accessToken;
 
   if (!token) {
     const authHeader = req.headers.authorization;
-    if (authHeader && authHeader.startsWith('Bearer ')) {
-      token = authHeader.split(' ')[1];
+    if (authHeader && authHeader.startsWith("Bearer ")) {
+      token = authHeader.split(" ")[1];
     }
   }
 
   if (!token) {
-    next(new AppError('Unauthorized', 401, ERROR_CODE.UNAUTHORIZED));
+    next(new AppError("Unauthorized", 401, ERROR_CODE.UNAUTHORIZED));
     return;
   }
 
@@ -51,14 +54,18 @@ export async function authMiddleware(req: Request, res: Response, next: NextFunc
     next();
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {
-      next(new AppError('Token expired', 401, ERROR_CODE.TOKEN_EXPIRED));
+      next(new AppError("Token expired", 401, ERROR_CODE.TOKEN_EXPIRED));
     } else {
-      next(new AppError('Invalid token', 401, ERROR_CODE.TOKEN_INVALID));
+      next(new AppError("Invalid token", 401, ERROR_CODE.TOKEN_INVALID));
     }
   }
 }
 
-export function copyRefreshTokenToBody(req: Request, res: Response, next: NextFunction): void {
+export function copyRefreshTokenToBody(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
   if (req.cookies?.refreshToken && !req.body.refreshToken) {
     req.body.refreshToken = req.cookies.refreshToken;
   }

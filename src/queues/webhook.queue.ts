@@ -1,5 +1,5 @@
-import { Queue } from 'bullmq';
-import { envConfig } from '../config/env.config';
+import { Queue } from "bullmq";
+import { envConfig } from "../config/env.config";
 
 export const webhookQueue = envConfig.redis.enabled
   ? new Queue(envConfig.webhook.queueName, {
@@ -11,7 +11,7 @@ export const webhookQueue = envConfig.redis.enabled
       },
       defaultJobOptions: {
         attempts: 3,
-        backoff: { type: 'exponential', delay: 5000 },
+        backoff: { type: "exponential", delay: 5000 },
         removeOnComplete: { count: 1000 },
         removeOnFail: { count: 5000 },
       },

@@ -1,6 +1,6 @@
-import { prisma } from '../../database/prisma.client';
-import { CrawlPageStatus, Prisma } from '@prisma/client';
-import { CrawlPageQueryDto } from './crawl-page.dto';
+import { prisma } from "../../database/prisma.client";
+import { CrawlPageStatus, Prisma } from "@prisma/client";
+import { CrawlPageQueryDto } from "./crawl-page.dto";
 
 export class CrawlPageRepository {
   create(data: {
@@ -31,16 +31,16 @@ export class CrawlPageRepository {
     if (query.status) {
       where.status = query.status;
     }
-    if (query.statusCode !== undefined && query.statusCode !== '') {
+    if (query.statusCode !== undefined && query.statusCode !== "") {
       where.statusCode = Number(query.statusCode);
     }
     if (query.search) {
       where.OR = [
-        { url: { contains: query.search, mode: 'insensitive' } },
-        { title: { contains: query.search, mode: 'insensitive' } },
-        { description: { contains: query.search, mode: 'insensitive' } },
-        { markdownContent: { contains: query.search, mode: 'insensitive' } },
-        { content: { contains: query.search, mode: 'insensitive' } },
+        { url: { contains: query.search, mode: "insensitive" } },
+        { title: { contains: query.search, mode: "insensitive" } },
+        { description: { contains: query.search, mode: "insensitive" } },
+        { markdownContent: { contains: query.search, mode: "insensitive" } },
+        { content: { contains: query.search, mode: "insensitive" } },
       ];
     }
 
@@ -48,14 +48,14 @@ export class CrawlPageRepository {
     const minScore = query.minDataQualityScore ?? query.minQualityScore;
     const maxScore = query.maxDataQualityScore ?? query.maxQualityScore;
 
-    if (exactScore !== undefined && exactScore !== '') {
+    if (exactScore !== undefined && exactScore !== "") {
       where.dataQualityScore = Number(exactScore);
     } else {
       const scoreFilter: Prisma.IntNullableFilter = {};
-      if (minScore !== undefined && minScore !== '') {
+      if (minScore !== undefined && minScore !== "") {
         scoreFilter.gte = Number(minScore);
       }
-      if (maxScore !== undefined && maxScore !== '') {
+      if (maxScore !== undefined && maxScore !== "") {
         scoreFilter.lte = Number(maxScore);
       }
       if (Object.keys(scoreFilter).length > 0) {
@@ -63,40 +63,49 @@ export class CrawlPageRepository {
       }
     }
 
-    if (query.hasImages !== undefined && query.hasImages !== '') {
-      const isTrue = query.hasImages === true || query.hasImages === 'true' || query.hasImages === '1';
+    if (query.hasImages !== undefined && query.hasImages !== "") {
+      const isTrue =
+        query.hasImages === true ||
+        query.hasImages === "true" ||
+        query.hasImages === "1";
       if (isTrue) {
-        andConditions.push({ assets: { some: { assetType: 'IMAGE' } } });
+        andConditions.push({ assets: { some: { assetType: "IMAGE" } } });
       } else {
-        andConditions.push({ assets: { none: { assetType: 'IMAGE' } } });
+        andConditions.push({ assets: { none: { assetType: "IMAGE" } } });
       }
     }
 
-    if (query.hasLinks !== undefined && query.hasLinks !== '') {
-      const isTrue = query.hasLinks === true || query.hasLinks === 'true' || query.hasLinks === '1';
+    if (query.hasLinks !== undefined && query.hasLinks !== "") {
+      const isTrue =
+        query.hasLinks === true ||
+        query.hasLinks === "true" ||
+        query.hasLinks === "1";
       if (isTrue) {
-        andConditions.push({ assets: { some: { assetType: 'LINK' } } });
+        andConditions.push({ assets: { some: { assetType: "LINK" } } });
       } else {
-        andConditions.push({ assets: { none: { assetType: 'LINK' } } });
+        andConditions.push({ assets: { none: { assetType: "LINK" } } });
       }
     }
 
-    if (query.hasTables !== undefined && query.hasTables !== '') {
-      const isTrue = query.hasTables === true || query.hasTables === 'true' || query.hasTables === '1';
+    if (query.hasTables !== undefined && query.hasTables !== "") {
+      const isTrue =
+        query.hasTables === true ||
+        query.hasTables === "true" ||
+        query.hasTables === "1";
       const insensitiveMode = Prisma.QueryMode.insensitive;
       const tableConditions: Prisma.CrawlPageWhereInput[] = [
-        { markdownContent: { contains: '<table', mode: insensitiveMode } },
-        { content: { contains: '<table', mode: insensitiveMode } },
-        { markdownContent: { contains: '|', mode: insensitiveMode } },
+        { markdownContent: { contains: "<table", mode: insensitiveMode } },
+        { content: { contains: "<table", mode: insensitiveMode } },
+        { markdownContent: { contains: "|", mode: insensitiveMode } },
       ];
       if (isTrue) {
         andConditions.push({ OR: tableConditions });
       } else {
         andConditions.push({
           AND: [
-            { markdownContent: { not: { contains: '<table' } } },
-            { content: { not: { contains: '<table' } } },
-            { markdownContent: { not: { contains: '|' } } },
+            { markdownContent: { not: { contains: "<table" } } },
+            { content: { not: { contains: "<table" } } },
+            { markdownContent: { not: { contains: "|" } } },
           ],
         });
       }
@@ -106,14 +115,14 @@ export class CrawlPageRepository {
     const minLength = query.minContentLength ?? query.minWordCount;
     const maxLength = query.maxContentLength ?? query.maxWordCount;
 
-    if (exactLength !== undefined && exactLength !== '') {
+    if (exactLength !== undefined && exactLength !== "") {
       where.wordCount = Number(exactLength);
     } else {
       const countFilter: Prisma.IntFilter = {};
-      if (minLength !== undefined && minLength !== '') {
+      if (minLength !== undefined && minLength !== "") {
         countFilter.gte = Number(minLength);
       }
-      if (maxLength !== undefined && maxLength !== '') {
+      if (maxLength !== undefined && maxLength !== "") {
         countFilter.lte = Number(maxLength);
       }
       if (Object.keys(countFilter).length > 0) {
@@ -122,26 +131,31 @@ export class CrawlPageRepository {
     }
 
     if (andConditions.length > 0) {
-      const existingAnd = Array.isArray(where.AND) ? where.AND : (where.AND ? [where.AND] : []);
+      const existingAnd = Array.isArray(where.AND)
+        ? where.AND
+        : where.AND
+          ? [where.AND]
+          : [];
       where.AND = [...existingAnd, ...andConditions];
     }
 
-    const sortBy = query.sortBy || 'createdAt';
-    const order = query.order || 'asc';
+    const sortBy = query.sortBy || "createdAt";
+    const order = query.order || "asc";
     const allowedSortFields = [
-      'createdAt',
-      'updatedAt',
-      'url',
-      'title',
-      'statusCode',
-      'status',
-      'crawledAt',
-      'dataQualityScore',
-      'wordCount',
+      "createdAt",
+      "updatedAt",
+      "url",
+      "title",
+      "statusCode",
+      "status",
+      "crawledAt",
+      "dataQualityScore",
+      "wordCount",
     ];
-    const orderBy: Prisma.CrawlPageOrderByWithRelationInput = allowedSortFields.includes(sortBy)
-      ? { [sortBy]: order as Prisma.SortOrder }
-      : { createdAt: 'asc' };
+    const orderBy: Prisma.CrawlPageOrderByWithRelationInput =
+      allowedSortFields.includes(sortBy)
+        ? { [sortBy]: order as Prisma.SortOrder }
+        : { createdAt: "asc" };
 
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(Math.max(1, Number(query.limit) || 20), 100);
@@ -167,7 +181,7 @@ export class CrawlPageRepository {
       updatedAt: true,
     };
 
-    if (query.preview === true || query.preview === 'true') {
+    if (query.preview === true || query.preview === "true") {
       select.markdownContent = true;
       select.content = true;
     }
@@ -201,24 +215,27 @@ export class CrawlPageRepository {
     });
   }
 
-  update(id: string, data: {
-    title?: string;
-    description?: string;
-    markdownContent?: string;
-    content?: string;
-    htmlContentPath?: string;
-    status?: CrawlPageStatus;
-    statusCode?: number;
-    errorMessage?: string;
-    crawledAt?: Date;
-    hasSensitiveData?: boolean;
-    normalizedUrl?: string;
-    wordCount?: number;
-    contentHash?: string | null;
-    dataQualityScore?: number | null;
-    warnings?: string[];
-    extractedData?: Prisma.InputJsonValue;
-  }) {
+  update(
+    id: string,
+    data: {
+      title?: string;
+      description?: string;
+      markdownContent?: string;
+      content?: string;
+      htmlContentPath?: string;
+      status?: CrawlPageStatus;
+      statusCode?: number;
+      errorMessage?: string;
+      crawledAt?: Date;
+      hasSensitiveData?: boolean;
+      normalizedUrl?: string;
+      wordCount?: number;
+      contentHash?: string | null;
+      dataQualityScore?: number | null;
+      warnings?: string[];
+      extractedData?: Prisma.InputJsonValue;
+    },
+  ) {
     return prisma.crawlPage.update({
       where: { id },
       data,

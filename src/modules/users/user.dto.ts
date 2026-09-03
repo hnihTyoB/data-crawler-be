@@ -1,11 +1,11 @@
-import { UserRole } from '@prisma/client';
+import { Role } from "../../common/constants/role.constant";
 
 export interface CreateUserDto {
   email: string;
   password: string;
   fullName?: string;
   avatarUrl?: string;
-  role?: string;
+  role?: Role;
   maxPagesLimit?: number;
   maxJobsPerDayLimit?: number;
   maxConcurrentJobsLimit?: number;
@@ -15,7 +15,7 @@ export interface UpdateUserDto {
   fullName?: string;
   avatarUrl?: string | null;
   isActive?: boolean;
-  role?: string;
+  role?: Role;
   maxPagesLimit?: number;
   maxJobsPerDayLimit?: number;
   maxConcurrentJobsLimit?: number;
@@ -36,12 +36,11 @@ export interface UserResponseDto {
 }
 
 export interface UserQueryDto {
-  role?: UserRole;
+  role?: Role;
   isActive?: string | boolean;
   search?: string;
   sortBy?: string;
-  order?: 'asc' | 'desc';
+  order?: "asc" | "desc";
   page?: string | number;
   limit?: string | number;
 }
-

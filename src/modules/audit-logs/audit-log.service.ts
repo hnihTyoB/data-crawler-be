@@ -1,5 +1,5 @@
-import { AuditLogRepository } from './audit-log.repository';
-import { AuditLogQueryDto, CreateAuditLogDto } from './audit-log.dto';
+import { AuditLogRepository } from "./audit-log.repository";
+import { AuditLogQueryDto, CreateAuditLogDto } from "./audit-log.dto";
 
 export class AuditLogService {
   private readonly repository = new AuditLogRepository();
@@ -8,7 +8,7 @@ export class AuditLogService {
     try {
       return await this.repository.create(data);
     } catch (error) {
-      console.error('Failed to save audit log:', error);
+      console.error("Failed to save audit log:", error);
     }
   }
 

@@ -1,9 +1,9 @@
-import * as dns from 'dns';
-import * as http from 'http';
-import * as https from 'https';
-import axios, { AxiosInstance } from 'axios';
-import { AppError } from '../errors/app-error';
-import { ERROR_CODE } from '../errors/error-code';
+import * as dns from "dns";
+import * as http from "http";
+import * as https from "https";
+import axios, { AxiosInstance } from "axios";
+import { AppError } from "../errors/app-error";
+import { ERROR_CODE } from "../errors/error-code";
 
 // ---------------------------------------------------------------------------
 // Static IP-based patterns (sync, fast path)
@@ -12,33 +12,33 @@ import { ERROR_CODE } from '../errors/error-code';
 const PRIVATE_IP_PATTERNS: RegExp[] = [
   // --- IPv4 ---
   /^localhost$/i,
-  /^127\./,                                        // 127.0.0.0/8 — full loopback range
-  /^10\./,                                         // 10.0.0.0/8
-  /^172\.(1[6-9]|2\d|3[01])\./,                   // 172.16.0.0/12
-  /^192\.168\./,                                   // 192.168.0.0/16
-  /^169\.254\./,                                   // link-local + AWS metadata
-  /^0\.0\.0\.0$/,                                  // maps to localhost on most systems
-  /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./,    // 100.64.0.0/10 — CGNAT (RFC 6598)
-  /^192\.0\.2\./,                                  // 192.0.2.0/24 — TEST-NET-1 (RFC 5737)
-  /^198\.51\.100\./,                               // 198.51.100.0/24 — TEST-NET-2 (RFC 5737)
-  /^203\.0\.113\./,                                // 203.0.113.0/24 — TEST-NET-3 (RFC 5737)
-  /^198\.1[89]\./,                                 // 198.18.0.0/15 — benchmarking (RFC 2544)
+  /^127\./, // 127.0.0.0/8 — full loopback range
+  /^10\./, // 10.0.0.0/8
+  /^172\.(1[6-9]|2\d|3[01])\./, // 172.16.0.0/12
+  /^192\.168\./, // 192.168.0.0/16
+  /^169\.254\./, // link-local + AWS metadata
+  /^0\.0\.0\.0$/, // maps to localhost on most systems
+  /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // 100.64.0.0/10 — CGNAT (RFC 6598)
+  /^192\.0\.2\./, // 192.0.2.0/24 — TEST-NET-1 (RFC 5737)
+  /^198\.51\.100\./, // 198.51.100.0/24 — TEST-NET-2 (RFC 5737)
+  /^203\.0\.113\./, // 203.0.113.0/24 — TEST-NET-3 (RFC 5737)
+  /^198\.1[89]\./, // 198.18.0.0/15 — benchmarking (RFC 2544)
 
   // --- IPv6 ---
-  /^\[?::1\]?$/,                                   // loopback
-  /^\[?::\]?$/,                                    // unspecified
-  /^\[?fc[0-9a-f]{2}:/i,                          // ULA fc00::/7 (fc prefix)
-  /^\[?fd[0-9a-f]{2}:/i,                          // ULA fd00::/8 (fd prefix)
-  /^\[?fe[89ab][0-9a-f]:/i,                       // link-local fe80::/10
-  /^\[?2001:db8:/i,                               // 2001:db8::/32 — documentation (RFC 3849)
-  /^\[?ff[0-9a-f]{2}:/i,                          // ff00::/8 — multicast
+  /^\[?::1\]?$/, // loopback
+  /^\[?::\]?$/, // unspecified
+  /^\[?fc[0-9a-f]{2}:/i, // ULA fc00::/7 (fc prefix)
+  /^\[?fd[0-9a-f]{2}:/i, // ULA fd00::/8 (fd prefix)
+  /^\[?fe[89ab][0-9a-f]:/i, // link-local fe80::/10
+  /^\[?2001:db8:/i, // 2001:db8::/32 — documentation (RFC 3849)
+  /^\[?ff[0-9a-f]{2}:/i, // ff00::/8 — multicast
 
   // IPv4-mapped IPv6 — block all ::ffff: mapped addresses, since legitimate
 ];
 
-  // Strict IPv4 literal check — validates each octet is 0-255.
-  // The naive /^\d{1,3}(\.\d{1,3}){3}$/ matches 999.999.999.999.
- 
+// Strict IPv4 literal check — validates each octet is 0-255.
+// The naive /^\d{1,3}(\.\d{1,3}){3}$/ matches 999.999.999.999.
+
 function isIPv4Literal(hostname: string): boolean {
   return /^((25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/.test(
     hostname,
@@ -51,8 +51,8 @@ function isIPv6Literal(hostname: string): boolean {
 }
 
 export function checkAgainstPrivatePatterns(address: string): boolean {
-  const stripped = address.replace(/^\[|\]$/g, ''); // remove brackets
-  
+  const stripped = address.replace(/^\[|\]$/g, ""); // remove brackets
+
   // IPv4-mapped IPv6: ::ffff:x.x.x.x or compressed hex form
   // Extract embedded IPv4 if present in dotted form
   const ipv4MappedDotted = stripped.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
@@ -69,7 +69,6 @@ export function checkAgainstPrivatePatterns(address: string): boolean {
   return PRIVATE_IP_PATTERNS.some((p) => p.test(stripped));
 }
 
-
 // Sync validation — static IPs and protocol only.
 // Cannot block DNS rebinding. Use validateUrlAsync() at every call site that
 // accepts user-supplied URLs.
@@ -80,12 +79,12 @@ export function validateUrl(url: string): URL {
   try {
     parsed = new URL(url);
   } catch {
-    throw new AppError('Invalid URL format', 400, ERROR_CODE.INVALID_URL);
+    throw new AppError("Invalid URL format", 400, ERROR_CODE.INVALID_URL);
   }
 
-  if (!['http:', 'https:'].includes(parsed.protocol)) {
+  if (!["http:", "https:"].includes(parsed.protocol)) {
     throw new AppError(
-      'Only HTTP and HTTPS URLs are allowed',
+      "Only HTTP and HTTPS URLs are allowed",
       400,
       ERROR_CODE.INVALID_URL,
     );
@@ -95,7 +94,7 @@ export function validateUrl(url: string): URL {
 
   if (checkAgainstPrivatePatterns(hostname)) {
     throw new AppError(
-      'Private or local IP addresses are not allowed',
+      "Private or local IP addresses are not allowed",
       403,
       ERROR_CODE.PRIVATE_IP_BLOCKED,
     );
@@ -121,24 +120,32 @@ export async function validateUrlAsync(url: string): Promise<URL> {
     return parsed;
   }
 
-  const addresses = await new Promise<dns.LookupAddress[]>((resolve, reject) => {
-    dns.lookup(hostname, { all: true }, (err, addrs) => {
-      if (err) {
-        reject(new AppError('DNS resolution failed', 400, ERROR_CODE.INVALID_URL));
-      } else {
-        resolve(addrs);
-      }
-    });
-  });
+  const addresses = await new Promise<dns.LookupAddress[]>(
+    (resolve, reject) => {
+      dns.lookup(hostname, { all: true }, (err, addrs) => {
+        if (err) {
+          reject(
+            new AppError("DNS resolution failed", 400, ERROR_CODE.INVALID_URL),
+          );
+        } else {
+          resolve(addrs);
+        }
+      });
+    },
+  );
 
   if (addresses.length === 0) {
-    throw new AppError('DNS resolution returned no addresses', 400, ERROR_CODE.INVALID_URL);
+    throw new AppError(
+      "DNS resolution returned no addresses",
+      400,
+      ERROR_CODE.INVALID_URL,
+    );
   }
 
   for (const { address } of addresses) {
     if (checkAgainstPrivatePatterns(address)) {
       throw new AppError(
-        'URL resolves to a private or reserved IP address',
+        "URL resolves to a private or reserved IP address",
         403,
         ERROR_CODE.PRIVATE_IP_BLOCKED,
       );
@@ -153,17 +160,21 @@ export function extractDomain(url: string): string {
     const parsed = new URL(url);
     return parsed.hostname;
   } catch {
-    return '';
+    return "";
   }
 }
 
 // Secure DNS lookup for private IP addresses
-export type LookupFn = NonNullable<http.AgentOptions['lookup']>;
+export type LookupFn = NonNullable<http.AgentOptions["lookup"]>;
 
 export const secureLookup: LookupFn = (
   hostname: string,
   options: dns.LookupOptions,
-  callback: (err: NodeJS.ErrnoException | null, address: string | dns.LookupAddress[], family: number) => void,
+  callback: (
+    err: NodeJS.ErrnoException | null,
+    address: string | dns.LookupAddress[],
+    family: number,
+  ) => void,
 ): void => {
   dns.lookup(hostname, options, (err, address, family) => {
     if (err) {
@@ -173,13 +184,25 @@ export const secureLookup: LookupFn = (
     if (Array.isArray(address)) {
       for (const addr of address) {
         if (checkAgainstPrivatePatterns(addr.address)) {
-          return callback(new Error(`Access to private IP ${addr.address} is blocked`) as NodeJS.ErrnoException, [], 0);
+          return callback(
+            new Error(
+              `Access to private IP ${addr.address} is blocked`,
+            ) as NodeJS.ErrnoException,
+            [],
+            0,
+          );
         }
       }
       return callback(null, address, family);
     } else {
       if (address && checkAgainstPrivatePatterns(address)) {
-        return callback(new Error(`Access to private IP ${address} is blocked`) as NodeJS.ErrnoException, '', 0);
+        return callback(
+          new Error(
+            `Access to private IP ${address} is blocked`,
+          ) as NodeJS.ErrnoException,
+          "",
+          0,
+        );
       }
       return callback(null, address, family);
     }
@@ -213,9 +236,15 @@ export function getSecureAxios(): AxiosInstance {
     }
 
     instance.interceptors.request.use((config) => {
-      (config as unknown as { beforeRedirect?: (opts: { hostname?: string }) => void }).beforeRedirect = (options: { hostname?: string }) => {
+      (
+        config as unknown as {
+          beforeRedirect?: (opts: { hostname?: string }) => void;
+        }
+      ).beforeRedirect = (options: { hostname?: string }) => {
         if (options.hostname && checkAgainstPrivatePatterns(options.hostname)) {
-          throw new Error(`Redirect blocked: host ${options.hostname} resolves to or is a private/local IP address`);
+          throw new Error(
+            `Redirect blocked: host ${options.hostname} resolves to or is a private/local IP address`,
+          );
         }
       };
       return config;

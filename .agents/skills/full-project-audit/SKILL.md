@@ -31,6 +31,7 @@ The workflow operates **autonomously** without requiring manual user prompt paci
 ## Core Invariants & Safety Guardrails
 
 ### 1. General Safety Guardrails
+
 - **DO NOT** delete data or drop database tables/schemas.
 - **DO NOT** execute destructive migrations (`pnpm db:migrate:reset` or manual `DROP TABLE`).
 - **DO NOT** remove authentication checks, disable authorization middleware, or weaken Zod validation schemas.
@@ -38,7 +39,9 @@ The workflow operates **autonomously** without requiring manual user prompt paci
 - **DO NOT** weaken security controls or mock out security middleware merely to make test suites pass.
 
 ### 2. Financial Logic Invariants
+
 When auditing or repairing applications handling wallets, transactions, budgets, or accounting:
+
 - **Income**: Increases target wallet balance.
 - **Expense**: Decreases target wallet balance.
 - **Transfer**: Decreases source wallet balance, increases destination wallet balance. A transfer **must never** be counted as income or expense in revenue/spending analytics.
@@ -49,6 +52,7 @@ When auditing or repairing applications handling wallets, transactions, budgets,
 - **Ownership & Tenant Isolation**: Never trust `userId` or `walletId` from client body or query params. Always verify that the authenticated user owns the resource being accessed or modified.
 
 ### 3. Timezone Invariants (Asia/Ho_Chi_Minh — UTC+7)
+
 - The official business timezone is **`Asia/Ho_Chi_Minh` (UTC+7, +07:00)**.
 - **Boundary Auditing**: All date filters, `startOfDay`, `endOfDay`, monthly aggregations, budget periods, reports, reminders, cron schedules, and daily quotas must be calculated in `Asia/Ho_Chi_Minh`.
 - **Near-Midnight Invariant**: A transaction occurring at `23:59:59` or `00:00:01` Vietnam time must strictly belong to the correct Vietnam business calendar date, regardless of whether the server or database runs in UTC (`+00:00`).
@@ -123,7 +127,9 @@ Convert all audit findings into a structured, prioritized backlog using the foll
 - **P3 — Low**: Code quality, architectural convention drift, minor CPU/memory optimizations, documentation inaccuracies, or cosmetic formatting.
 
 #### Finding Entry Structure
+
 For every finding recorded in the backlog:
+
 - **ID**: e.g., `BUG-P0-01`, `BUG-P1-02`
 - **Severity**: `P0` / `P1` / `P2` / `P3`
 - **Module**: Feature/module directory name
@@ -136,6 +142,7 @@ For every finding recorded in the backlog:
 - **Required Tests**: Specific test cases to prove the bug is resolved and prevent regressions
 
 #### Priority Order for Triage
+
 1. Data corruption & data loss
 2. Financial calculation and balance errors
 3. Security vulnerabilities (SSRF, Auth/IDOR, Injection)
@@ -164,6 +171,7 @@ Before applying any code changes, rigorously verify every **P0** and **P1** find
 ### Step 4 — Fix P0 Issues
 
 Implement fixes for all `CONFIRMED` P0 findings adhering to these rules:
+
 - **Smallest Safe Change**: Make the minimal diff necessary to fix the root cause.
 - **Preserve Architecture**: Follow existing repository patterns and layered architecture.
 - **No Unrelated Refactors**: Do not reformat or clean up unrelated code in the same change.
@@ -197,6 +205,7 @@ Validate that all P0 fixes are working and introduce no regressions:
 ### Step 6 — Fix P1 Issues
 
 Once P0 fixes are verified and green:
+
 - Apply targeted, minimal fixes for all `CONFIRMED` P1 findings.
 - Maintain the same strict standards: no architectural disruption, no breaking contract changes, minimal clean diff.
 
@@ -226,13 +235,14 @@ Perform a second full audit pass over the entire codebase to verify resolution a
 ### Step 9 — Secondary Fixes (Convergence Loop)
 
 If the re-audit uncovers new `CONFIRMED` P0 or P1 issues caused by recent edits:
+
 1. Re-enter the loop: `VERIFY -> FIX -> TEST -> RE-AUDIT`.
 2. Iterate until:
    - Zero confirmed P0 issues remain.
    - Zero confirmed P1 issues remain.
    - All tests pass cleanly.
    - Lint and typecheck pass with zero errors.
-3. *Convergence limit*: If an issue cannot be resolved within 3 iterations without major architectural redesign, document it clearly in the report as `Deferred` and stop the loop.
+3. _Convergence limit_: If an issue cannot be resolved within 3 iterations without major architectural redesign, document it clearly in the report as `Deferred` and stop the loop.
 
 ---
 
@@ -251,14 +261,17 @@ Create directory `docs/audits/` (if it does not exist) and write the final repor
 **Status**: [Clean / Action Required / Converged]
 
 ## Executive Summary
+
 Concise 2–3 paragraph summary of the audit scope, critical issues discovered, fixes applied, test outcomes, and current repository health.
 
 ## Initial Findings Backlog
+
 Summary table of all findings from Step 2 with Severity (P0, P1, P2, P3), Module, and Status (Fixed / Verified / Deferred).
 
 ## Fixed Issues Detail
 
 ### [BUG-P0-01] [Issue Title]
+
 - **Severity**: P0
 - **Module**: [module]
 - **Root Cause**: [explanation]
@@ -270,18 +283,22 @@ Summary table of all findings from Step 2 with Severity (P0, P1, P2, P3), Module
 [... repeat for all fixed P0 and P1 issues ...]
 
 ## Test Execution Summary
+
 - **Typecheck**: PASSED
 - **Lint**: PASSED
 - **Unit & Integration Tests**: [X] passed, 0 failed
 - **New Tests Added**: [list of new test suites]
 
 ## Re-Audit Results
+
 Detailed checklist proving no secondary regressions, contract breakages, or timezone errors remain.
 
 ## Remaining & Deferred Issues (P2 / P3)
+
 List of non-blocking P2 and P3 issues scheduled for future maintenance cycles with recommended remediation.
 
 ## Risk Assessment & Next Steps
+
 - Remaining operational or infrastructure risks.
 - Actionable recommendations for the development team.
 ```
@@ -291,6 +308,7 @@ List of non-blocking P2 and P3 issues scheduled for future maintenance cycles wi
 ## Final Output Summary
 
 Upon completion of the workflow, output a clear, concise terminal summary:
+
 - **P0 Fixed**: Total count and IDs
 - **P1 Fixed**: Total count and IDs
 - **P2 / P3 Remaining**: Total count and IDs

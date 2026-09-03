@@ -21,12 +21,12 @@
  * - LOW_QUALITY_SCORE  : dataQualityScore < ngưỡng cho phép.
  */
 export type DataQualityWarning =
-  | 'NAV_NOISE'
-  | 'TOO_SHORT'
-  | 'DUPLICATE_CONTENT'
-  | 'MISSING_TITLE'
-  | 'MISSING_DESCRIPTION'
-  | 'LOW_QUALITY_SCORE';
+  | "NAV_NOISE"
+  | "TOO_SHORT"
+  | "DUPLICATE_CONTENT"
+  | "MISSING_TITLE"
+  | "MISSING_DESCRIPTION"
+  | "LOW_QUALITY_SCORE";
 
 // ─────────────────────────────────────────────
 // Asset Sub-Records
@@ -38,7 +38,7 @@ export interface LinkRecord {
   /** URL của trang chứa link này */
   sourceUrl: string;
   /** Phân loại: internal (cùng domain) hoặc external */
-  type: 'internal' | 'external';
+  type: "internal" | "external";
 }
 
 export interface ImageRecord {
@@ -167,15 +167,15 @@ export interface CrawlPageRecord {
  * Định nghĩa lại ở đây để Data Contract không phụ thuộc trực tiếp vào Prisma.
  */
 export type CrawlPageStatus =
-  | 'PENDING'
-  | 'SUCCESS'
-  | 'FAILED'
-  | 'BLOCKED'
-  | 'TIMEOUT'
-  | 'CAPTCHA_DETECTED'
-  | 'PAYWALL_DETECTED'
-  | 'REQUIRES_LOGIN'
-  | 'SKIPPED';
+  | "PENDING"
+  | "SUCCESS"
+  | "FAILED"
+  | "BLOCKED"
+  | "TIMEOUT"
+  | "CAPTCHA_DETECTED"
+  | "PAYWALL_DETECTED"
+  | "REQUIRES_LOGIN"
+  | "SKIPPED";
 
 // ─────────────────────────────────────────────
 // Export Envelope

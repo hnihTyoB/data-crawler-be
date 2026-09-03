@@ -1,12 +1,12 @@
-import path from 'path';
-import fs from 'fs';
-import { storageConfig } from '../../config/storage.config';
+import path from "path";
+import fs from "fs";
+import { storageConfig } from "../../config/storage.config";
 import {
   JOB_EXPORT_SUBDIRS,
   buildCrawlResultZipName,
   buildMarkdownZipName,
-} from '../constants/storage-path.constant';
-import { generatePageFileName } from './slug.helper';
+} from "../constants/storage-path.constant";
+import { generatePageFileName } from "./slug.helper";
 
 export function ensureDirExists(dirPath: string): void {
   if (!fs.existsSync(dirPath)) {
@@ -76,7 +76,7 @@ export function buildJobMarkdownFilePath(
   jobId: string,
   index: number,
   url: string,
-  ext = 'md',
+  ext = "md",
 ): { fileName: string; filePath: string } {
   const fileName = generatePageFileName(index, url, ext);
   const dirPath = buildJobSubDir(jobId, JOB_EXPORT_SUBDIRS.MARKDOWN);
@@ -87,7 +87,7 @@ export function buildJobMarkdownRawFilePath(
   jobId: string,
   index: number,
   url: string,
-  ext = 'md',
+  ext = "md",
 ): { fileName: string; filePath: string } {
   const fileName = generatePageFileName(index, url, ext);
   const dirPath = buildJobSubDir(jobId, JOB_EXPORT_SUBDIRS.MARKDOWN_RAW);
@@ -98,7 +98,7 @@ export function buildJobMarkdownCleanFilePath(
   jobId: string,
   index: number,
   url: string,
-  ext = 'md',
+  ext = "md",
 ): { fileName: string; filePath: string } {
   const fileName = generatePageFileName(index, url, ext);
   const dirPath = buildJobSubDir(jobId, JOB_EXPORT_SUBDIRS.MARKDOWN_CLEAN);
@@ -109,7 +109,7 @@ export function buildJobRawFilePath(
   jobId: string,
   index: number,
   url: string,
-  ext = 'html',
+  ext = "html",
 ): { fileName: string; filePath: string } {
   const fileName = generatePageFileName(index, url, ext);
   const dirPath = buildJobSubDir(jobId, JOB_EXPORT_SUBDIRS.RAW);

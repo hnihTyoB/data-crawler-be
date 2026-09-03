@@ -1,9 +1,15 @@
-import bcrypt from 'bcryptjs';
-import { UserRepository } from './user.repository';
-import { AppError } from '../../common/errors/app-error';
-import { ERROR_CODE } from '../../common/errors/error-code';
-import { UserRole, User } from '@prisma/client';
-import { CreateUserDto, UpdateUserDto, UserResponseDto, UserQueryDto } from './user.dto';
+import bcrypt from "bcryptjs";
+import { UserRepository } from "./user.repository";
+import { AppError } from "../../common/errors/app-error";
+import { ERROR_CODE } from "../../common/errors/error-code";
+import { User } from "@prisma/client";
+import { ROLES } from "../../common/constants/role.constant";
+import {
+  CreateUserDto,
+  UpdateUserDto,
+  UserResponseDto,
+  UserQueryDto,
+} from "./user.dto";
 
 export class UserService {
   private readonly repository = new UserRepository();
@@ -27,7 +33,7 @@ export class UserService {
   async findAll(query: UserQueryDto) {
     const { items, total, page, limit } = await this.repository.findAll(query);
     return {
-      items: items.map(user => this.formatUser(user)),
+      items: items.map((user) => this.formatUser(user)),
       meta: {
         total,
         page,
@@ -41,7 +47,7 @@ export class UserService {
     const user = await this.repository.findById(id);
 
     if (!user) {
-      throw new AppError('User not found', 404, ERROR_CODE.NOT_FOUND);
+      throw new AppError("User not found", 404, ERROR_CODE.NOT_FOUND);
     }
 
     return this.formatUser(user);
@@ -51,7 +57,11 @@ export class UserService {
     const existing = await this.repository.findByEmail(data.email);
 
     if (existing) {
-      throw new AppError('Email already exists', 409, ERROR_CODE.DUPLICATE_ENTRY);
+      throw new AppError(
+        "Email already exists",
+        409,
+        ERROR_CODE.DUPLICATE_ENTRY,
+      );
     }
 
     const passwordHash = await bcrypt.hash(data.password, 10);
@@ -60,7 +70,7 @@ export class UserService {
       email: data.email,
       passwordHash,
       fullName: data.fullName,
-      role: data.role as UserRole | undefined,
+      role: data.role,
       maxPagesLimit: data.maxPagesLimit,
       maxJobsPerDayLimit: data.maxJobsPerDayLimit,
       maxConcurrentJobsLimit: data.maxConcurrentJobsLimit,
@@ -73,12 +83,12 @@ export class UserService {
     const existingUser = await this.findById(id);
 
     if (
-      existingUser.role === UserRole.ADMIN &&
+      existingUser.role === ROLES.ADMIN &&
       data.role !== undefined &&
-      data.role !== UserRole.ADMIN
+      data.role !== ROLES.ADMIN
     ) {
       throw new AppError(
-        'Không thể thay đổi vai trò của tài khoản Admin.',
+        "Không thể thay đổi vai trò của tài khoản Admin.",
         400,
         ERROR_CODE.VALIDATION_ERROR,
       );
@@ -87,7 +97,7 @@ export class UserService {
     const user = await this.repository.update(id, {
       fullName: data.fullName,
       isActive: data.isActive,
-      role: data.role as UserRole | undefined,
+      role: data.role,
       maxPagesLimit: data.maxPagesLimit,
       maxJobsPerDayLimit: data.maxJobsPerDayLimit,
       maxConcurrentJobsLimit: data.maxConcurrentJobsLimit,
@@ -109,4 +119,3 @@ export class UserService {
     await this.repository.delete(id, currentUserId);
   }
 }
-

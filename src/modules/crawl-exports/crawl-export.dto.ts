@@ -1,4 +1,4 @@
-import { ExportType, ExportStatus } from '@prisma/client';
+import { ExportType, ExportStatus } from "@prisma/client";
 
 export interface CreateCrawlExportDto {
   jobId: string;

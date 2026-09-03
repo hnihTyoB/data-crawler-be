@@ -31,6 +31,7 @@ Khi khởi tạo `CrawlJob` qua API `POST /api/v1/crawl-jobs`, sử dụng paylo
 ```
 
 > **Lưu ý chống chặn (Anti-bot):**
+>
 > - Luôn thiết lập `delayMs` tối thiểu `2000`ms để tránh bị hệ thống Amazon chặn IP hoặc hiển thị CAPTCHA.
 > - Đảm bảo worker bắt cờ `CAPTCHA_DETECTED` và `BLOCKED` trong bảng `crawl_pages` để cảnh báo người dùng.
 

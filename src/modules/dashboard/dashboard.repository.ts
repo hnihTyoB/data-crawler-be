@@ -1,5 +1,7 @@
-import { prisma } from '../../database/prisma.client';
-import { ROLES } from '../../common/constants/role.constant';
+import { prisma } from "../../database/prisma.client";
+import { ROLES } from "../../common/constants/role.constant";
+import { JOB_STATUS } from "../../common/constants/job-status.constant";
+import { CrawlPageStatus } from "@prisma/client";
 
 export class DashboardRepository {
   async getStats(userId: string, role: string) {
@@ -23,14 +25,31 @@ export class DashboardRepository {
       totalExports,
     ] = await Promise.all([
       prisma.crawlJob.count({ where: jobWhere }),
-      prisma.crawlJob.count({ where: { ...jobWhere, status: 'COMPLETED' } }),
-      prisma.crawlJob.count({ where: { ...jobWhere, status: 'FAILED' } }),
-      prisma.crawlJob.count({ where: { ...jobWhere, status: 'RUNNING' } }),
-      prisma.crawlJob.count({ where: { ...jobWhere, status: { in: ['PENDING', 'QUEUED'] } } }),
+      prisma.crawlJob.count({
+        where: { ...jobWhere, status: JOB_STATUS.COMPLETED },
+      }),
+      prisma.crawlJob.count({
+        where: { ...jobWhere, status: JOB_STATUS.FAILED },
+      }),
+      prisma.crawlJob.count({
+        where: { ...jobWhere, status: JOB_STATUS.RUNNING },
+      }),
+      prisma.crawlJob.count({
+        where: {
+          ...jobWhere,
+          status: { in: [JOB_STATUS.PENDING, JOB_STATUS.QUEUED] },
+        },
+      }),
       prisma.crawlPage.count({ where: pageWhere }),
-      prisma.crawlPage.count({ where: { ...pageWhere, status: 'SUCCESS' } }),
-      prisma.crawlPage.count({ where: { ...pageWhere, status: 'FAILED' } }),
-      prisma.crawlSchedule.count({ where: { ...scheduleWhere, isActive: true } }),
+      prisma.crawlPage.count({
+        where: { ...pageWhere, status: CrawlPageStatus.SUCCESS },
+      }),
+      prisma.crawlPage.count({
+        where: { ...pageWhere, status: CrawlPageStatus.FAILED },
+      }),
+      prisma.crawlSchedule.count({
+        where: { ...scheduleWhere, isActive: true },
+      }),
       prisma.crawlSchedule.count({ where: scheduleWhere }),
       prisma.crawlExport.count({ where: exportWhere }),
     ]);

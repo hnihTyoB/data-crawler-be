@@ -1,13 +1,17 @@
-import { Request, Response, NextFunction } from 'express';
-import { ApiKeyService } from './api-key.service';
-import { AuditLogService } from '../audit-logs/audit-log.service';
-import { AUDIT_ACTIONS } from '../../common/constants/audit-action.constant';
+import { Request, Response, NextFunction } from "express";
+import { ApiKeyService } from "./api-key.service";
+import { AuditLogService } from "../audit-logs/audit-log.service";
+import { AUDIT_ACTIONS } from "../../common/constants/audit-action.constant";
 
 export class ApiKeyController {
   private readonly service = new ApiKeyService();
   private readonly auditLogService = new AuditLogService();
 
-  create = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  create = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const userId = req.user.id;
       const { name, expiresAt } = req.body;
@@ -18,8 +22,12 @@ export class ApiKeyController {
         userId,
         action: AUDIT_ACTIONS.CREATE_API_KEY,
         ipAddress: req.ip,
-        userAgent: req.headers['user-agent'] as string,
-        details: { apiKeyId: result.id, name: result.name, keyPrefix: result.keyPrefix },
+        userAgent: req.headers["user-agent"] as string,
+        details: {
+          apiKeyId: result.id,
+          name: result.name,
+          keyPrefix: result.keyPrefix,
+        },
       });
 
       res.status(201).json({
@@ -31,7 +39,11 @@ export class ApiKeyController {
     }
   };
 
-  list = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  list = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const userId = req.user.id;
       const result = await this.service.list(userId);
@@ -45,7 +57,11 @@ export class ApiKeyController {
     }
   };
 
-  setActive = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  setActive = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const userId = req.user.id;
       const keyId = req.params.id;
@@ -57,7 +73,7 @@ export class ApiKeyController {
         userId,
         action: AUDIT_ACTIONS.UPDATE_API_KEY_STATUS,
         ipAddress: req.ip,
-        userAgent: req.headers['user-agent'] as string,
+        userAgent: req.headers["user-agent"] as string,
         details: {
           apiKeyId: keyId,
           name: result.name,
@@ -75,7 +91,11 @@ export class ApiKeyController {
     }
   };
 
-  revoke = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  revoke = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
     try {
       const userId = req.user.id;
       const keyId = req.params.id;
@@ -86,7 +106,7 @@ export class ApiKeyController {
         userId,
         action: AUDIT_ACTIONS.REVOKE_API_KEY,
         ipAddress: req.ip,
-        userAgent: req.headers['user-agent'] as string,
+        userAgent: req.headers["user-agent"] as string,
         details: {
           apiKeyId: keyId,
           name: result.name,

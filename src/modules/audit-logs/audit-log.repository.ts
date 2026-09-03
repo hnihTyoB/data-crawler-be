@@ -1,6 +1,6 @@
-import { prisma } from '../../database/prisma.client';
-import { Prisma } from '@prisma/client';
-import { AuditLogQueryDto, CreateAuditLogDto } from './audit-log.dto';
+import { prisma } from "../../database/prisma.client";
+import { Prisma } from "@prisma/client";
+import { AuditLogQueryDto, CreateAuditLogDto } from "./audit-log.dto";
 
 export class AuditLogRepository {
   async create(data: CreateAuditLogDto) {
@@ -8,7 +8,8 @@ export class AuditLogRepository {
       data: {
         userId: data.userId || null,
         action: data.action,
-        details: (data.details ?? undefined) as Prisma.InputJsonValue | undefined,
+        details: (data.details ?? undefined) as
+          Prisma.InputJsonValue | undefined,
         ipAddress: data.ipAddress || null,
         userAgent: data.userAgent || null,
       },
@@ -38,24 +39,25 @@ export class AuditLogRepository {
 
     if (query.search) {
       where.OR = [
-        { action: { contains: query.search, mode: 'insensitive' } },
+        { action: { contains: query.search, mode: "insensitive" } },
         {
           user: {
             OR: [
-              { email: { contains: query.search, mode: 'insensitive' } },
-              { fullName: { contains: query.search, mode: 'insensitive' } },
+              { email: { contains: query.search, mode: "insensitive" } },
+              { fullName: { contains: query.search, mode: "insensitive" } },
             ],
           },
         },
       ];
     }
 
-    const sortBy = query.sortBy || 'createdAt';
-    const order = (query.order || 'desc') as Prisma.SortOrder;
-    const allowedSortFields = ['createdAt', 'action'];
-    const orderBy: Prisma.AuditLogOrderByWithRelationInput = allowedSortFields.includes(sortBy)
-      ? { [sortBy]: order }
-      : { createdAt: 'desc' };
+    const sortBy = query.sortBy || "createdAt";
+    const order = (query.order || "desc") as Prisma.SortOrder;
+    const allowedSortFields = ["createdAt", "action"];
+    const orderBy: Prisma.AuditLogOrderByWithRelationInput =
+      allowedSortFields.includes(sortBy)
+        ? { [sortBy]: order }
+        : { createdAt: "desc" };
 
     const page = Math.max(1, Number(query.page) || 1);
     const limit = Math.min(Math.max(1, Number(query.limit) || 20), 100);
