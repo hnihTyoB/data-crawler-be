@@ -7,4 +7,8 @@ storage/exports/*
 .DS_Store
 nopush/
 coverage/
-frontend-data-crawler-be/
+
+# Claude local overrides
+.claude/*.local.*
+.claude/CLAUDE.local.md
+.claude/settings.local.json

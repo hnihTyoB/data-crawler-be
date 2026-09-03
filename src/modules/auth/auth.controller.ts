@@ -74,6 +74,19 @@ export class AuthController {
     }
   };
 
+  usage = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.service.getUsage(req.user.id);
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   refresh = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { refreshToken } = req.body;

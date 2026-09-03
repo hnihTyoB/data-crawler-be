@@ -9,45 +9,36 @@ const router = Router();
 const controller = new AuthController();
 
 router.post('/login', authRateLimiter, validate(loginSchema), (req, res, next) => {
-  // #swagger.requestBody = { schema: { $ref: '#/components/schemas/LoginRequest' } }
   controller.login(req, res, next);
 });
 router.post('/refresh', copyRefreshTokenToBody, validate(refreshSchema), (req, res, next) => {
-  // #swagger.requestBody = { schema: { $ref: '#/components/schemas/RefreshRequest' } }
   controller.refresh(req, res, next);
 });
 router.post('/logout', copyRefreshTokenToBody, validate(logoutSchema), (req, res, next) => {
-  // #swagger.requestBody = { schema: { $ref: '#/components/schemas/LogoutRequest' } }
   controller.logout(req, res, next);
 });
 router.get('/me', authMiddleware, controller.me);
+router.get('/me/usage', authMiddleware, controller.usage);
 router.put("/me", authMiddleware, validate(updateMeSchema), (req, res, next) => {
-  // #swagger.requestBody = { schema: { $ref: '#/components/schemas/UpdateMeRequest' } }
   controller.updateMe(req, res, next);
 });
 router.post('/change-password', authMiddleware, validate(changePasswordSchema), (req, res, next) => {
-  // #swagger.requestBody = { schema: { $ref: '#/components/schemas/ChangePasswordRequest' } }
   controller.changePassword(req, res, next);
 });
 router.post("/register", authRateLimiter, validate(registerSchema), (req, res, next) => {
-  // #swagger.requestBody = { schema: { $ref: '#/components/schemas/RegisterRequest' } }
   controller.register(req, res, next);
 });
 router.post("/forgot-password", authRateLimiter, validate(forgotPasswordSchema), (req, res, next) => {
-  // #swagger.requestBody = { schema: { $ref: '#/components/schemas/ForgotPasswordRequest' } }
   controller.forgotPassword(req, res, next);
 });
 router.post("/reset-password", validate(resetPasswordSchema), (req, res, next) => {
-  // #swagger.requestBody = { schema: { $ref: '#/components/schemas/ResetPasswordRequest' } }
   controller.resetPassword(req, res, next);
 });
 router.post("/resend-verification", authRateLimiter, validate(resendVerificationSchema), (req, res, next) => {
-  // #swagger.requestBody = { schema: { $ref: '#/components/schemas/ResendVerificationRequest' } }
   controller.resendVerification(req, res, next);
 });
 
 router.post("/verify-email", validate(verifyEmailSchema), (req, res, next) => {
-  // #swagger.requestBody = { schema: { $ref: '#/components/schemas/VerifyEmailRequest' } }
   controller.verifyEmail(req, res, next);
 });
 

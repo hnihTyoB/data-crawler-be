@@ -25,7 +25,7 @@ export class AuthRepository {
     });
   }
 
-  updateUser(id: string, data: { fullName?: string; passwordHash?: string; isActive?: boolean }) {
+  updateUser(id: string, data: { fullName?: string; avatarUrl?: string | null; passwordHash?: string; isActive?: boolean }) {
     return prisma.user.update({
       where: { id },
       data,

@@ -15,6 +15,9 @@ router.post('/', apiKeyOrAuthMiddleware, requireRole(ROLES.ADMIN, ROLES.CRAWLER_
 });
 router.get('/', apiKeyOrAuthMiddleware, requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER), validateQuery(listCrawlJobsQuerySchema), controller.findAll);
 router.get('/:id', apiKeyOrAuthMiddleware, requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER), controller.findById);
+router.delete('/:id', apiKeyOrAuthMiddleware, requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER), controller.delete);
+router.post('/:id/rerun', apiKeyOrAuthMiddleware, requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER), controller.rerun);
+router.get('/:id/logs', apiKeyOrAuthMiddleware, requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER), controller.getLogs);
 router.get('/:id/events', apiKeyOrAuthMiddleware, requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER), controller.streamEvents);
 router.post('/:id/cancel', apiKeyOrAuthMiddleware, requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER), controller.cancel);
 router.get('/:id/pages', apiKeyOrAuthMiddleware, requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER), validateQuery(crawlPageQuerySchema), controller.getPages);

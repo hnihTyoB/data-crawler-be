@@ -37,6 +37,21 @@ export class WebhookRepository {
     });
   }
 
+  updateConfig(
+    id: string,
+    data: {
+      url?: string;
+      encryptedSecret?: string;
+      events?: string[];
+      isActive?: boolean;
+    },
+  ): Promise<WebhookConfig> {
+    return prisma.webhookConfig.update({
+      where: { id },
+      data,
+    });
+  }
+
   findActiveConfigsByEvent(userId: string, event: string): Promise<WebhookConfig[]> {
     return prisma.webhookConfig.findMany({
       where: {

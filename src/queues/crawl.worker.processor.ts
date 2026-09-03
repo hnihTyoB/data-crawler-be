@@ -176,21 +176,35 @@ export async function persistBatchResults(
   return { successCount, failedCount, saveErrors, totalPages: seenUrls.size };
 }
 
-export async function processCrawlJob(job: Job<{ jobId: string }>) {
-  const { jobId } = job.data;
+async function logStep(
+  jobId: string,
+  level: 'INFO' | 'WARNING' | 'ERROR',
+  step: string,
+  message: string,
+): Promise<void> {
+  try {
+    await getJobRepository().createJobLog({ jobId, level, step, message });
+  } catch {
+    // Non-fatal if database logging fails
+  }
+}
 
+export async function processCrawlJob(job: Job): Promise<void> {
+  const { jobId } = job.data;
   const crawlJob = await getJobRepository().findById(jobId);
 
   if (!crawlJob) {
-    throw new Error(`Job ${jobId} not found`);
+    throw new Error(`CrawlJob ${jobId} not found`);
   }
 
-  try {
-    if (crawlJob.status === 'CANCELED') {
-      console.log(`[Worker] Job ${jobId} was canceled before processing, skipping`);
-      return;
-    }
+  if (crawlJob.status === 'CANCELED') {
+    return;
+  }
 
+  await getJobRepository().updateStatus(jobId, 'RUNNING', { startedAt: new Date() });
+  void logStep(jobId, 'INFO', 'INITIALIZE', `Job started, mode=${crawlJob.mode}`);
+
+  try {
     if (crawlJob.mode !== 'URL_LIST') {
       try {
         await validateUrlAsync(crawlJob.startUrl);
@@ -462,6 +476,12 @@ export async function processCrawlJob(job: Job<{ jobId: string }>) {
         const webhookDeliveryService = new WebhookDeliveryService();
 
         const event = updatedJob.status === 'COMPLETED' ? 'job.completed' : 'job.failed';
+        void logStep(
+          jobId,
+          updatedJob.status === 'COMPLETED' ? 'INFO' : 'ERROR',
+          updatedJob.status,
+          `Job finished with status ${updatedJob.status}${updatedJob.errorMessage ? `: ${updatedJob.errorMessage}` : ''}`,
+        );
         const diffSummary = (updatedJob && typeof updatedJob === 'object' && 'diffSummary' in updatedJob)
           ? (updatedJob as { diffSummary: unknown }).diffSummary ?? null
           : null;

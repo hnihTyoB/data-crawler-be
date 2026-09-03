@@ -9,12 +9,14 @@ import webhookRoute from '../modules/webhooks/webhook.route';
 import extractionTemplateRoute from '../modules/extraction-templates/extraction-template.route';
 import crawlScheduleRoute from '../modules/crawl-schedules/crawl-schedule.route';
 import healthRoute from '../modules/health/health.route';
+import dashboardRoute from '../modules/dashboard/dashboard.route';
 
 const router = Router();
 
 router.use('/health', healthRoute);
 router.use('/auth', authRoute);
 router.use('/users', userRoute);
+router.use('/dashboard', dashboardRoute);
 router.use('/crawl-jobs', crawlJobRoute);
 router.use('/crawl-schedules', crawlScheduleRoute);
 router.use('/exports', crawlExportRoute);

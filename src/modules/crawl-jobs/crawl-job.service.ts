@@ -233,4 +233,50 @@ export class CrawlJobService {
     const exportService = new ExportService();
     return exportService.generate(job, 'ZIP');
   }
+
+  async delete(userId: string, role: string, jobId: string) {
+    const job = await this.findById(userId, role, jobId);
+
+    if (job.status === JOB_STATUS.RUNNING || job.status === JOB_STATUS.PROCESSING_EXPORT) {
+      throw new AppError(
+        'Cannot delete a job that is currently running. Cancel it first.',
+        400,
+        ERROR_CODE.CRAWL_JOB_NOT_COMPLETED,
+      );
+    }
+
+    const exportRepository = new CrawlExportRepository();
+    const exports = await exportRepository.findByJobId(jobId);
+    const storage = StorageFactory.getStorageService();
+
+    for (const exp of exports) {
+      if (exp.filePath) {
+        await storage.deleteFile(exp.filePath).catch(() => {});
+      }
+    }
+
+    if (job.diffReportPath) {
+      await storage.deleteFile(job.diffReportPath).catch(() => {});
+    }
+
+    await this.repository.delete(jobId);
+    return { success: true, message: 'Crawl job deleted successfully' };
+  }
+
+  async rerun(userId: string, role: string, jobId: string) {
+    const existing = await this.findById(userId, role, jobId);
+
+    return this.create(userId, {
+      startUrl: existing.startUrl,
+      mode: existing.mode,
+      maxPages: existing.maxPages,
+      maxDepth: existing.maxDepth,
+      urls: existing.urls,
+    });
+  }
+
+  async getLogs(userId: string, role: string, jobId: string, page = 1, limit = 50) {
+    await this.findById(userId, role, jobId);
+    return this.repository.findLogsByJobId(jobId, page, limit);
+  }
 }

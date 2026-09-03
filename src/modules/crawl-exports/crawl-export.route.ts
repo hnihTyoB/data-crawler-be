@@ -7,7 +7,9 @@ import { ROLES } from '../../common/constants/role.constant';
 const router = Router();
 const controller = new CrawlExportController();
 
+router.get('/', authMiddleware, requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER), controller.findAll);
 router.get('/:exportId/download', authMiddleware, requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER), controller.download);
+router.delete('/:exportId', authMiddleware, requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER), controller.delete);
 
 export default router;
 
