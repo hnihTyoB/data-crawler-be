@@ -40,7 +40,7 @@ app.use(
     maxAge: 86400,
   }),
 );
-app.use(morgan("dev"));
+app.use(morgan(envConfig.nodeEnv === "production" ? "combined" : "dev"));
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

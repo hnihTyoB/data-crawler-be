@@ -2,7 +2,7 @@ import bcrypt from "bcryptjs";
 import { UserRepository } from "./user.repository";
 import { AppError } from "../../common/errors/app-error";
 import { ERROR_CODE } from "../../common/errors/error-code";
-import { User } from "@prisma/client";
+import { User } from "../../common/types/database.types";
 import { ROLES } from "../../common/constants/role.constant";
 import {
   CreateUserDto,

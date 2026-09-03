@@ -57,6 +57,15 @@ export class CrawlAssetRepository {
     });
   }
 
+  countByJobId(jobId: string, assetType?: AssetType) {
+    return prisma.crawlAsset.count({
+      where: {
+        crawlJobId: jobId,
+        ...(assetType ? { assetType } : {}),
+      },
+    });
+  }
+
   findAssetsForJsonExport(jobId: string) {
     return prisma.crawlAsset.findMany({
       where: { crawlJobId: jobId },

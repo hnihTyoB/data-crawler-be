@@ -283,22 +283,14 @@ export class AuthController {
   forgotPassword = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const forgotPasswordDto: ForgotPasswordDto = req.body;
-      const result = await this.service.forgotPassword(forgotPasswordDto);
+      await this.service.forgotPassword(forgotPasswordDto);
 
-      if (result.userId && result.resetToken) {
-        await this.auditLogService.log({
-          userId: result.userId,
-          action: AUDIT_ACTIONS.FORGOT_PASSWORD,
-          ipAddress: req.ip,
-          userAgent: req.headers["user-agent"] as string,
-          details: { email: forgotPasswordDto.email },
-        });
-
-        await this.mailService.sendPasswordResetEmail(
-          forgotPasswordDto.email,
-          result.resetToken,
-        );
-      }
+      await this.auditLogService.log({
+        action: AUDIT_ACTIONS.FORGOT_PASSWORD,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"] as string,
+        details: { email: forgotPasswordDto.email },
+      });
 
       res.json({
         success: true,

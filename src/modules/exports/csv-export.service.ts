@@ -1,5 +1,9 @@
 import fs from "fs";
-import { CrawlAsset, CrawlJob, CrawlPage } from "@prisma/client";
+import {
+  CrawlAsset,
+  CrawlJob,
+  CrawlPage,
+} from "../../common/types/database.types";
 import { CrawlAssetRepository } from "../crawl-assets/crawl-asset.repository";
 import { JOB_EXPORT_FILES } from "../../common/constants/storage-path.constant";
 import { EXPORT_MIME_TYPES } from "../../common/constants/export-type.constant";

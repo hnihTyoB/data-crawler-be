@@ -1,4 +1,4 @@
-import { CrawlPageStatus } from "@prisma/client";
+import { CrawlPageStatus } from "../../common/constants/crawl-page-status.constant";
 import {
   FirecrawlPageResult,
   CrawlErrorItem,

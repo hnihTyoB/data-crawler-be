@@ -1,4 +1,4 @@
-import { WebhookDelivery, Prisma } from "@prisma/client";
+import { WebhookDelivery, Prisma } from "../../common/types/database.types";
 import { WebhookRepository } from "./webhook.repository";
 import { decrypt, signPayload } from "./webhook-crypto.helper";
 import { webhookQueue } from "../../queues/webhook.queue";

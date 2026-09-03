@@ -1,6 +1,6 @@
 import ExcelJS from "exceljs";
 import { parse as parseHtml } from "node-html-parser";
-import { CrawlJob, CrawlPage } from "@prisma/client";
+import { CrawlJob, CrawlPage } from "../../common/types/database.types";
 import { JOB_EXPORT_FILES } from "../../common/constants/storage-path.constant";
 import { EXPORT_MIME_TYPES } from "../../common/constants/export-type.constant";
 import { buildJobDataFilePath } from "../../common/helpers/file.helper";

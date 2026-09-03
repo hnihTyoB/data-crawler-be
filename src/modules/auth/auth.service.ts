@@ -502,9 +502,7 @@ export class AuthService {
     };
   }
 
-  async forgotPassword(
-    data: ForgotPasswordDto,
-  ): Promise<{ success: boolean; resetToken?: string; userId?: string }> {
+  async forgotPassword(data: ForgotPasswordDto): Promise<{ success: boolean }> {
     const { email } = data;
     const user = await this.repository.findByEmail(email);
 
@@ -517,10 +515,14 @@ export class AuthService {
       expiresIn: "15m",
     });
 
+    try {
+      await this.mailService.sendPasswordResetEmail(user.email, resetToken);
+    } catch (error: unknown) {
+      console.error("[Mail] Password reset delivery failed:", error);
+    }
+
     return {
       success: true,
-      resetToken,
-      userId: user.id,
     };
   }
 

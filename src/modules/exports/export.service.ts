@@ -1,4 +1,4 @@
-import { CrawlJob, CrawlPage } from "@prisma/client";
+import { CrawlJob, CrawlPage } from "../../common/types/database.types";
 import { CrawlJobRepository } from "../crawl-jobs/crawl-job.repository";
 import { CrawlExportRepository } from "../crawl-exports/crawl-export.repository";
 import { JsonExportService } from "./json-export.service";

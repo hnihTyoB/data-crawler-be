@@ -6,6 +6,7 @@ import {
   createCrawlJobSchema,
   createExportSchema,
   listCrawlJobsQuerySchema,
+  getAssetsQuerySchema,
 } from "./crawl-job.validation";
 import { crawlPageQuerySchema } from "../crawl-pages/crawl-page.validation";
 import { requireRole } from "../../middlewares/role.middleware";
@@ -105,6 +106,7 @@ router.get(
   "/:id/assets",
   apiKeyOrAuthMiddleware,
   requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER),
+  validateQuery(getAssetsQuerySchema),
   controller.getAssets,
 );
 router.get(

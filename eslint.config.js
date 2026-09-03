@@ -25,6 +25,29 @@ export default [
       ],
       "no-console": "off",
       "@typescript-eslint/no-explicit-any": "warn",
+      "no-restricted-imports": [
+        "error",
+        {
+          paths: [
+            {
+              name: "@prisma/client",
+              message:
+                "Importing directly from @prisma/client is forbidden outside repositories and database.types.ts (Rule: AGENTS.md). Use src/common/constants or src/common/types/database.types.",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: [
+      "src/**/*.repository.ts",
+      "src/database/prisma.client.ts",
+      "src/common/types/database.types.ts",
+      "src/**/__tests__/**/*.ts",
+    ],
+    rules: {
+      "no-restricted-imports": "off",
     },
   },
 ];

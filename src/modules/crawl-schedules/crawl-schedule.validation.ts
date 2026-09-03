@@ -46,20 +46,6 @@ export const createCrawlScheduleSchema = z
         });
       }
     }
-
-    if (
-      data.frequency === SCHEDULE_FREQUENCY.WEEKLY &&
-      data.dayOfWeek === undefined
-    ) {
-      data.dayOfWeek = 0; // Default to Sunday
-    }
-
-    if (
-      data.frequency === SCHEDULE_FREQUENCY.MONTHLY &&
-      data.dayOfMonth === undefined
-    ) {
-      data.dayOfMonth = 1; // Default to 1st of month
-    }
   });
 
 export const updateCrawlScheduleSchema = z
@@ -99,20 +85,24 @@ export const updateCrawlScheduleSchema = z
 export const crawlScheduleQuerySchema = z.object({
   search: z.string().trim().optional(),
   frequency: z.nativeEnum(SCHEDULE_FREQUENCY).optional(),
-  isActive: z
-    .string()
+  isActive: z.preprocess((val) => {
+    if (val === "true" || val === true || val === "1") return true;
+    if (val === "false" || val === false || val === "0") return false;
+    return undefined;
+  }, z.boolean().optional()),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  sortBy: z
+    .enum([
+      "createdAt",
+      "updatedAt",
+      "name",
+      "frequency",
+      "nextRunAt",
+      "lastRunAt",
+      "isActive",
+    ])
     .optional()
-    .transform((val) =>
-      val === "true" ? true : val === "false" ? false : undefined,
-    ),
-  page: z
-    .string()
-    .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 1)),
-  limit: z
-    .string()
-    .optional()
-    .transform((val) => (val ? parseInt(val, 10) : 20)),
-  sortBy: z.string().optional().default("createdAt"),
+    .default("createdAt"),
   order: z.enum(["asc", "desc"]).optional().default("desc"),
 });

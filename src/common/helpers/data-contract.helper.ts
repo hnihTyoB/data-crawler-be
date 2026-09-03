@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { CrawlPage, CrawlAsset } from "@prisma/client";
+import { CrawlPage, CrawlAsset } from "../types/database.types";
 import {
   CrawlPageRecord,
   DataQualityWarning,
@@ -14,10 +14,6 @@ import {
   DATA_QUALITY_MIN_SCORE,
   DATA_CONTRACT_HASH_ALGORITHM,
 } from "../constants/data-contract.constant";
-
-// ─────────────────────────────────────────────
-// URL Normalization
-// ─────────────────────────────────────────────
 
 /**
  * Normalize một URL để phục vụ deduplicate và so sánh.
@@ -65,10 +61,6 @@ export function normalizeUrl(rawUrl: string): string {
     return rawUrl;
   }
 }
-
-// ─────────────────────────────────────────────
-// Text Utilities
-// ─────────────────────────────────────────────
 
 /**
  * Strip toàn bộ Markdown syntax, trả về plain text thuần.
@@ -234,10 +226,6 @@ export function hashContent(text: string): string | null {
     .digest("hex");
 }
 
-// ─────────────────────────────────────────────
-// Data Quality
-// ─────────────────────────────────────────────
-
 /**
  * Tính điểm chất lượng dữ liệu (0–100) của một page dựa trên các tiêu chí:
  * - Có mainContent       : +40 điểm
@@ -294,10 +282,6 @@ export function detectWarnings(params: {
 
   return warnings;
 }
-
-// ─────────────────────────────────────────────
-// Asset Transformation
-// ─────────────────────────────────────────────
 
 /**
  * Chuyển đổi danh sách CrawlAsset sang LinkRecord[].
@@ -360,10 +344,6 @@ function inferImageType(imageUrl: string): string {
     return "unknown";
   }
 }
-
-// ─────────────────────────────────────────────
-// Main Transformer
-// ─────────────────────────────────────────────
 
 export interface TransformPageOptions {
   page: CrawlPage & { normalizedUrl?: string | null };
@@ -451,10 +431,6 @@ export function transformPageToRecord(
     crawledAt: page.crawledAt?.toISOString() ?? null,
   };
 }
-
-// ─────────────────────────────────────────────
-// Envelope Builder
-// ─────────────────────────────────────────────
 
 /**
  * Đóng gói danh sách CrawlPageRecord vào PagesJsonEnvelope để ghi ra pages.json.

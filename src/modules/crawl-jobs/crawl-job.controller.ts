@@ -8,10 +8,7 @@ import { AuditLogService } from "../audit-logs/audit-log.service";
 import { AUDIT_ACTIONS } from "../../common/constants/audit-action.constant";
 import { JOB_STATUS } from "../../common/constants/job-status.constant";
 import { CrawlAssetService } from "../crawl-assets/crawl-asset.service";
-import {
-  AssetType,
-  ASSET_TYPES,
-} from "../../common/constants/asset-type.constant";
+import { AssetType } from "../../common/constants/asset-type.constant";
 import { streamStorageDownload } from "../../common/storage/storage-download.helper";
 export class CrawlJobController {
   private readonly service = new CrawlJobService();
@@ -137,22 +134,11 @@ export class CrawlJobController {
     try {
       await this.service.findById(req.user.id, req.user.role, req.params.id);
 
-      const VALID_ASSET_TYPES: readonly string[] = Object.values(ASSET_TYPES);
-      const rawType = req.query.assetType as string | undefined;
-      if (rawType && !VALID_ASSET_TYPES.includes(rawType)) {
-        res
-          .status(400)
-          .json({ success: false, message: `Invalid assetType: ${rawType}` });
-        return;
-      }
-      const assetType = rawType as AssetType | undefined;
-      const page = Math.max(1, parseInt((req.query.page as string) || "1", 10));
-      const limit = Math.min(
-        Math.max(1, parseInt((req.query.limit as string) || "50", 10)),
-        500,
-      );
+      const assetType = req.query.assetType as AssetType | undefined;
+      const page = Number(req.query.page) || 1;
+      const limit = Number(req.query.limit) || 50;
 
-      const items = await this.assetService.findByJobId(
+      const result = await this.assetService.findByJobId(
         req.params.id,
         assetType,
         page,
@@ -162,8 +148,13 @@ export class CrawlJobController {
       res.json({
         success: true,
         data: {
-          items,
-          meta: { page, limit },
+          items: result.items,
+          meta: {
+            total: result.total,
+            page: result.page,
+            limit: result.limit,
+            totalPages: result.totalPages,
+          },
         },
       });
     } catch (error) {
@@ -413,11 +404,14 @@ export class CrawlJobController {
       );
       res.json({
         success: true,
-        data: result.items,
-        pagination: {
-          total: result.total,
-          page: result.page,
-          limit: result.limit,
+        data: {
+          items: result.items,
+          meta: {
+            total: result.total,
+            page: result.page,
+            limit: result.limit,
+            totalPages: Math.ceil(result.total / (result.limit || 1)),
+          },
         },
       });
     } catch (error) {

@@ -7,3 +7,4 @@ process.env.JWT_REFRESH_SECRET =
 process.env.WEBHOOK_ENCRYPTION_KEY =
   process.env.WEBHOOK_ENCRYPTION_KEY ||
   "abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890";
+process.env.REDIS_ENABLED = "false";

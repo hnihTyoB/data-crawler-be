@@ -269,10 +269,6 @@ export async function processCrawlJob(job: Job): Promise<void> {
       }
     }
 
-    await getJobRepository().updateStatus(jobId, JOB_STATUS.RUNNING, {
-      startedAt: new Date(),
-    });
-
     try {
       if (crawlJob.mode === CRAWL_MODE.SCRAPE) {
         console.log(

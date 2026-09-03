@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import archiver from "archiver";
 import { PassThrough } from "stream";
-import { CrawlJob, CrawlPage } from "@prisma/client";
+import { CrawlJob, CrawlPage } from "../../common/types/database.types";
 import { CrawlAssetRepository } from "../crawl-assets/crawl-asset.repository";
 import {
   JOB_EXPORT_FILES,

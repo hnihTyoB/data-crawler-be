@@ -1,4 +1,4 @@
-import type { ApiKey } from "@prisma/client";
+import type { ApiKey } from "../../common/types/database.types";
 
 export type PublicApiKey = Omit<ApiKey, "keyHash">;
 

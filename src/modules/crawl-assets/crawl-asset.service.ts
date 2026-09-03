@@ -10,7 +10,19 @@ export class CrawlAssetService {
     page = 1,
     limit = 50,
   ) {
-    return this.repository.findByJobId(jobId, assetType, page, limit);
+    const safeLimit = Math.min(Math.max(1, limit), 500);
+    const safePage = Math.max(1, page);
+    const [items, total] = await Promise.all([
+      this.repository.findByJobId(jobId, assetType, safePage, safeLimit),
+      this.repository.countByJobId(jobId, assetType),
+    ]);
+    return {
+      items,
+      total,
+      page: safePage,
+      limit: safeLimit,
+      totalPages: Math.ceil(total / safeLimit),
+    };
   }
 
   async create(data: {

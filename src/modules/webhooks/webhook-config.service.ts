@@ -1,4 +1,4 @@
-import { WebhookConfig } from "@prisma/client";
+import { WebhookConfig } from "../../common/types/database.types";
 import { WebhookRepository } from "./webhook.repository";
 import { encrypt } from "./webhook-crypto.helper";
 import { AppError } from "../../common/errors/app-error";
