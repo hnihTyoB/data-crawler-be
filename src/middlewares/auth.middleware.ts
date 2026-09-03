@@ -4,8 +4,10 @@ import { jwtConfig } from "../config/jwt.config";
 import { AppError } from "../common/errors/app-error";
 import { ERROR_CODE } from "../common/errors/error-code";
 import { UserRepository } from "../modules/users/user.repository";
+import { PermissionService } from "../modules/permissions/permission.service";
 
 const userRepository = new UserRepository();
+const permissionService = new PermissionService();
 
 export async function authMiddleware(
   req: Request,
@@ -45,10 +47,17 @@ export async function authMiddleware(
       return;
     }
 
+    const [roles, permissions] = await Promise.all([
+      permissionService.getUserRoles(user.id),
+      permissionService.getUserPermissions(user.id),
+    ]);
+
     req.user = {
       id: user.id,
       email: user.email,
       role: user.role,
+      roles,
+      permissions,
     };
 
     next();

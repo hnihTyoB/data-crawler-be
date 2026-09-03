@@ -10,5 +10,9 @@ export type {
   WebhookDelivery,
   AuditLog,
   RefreshToken,
+  Role,
+  Permission,
+  UserRoleAssignment,
+  RolePermission,
   Prisma,
 } from "@prisma/client";

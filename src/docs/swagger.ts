@@ -624,6 +624,77 @@ const rawSchemas = {
       },
     },
   },
+  Role: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      name: { type: "string" },
+      slug: { type: "string" },
+      description: { type: "string", nullable: true },
+      isSystem: { type: "boolean" },
+      isActive: { type: "boolean" },
+      createdAt: { type: "string", format: "date-time" },
+      updatedAt: { type: "string", format: "date-time" },
+    },
+  },
+  Permission: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      name: { type: "string" },
+      slug: { type: "string" },
+      description: { type: "string", nullable: true },
+      resource: { type: "string" },
+      action: { type: "string" },
+      isSystem: { type: "boolean" },
+      createdAt: { type: "string", format: "date-time" },
+      updatedAt: { type: "string", format: "date-time" },
+    },
+  },
+  CreateRoleRequest: {
+    type: "object",
+    required: ["name", "slug"],
+    properties: {
+      name: { type: "string", example: "Finance Auditor" },
+      slug: { type: "string", example: "finance_auditor" },
+      description: {
+        type: "string",
+        example: "Audits financial records and reports",
+      },
+      permissionIds: {
+        type: "array",
+        items: { type: "string", format: "uuid" },
+      },
+    },
+  },
+  UpdateRoleRequest: {
+    type: "object",
+    properties: {
+      name: { type: "string" },
+      description: { type: "string" },
+      isActive: { type: "boolean" },
+    },
+  },
+  AssignRolePermissionsRequest: {
+    type: "object",
+    required: ["permissionIds"],
+    properties: {
+      permissionIds: {
+        type: "array",
+        items: { type: "string", format: "uuid" },
+      },
+    },
+  },
+  AssignUserRolesRequest: {
+    type: "object",
+    required: ["roleIds"],
+    properties: {
+      roleIds: {
+        type: "array",
+        items: { type: "string", format: "uuid" },
+      },
+    },
+  },
 };
 
 const outputFile = "./src/docs/swagger.json";

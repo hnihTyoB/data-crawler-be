@@ -2,7 +2,7 @@
 
 **Date**: 2026-09-03  
 **Repository**: `data-crawler-be`  
-**Status**: Clean & All P0/P1 Resolved  
+**Status**: Clean & All P0/P1 Resolved
 
 ---
 
@@ -13,6 +13,7 @@ An autonomous, production-grade audit and remediation cycle was executed on the 
 All findings across authentication security, layered architecture boundaries, race conditions, N+1 queries, IDOR/ownership authorization, pagination bounds, zero-hardcode compliance, and response envelopes were triaged, verified against active code, repaired, and validated through the automated test suite.
 
 ### Key Validation Outcomes:
+
 - **Typecheck (`pnpm build`)**: ✅ 0 errors (OpenAPI Swagger autogen clean)
 - **Linter (`pnpm lint`)**: ✅ 0 errors, with strict ESLint `no-restricted-imports` rule active preventing non-repository `@prisma/client` imports
 - **Automated Test Suite (`pnpm jest --runInBand`)**: ✅ **31/31 Test Suites Passed**, **349/349 Tests Passed** (100% Green)
@@ -22,32 +23,33 @@ All findings across authentication security, layered architecture boundaries, ra
 
 ## Findings Backlog & Resolution Summary
 
-| ID | Severity | Module | Summary of Issue | Verification | Resolution Status |
-|---|---|---|---|---|---|
-| **BUG-01** | 🔴 P0 | Auth | `forgotPassword` leaked `resetToken` & `userId` in service return object | CONFIRMED | **FIXED & TESTED** |
-| **BUG-02** | 🔴 P0 | Architecture | Prisma enums/models imported directly outside repository layer | CONFIRMED | **FIXED & LINT-ENFORCED** |
-| **BUG-03** | 🟠 P1 | CrawlSchedules | `limit`/`page` query params lacked upper bound validation (DoS risk) | CONFIRMED | **FIXED & BOUNDED** |
-| **BUG-04** | 🟠 P1 | CrawlJobs | `updateStatus` TOCTOU race condition overriding `CANCELED` state | CONFIRMED | **FIXED (Atomic updateMany)** |
-| **BUG-05** | 🟠 P1 | Worker | Sequential DB round-trips for sensitive data scanning during crawl | CONFIRMED | **OPTIMIZED** |
-| **BUG-06** | 🟠 P1 | Worker | Duplicate `updateStatus(RUNNING)` call overwriting `startedAt` | CONFIRMED | **FIXED (Removed duplicate)** |
-| **BUG-07** | 🟠 P1 | CrawlJobs | `scheduleId` lacked user ownership authorization check (IDOR risk) | CONFIRMED | **FIXED & TESTED** |
-| **BUG-08** | 🟠 P1 | Auth | `authMiddleware` un-cached DB lookup per request | CONFIRMED | **DOCUMENTED (Redis cluster)** |
-| **BUG-09** | 🟠 P1 | Webhooks | Hardcoded string literals in webhook validation schemas | CONFIRMED | **FIXED (Constant enums)** |
-| **BUG-10** | 🟡 P2 | CrawlJobs | `getAssets` query parameters validated imperatively in controller | CONFIRMED | **FIXED (Zod Schema)** |
-| **BUG-11** | 🟡 P2 | CrawlPages | Search on large text columns without trigram index | CONFIRMED | **MAINTAINED (jobId scoped)** |
-| **BUG-12** | 🟡 P2 | CrawlSchedules | `superRefine` direct data mutation (Zod anti-pattern) | CONFIRMED | **FIXED (Clean validation)** |
-| **BUG-13** | 🟡 P2 | Infrastructure | `express-rate-limit` in-memory store in multi-instance clusters | CONFIRMED | **DOCUMENTED (Redis store)** |
-| **BUG-14** | 🟡 P2 | CrawlSchedules | `getScheduleHistory` tuple return format | CONFIRMED | **VERIFIED CLEAN** |
-| **BUG-15** | 🟡 P2 | CrawlJobs | Missing `total` and `totalPages` in `getAssets` and `getLogs` meta | CONFIRMED | **FIXED & STANDARDIZED** |
-| **BUG-16** | 🟡 P2 | Users | User quota fields without upper bound limits | CONFIRMED | **FIXED (Upper bounds added)** |
-| **BUG-17** | 🟢 P3 | Users | Hardcoded string `"CRAWLER_USER"` in `user.repository.ts` | CONFIRMED | **FIXED (ROLES.CRAWLER_USER)** |
-| **BUG-18** | 🟢 P3 | App | Morgan logger hardcoded to `"dev"` in production | CONFIRMED | **FIXED (Environment-aware)** |
+| ID         | Severity | Module         | Summary of Issue                                                         | Verification | Resolution Status              |
+| ---------- | -------- | -------------- | ------------------------------------------------------------------------ | ------------ | ------------------------------ |
+| **BUG-01** | 🔴 P0    | Auth           | `forgotPassword` leaked `resetToken` & `userId` in service return object | CONFIRMED    | **FIXED & TESTED**             |
+| **BUG-02** | 🔴 P0    | Architecture   | Prisma enums/models imported directly outside repository layer           | CONFIRMED    | **FIXED & LINT-ENFORCED**      |
+| **BUG-03** | 🟠 P1    | CrawlSchedules | `limit`/`page` query params lacked upper bound validation (DoS risk)     | CONFIRMED    | **FIXED & BOUNDED**            |
+| **BUG-04** | 🟠 P1    | CrawlJobs      | `updateStatus` TOCTOU race condition overriding `CANCELED` state         | CONFIRMED    | **FIXED (Atomic updateMany)**  |
+| **BUG-05** | 🟠 P1    | Worker         | Sequential DB round-trips for sensitive data scanning during crawl       | CONFIRMED    | **OPTIMIZED**                  |
+| **BUG-06** | 🟠 P1    | Worker         | Duplicate `updateStatus(RUNNING)` call overwriting `startedAt`           | CONFIRMED    | **FIXED (Removed duplicate)**  |
+| **BUG-07** | 🟠 P1    | CrawlJobs      | `scheduleId` lacked user ownership authorization check (IDOR risk)       | CONFIRMED    | **FIXED & TESTED**             |
+| **BUG-08** | 🟠 P1    | Auth           | `authMiddleware` un-cached DB lookup per request                         | CONFIRMED    | **DOCUMENTED (Redis cluster)** |
+| **BUG-09** | 🟠 P1    | Webhooks       | Hardcoded string literals in webhook validation schemas                  | CONFIRMED    | **FIXED (Constant enums)**     |
+| **BUG-10** | 🟡 P2    | CrawlJobs      | `getAssets` query parameters validated imperatively in controller        | CONFIRMED    | **FIXED (Zod Schema)**         |
+| **BUG-11** | 🟡 P2    | CrawlPages     | Search on large text columns without trigram index                       | CONFIRMED    | **MAINTAINED (jobId scoped)**  |
+| **BUG-12** | 🟡 P2    | CrawlSchedules | `superRefine` direct data mutation (Zod anti-pattern)                    | CONFIRMED    | **FIXED (Clean validation)**   |
+| **BUG-13** | 🟡 P2    | Infrastructure | `express-rate-limit` in-memory store in multi-instance clusters          | CONFIRMED    | **DOCUMENTED (Redis store)**   |
+| **BUG-14** | 🟡 P2    | CrawlSchedules | `getScheduleHistory` tuple return format                                 | CONFIRMED    | **VERIFIED CLEAN**             |
+| **BUG-15** | 🟡 P2    | CrawlJobs      | Missing `total` and `totalPages` in `getAssets` and `getLogs` meta       | CONFIRMED    | **FIXED & STANDARDIZED**       |
+| **BUG-16** | 🟡 P2    | Users          | User quota fields without upper bound limits                             | CONFIRMED    | **FIXED (Upper bounds added)** |
+| **BUG-17** | 🟢 P3    | Users          | Hardcoded string `"CRAWLER_USER"` in `user.repository.ts`                | CONFIRMED    | **FIXED (ROLES.CRAWLER_USER)** |
+| **BUG-18** | 🟢 P3    | App            | Morgan logger hardcoded to `"dev"` in production                         | CONFIRMED    | **FIXED (Environment-aware)**  |
 
 ---
 
 ## Fixed Issues Detail
 
 ### [BUG-01] Auth: Reset Token Leakage Across Service Boundary
+
 - **Severity**: 🔴 P0
 - **Module**: `auth`
 - **Root Cause**: `AuthService.forgotPassword()` returned `{ success: true, resetToken, userId }` so that the controller could invoke `MailService`. This exposed sensitive reset tokens across architectural boundaries and to potential loggers/interceptors.
@@ -63,6 +65,7 @@ All findings across authentication security, layered architecture boundaries, ra
 ---
 
 ### [BUG-02] Architecture: Direct `@prisma/client` Import Isolation
+
 - **Severity**: 🔴 P0
 - **Module**: `cross-cutting`
 - **Root Cause**: Non-repository modules (`crawl-pages`, `webhooks`, `exports`, `users`, `change-detection`, `api-keys`) were importing enums and types directly from `@prisma/client`, violating `AGENTS.md` Rule 1.
@@ -105,6 +108,7 @@ All findings across authentication security, layered architecture boundaries, ra
 ---
 
 ### [BUG-03 & BUG-12] CrawlSchedules: Pagination Bounds & Validation Cleanliness
+
 - **Severity**: 🟠 P1 / 🟡 P2
 - **Module**: `crawl-schedules`
 - **Root Cause**: `crawlScheduleQuerySchema` parsed string values without `.max(100)` or integer validation, creating DoS and NaN risks. In addition, `createCrawlScheduleSchema` mutated data within `superRefine`.
@@ -118,6 +122,7 @@ All findings across authentication security, layered architecture boundaries, ra
 ---
 
 ### [BUG-04] CrawlJobs: Atomic `updateStatus` Concurrency Guard
+
 - **Severity**: 🟠 P1
 - **Module**: `crawl-jobs`
 - **Root Cause**: Non-atomic read-then-write check allowed race conditions where a worker could overwrite a `CANCELED` job back to `RUNNING` or `COMPLETED`.
@@ -130,6 +135,7 @@ All findings across authentication security, layered architecture boundaries, ra
 ---
 
 ### [BUG-06] Worker: Redundant Status Transition Cleanup
+
 - **Severity**: 🟠 P1
 - **Module**: `worker`
 - **Root Cause**: `processCrawlJob` called `updateStatus(RUNNING)` twice (before and after pre-crawl URL validation), overwriting `startedAt`.
@@ -141,6 +147,7 @@ All findings across authentication security, layered architecture boundaries, ra
 ---
 
 ### [BUG-07] CrawlJobs: Schedule Ownership Authorization (IDOR Prevention)
+
 - **Severity**: 🟠 P1
 - **Module**: `crawl-jobs`
 - **Root Cause**: `CrawlJobService.create()` accepted `scheduleId` without verifying that the referenced schedule belonged to the authenticated user.
@@ -155,6 +162,7 @@ All findings across authentication security, layered architecture boundaries, ra
 ---
 
 ### [BUG-09] Webhooks: Zero-Hardcode Enum Validation
+
 - **Severity**: 🟠 P1
 - **Module**: `webhooks`
 - **Root Cause**: `webhook.validation.ts` used string literal arrays `z.enum([...])` instead of shared constants `z.nativeEnum()`.
@@ -166,6 +174,7 @@ All findings across authentication security, layered architecture boundaries, ra
 ---
 
 ### [BUG-10 & BUG-15] CrawlJobs: Validated Asset Query & Standardized Meta
+
 - **Severity**: 🟡 P2
 - **Module**: `crawl-jobs`
 - **Root Cause**: `getAssets` performed manual parsing without Zod and response metadata omitted `total` and `totalPages`. `getLogs` returned `{ pagination }` instead of `{ meta }`.
@@ -184,6 +193,7 @@ All findings across authentication security, layered architecture boundaries, ra
 ---
 
 ### [BUG-16, BUG-17, BUG-18] Users & App Configuration Standardization
+
 - **Severity**: 🟡 P2 / 🟢 P3
 - **Module**: `users` / `app`
 - **Fixes Applied**:
