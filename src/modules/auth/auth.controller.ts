@@ -227,6 +227,40 @@ export class AuthController {
     }
   };
 
+  uploadAvatar = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const result = await this.service.uploadAvatar(req.user.id, req.file);
+
+      await this.auditLogService.log({
+        userId: req.user.id,
+        action: AUDIT_ACTIONS.UPDATE_AVATAR,
+        ipAddress: req.ip,
+        userAgent: req.headers["user-agent"] as string,
+        details: { avatarUrl: result.avatarUrl },
+      });
+
+      res.json({
+        success: true,
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getAvatar = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const { fileName } = req.params;
+      const { stream, mimeType } = await this.service.getAvatarStream(fileName);
+
+      res.setHeader("Content-Type", mimeType);
+      res.setHeader("Cache-Control", "public, max-age=86400");
+      stream.pipe(res);
+    } catch (error) {
+      next(error);
+    }
+  };
+
   changePassword = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const changePasswordDto: ChangePasswordDto = req.body;

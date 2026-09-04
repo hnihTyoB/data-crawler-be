@@ -17,7 +17,14 @@ export const logoutSchema = z.object({
 });
 
 export const registerSchema = z.object({
-  email: z.string().email("Email không đúng định dạng."),
+  email: z
+    .string()
+    .min(1, "Vui lòng nhập email.")
+    .email("Email không đúng định dạng.")
+    .refine(
+      (email) => email.toLowerCase().endsWith("@gmail.com"),
+      "Email đăng ký bắt buộc phải là địa chỉ @gmail.com.",
+    ),
   password: z
     .string()
     .min(8, "Mật khẩu phải có ít nhất 8 ký tự.")
@@ -37,12 +44,6 @@ export const updateMeSchema = z.object({
     .string()
     .trim()
     .min(1, "Họ và tên không được để trống.")
-    .optional(),
-  avatarUrl: z
-    .string()
-    .url("Avatar URL không đúng định dạng.")
-    .or(z.literal(""))
-    .nullable()
     .optional(),
 });
 

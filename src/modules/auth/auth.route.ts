@@ -6,6 +6,7 @@ import {
 } from "../../middlewares/auth.middleware";
 import { authRateLimiter } from "../../middlewares/rate-limit.middleware";
 import { validate } from "../../middlewares/validate.middleware";
+import { uploadAvatarMiddleware } from "../../middlewares/upload.middleware";
 import {
   loginSchema,
   refreshSchema,
@@ -58,6 +59,25 @@ router.put(
     controller.updateMe(req, res, next);
   },
 );
+router.patch(
+  "/me",
+  authMiddleware,
+  validate(updateMeSchema),
+  (req, res, next) => {
+    controller.updateMe(req, res, next);
+  },
+);
+router.post(
+  "/avatar",
+  authMiddleware,
+  uploadAvatarMiddleware("avatar"),
+  (req, res, next) => {
+    controller.uploadAvatar(req, res, next);
+  },
+);
+router.get("/avatar/:fileName", (req, res, next) => {
+  controller.getAvatar(req, res, next);
+});
 router.post(
   "/change-password",
   authMiddleware,

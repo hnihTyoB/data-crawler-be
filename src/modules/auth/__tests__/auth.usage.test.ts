@@ -51,24 +51,24 @@ describe("AuthService getUsage and avatarUrl", () => {
     expect(usage.resetAt).toBeDefined();
   });
 
-  it("updates avatarUrl via updateMe", async () => {
+  it("updates fullName via updateMe", async () => {
     const service = new AuthService();
     const repository = {
       findById: jest.fn().mockResolvedValue(mockUser),
       updateUser: jest.fn().mockResolvedValue({
         ...mockUser,
-        avatarUrl: "https://example.com/new-avatar.png",
+        fullName: "Updated Name",
       }),
     };
     (service as any).repository = repository;
 
     const result = await service.updateMe("user-123", {
-      avatarUrl: "https://example.com/new-avatar.png",
+      fullName: "Updated Name",
     });
 
-    expect(result.avatarUrl).toBe("https://example.com/new-avatar.png");
+    expect(result.fullName).toBe("Updated Name");
     expect(repository.updateUser).toHaveBeenCalledWith("user-123", {
-      avatarUrl: "https://example.com/new-avatar.png",
+      fullName: "Updated Name",
     });
   });
 });

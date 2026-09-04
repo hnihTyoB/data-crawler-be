@@ -9,6 +9,10 @@ export const JOB_EXPORT_SUBDIRS = {
   LOGS: "logs",
 } as const;
 
+export const UPLOAD_SUBDIRS = {
+  AVATARS: "avatars",
+} as const;
+
 export const JOB_EXPORT_FILES = {
   METADATA: "metadata.json",
   SUMMARY: "summary.json",
