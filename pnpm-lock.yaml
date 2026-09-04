@@ -67,6 +67,9 @@ importers:
       morgan:
         specifier: ^1.10.0
         version: 1.11.0
+      multer:
+        specifier: ^2.3.0
+        version: 2.3.0
       node-html-parser:
         specifier: ^8.0.4
         version: 8.0.4
@@ -110,6 +113,9 @@ importers:
       "@types/morgan":
         specifier: ^1.9.9
         version: 1.9.10
+      "@types/multer":
+        specifier: ^2.2.0
+        version: 2.2.0
       "@types/node":
         specifier: ^22.10.2
         version: 22.20.0
@@ -1517,6 +1523,12 @@ packages:
         integrity: sha512-GsCCIZDE/p3i96vtEqx+7dBUGXrc7zeSK3wwPHIaRThS+9OhWIXRqzs4d6k1SVU8g91DrNRWxWUGhp5KXQb2VA==,
       }
 
+  "@types/multer@2.2.0":
+    resolution:
+      {
+        integrity: sha512-3U1troeqGV8Ntp7Q3klwf4zr23VEoqYVocYXaswm9+8z3O9UHDYAqLxjJ/h550iRADTjKdOdhhasXw6gD6kYtg==,
+      }
+
   "@types/node@14.18.63":
     resolution:
       {
@@ -1991,6 +2003,12 @@ packages:
       }
     engines: { node: ">= 8" }
 
+  append-field@1.0.0:
+    resolution:
+      {
+        integrity: sha512-klpgFSWLW1ZEs8svjfb7g4qWY0YS5imI82dTg+QahUvJ8YqAY0P10Uk8tTyh9ZGuYEZEMaeJYCF5BFuX552hsw==,
+      }
+
   archiver-utils@2.1.0:
     resolution:
       {
@@ -2385,6 +2403,13 @@ packages:
       redis:
         optional: true
 
+  busboy@1.6.0:
+    resolution:
+      {
+        integrity: sha512-8SFQbg/0hQ9xy3UNTB0YEnsNBbWfhf7RtnzpL7TkBiTBRfrQ9Fxcnz7VJsleJpyp6rVLvXiuORqjlHi5q+PYuA==,
+      }
+    engines: { node: ">=10.16.0" }
+
   bytes@3.1.2:
     resolution:
       {
@@ -2566,6 +2591,13 @@ packages:
       {
         integrity: sha512-/Srv4dswyQNBfohGpz9o6Yb3Gz3SrUDqBH5rTuhGR7ahtlbYKnVxw2bCFMRljaA7EXHaXZ8wsHdodFvbkhKmqg==,
       }
+
+  concat-stream@2.0.0:
+    resolution:
+      {
+        integrity: sha512-MWufYdFw53ccGjCA+Ol7XJYpAlW6/prSMzuPOTRnJGcGzuhLn4Scrz7qf6o8bROZ514ltazcIFJZevcfbo0x7A==,
+      }
+    engines: { "0": node >= 6.0 }
 
   content-disposition@0.5.4:
     resolution:
@@ -4386,6 +4418,13 @@ packages:
         integrity: sha512-o1C5KRmuRt+apqMr1HuGSqWStZoRBUpEsCsl15uM9VdAF1qHLtvMOU2En747EnTyEl6c4pzPewRMFF31s1CNbA==,
       }
 
+  multer@2.3.0:
+    resolution:
+      {
+        integrity: sha512-cjNbm3sttszgZeGfJR124D+jFEfkXCVAsoPBmFn9X7UxmDSFHWqE2CoEj0vrmSpuAFnqWR1Szcm9QTsiHr60Xw==,
+      }
+    engines: { node: ">= 10.16.0" }
+
   napi-postinstall@0.3.4:
     resolution:
       {
@@ -5053,6 +5092,13 @@ packages:
         integrity: sha512-H73RAHsVBapbim0tU2JwwOiXUj+fikfiaoYAKHF3VJfA0pe2BCzkhAHBlLG6REzE+2WNZcxOXjK7lkso+9euLA==,
       }
 
+  streamsearch@1.1.0:
+    resolution:
+      {
+        integrity: sha512-Mcc5wHehp9aXz1ax6bZUyY5afg9u2rv5cqQI3mRrYkGC8rW2hM02jWuwjtL++LS5qinSyhj2QfLyNsuc+VsExg==,
+      }
+    engines: { node: ">=10.0.0" }
+
   streamx@2.28.0:
     resolution:
       {
@@ -5400,6 +5446,12 @@ packages:
         integrity: sha512-TkRKr9sUTxEH8MdfuCSP7VizJyzRNMjj2J2do2Jr3Kym598JVdEksuzPQCnlFPW4ky9Q+iA+ma9BGm06XQBy8g==,
       }
     engines: { node: ">= 0.6" }
+
+  typedarray@0.0.6:
+    resolution:
+      {
+        integrity: sha512-/aCDEGatGvZ2BIk+HmLf4ifCJFwvKFNb9/JeZPMulfgFracn9QFcAf5GO8B/mweUjSoblS5In0cWhqpfs/5PQA==,
+      }
 
   typescript-event-target@1.1.2:
     resolution:
@@ -6657,6 +6709,10 @@ snapshots:
 
   "@types/ms@2.1.0": {}
 
+  "@types/multer@2.2.0":
+    dependencies:
+      "@types/express": 4.17.25
+
   "@types/node@14.18.63": {}
 
   "@types/node@22.20.0":
@@ -6926,6 +6982,8 @@ snapshots:
     dependencies:
       normalize-path: 3.0.0
       picomatch: 2.3.2
+
+  append-field@1.0.0: {}
 
   archiver-utils@2.1.0:
     dependencies:
@@ -7221,6 +7279,10 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
+  busboy@1.6.0:
+    dependencies:
+      streamsearch: 1.1.0
+
   bytes@3.1.2: {}
 
   call-bind-apply-helpers@1.0.2:
@@ -7333,6 +7395,13 @@ snapshots:
       readable-stream: 4.7.0
 
   concat-map@0.0.1: {}
+
+  concat-stream@2.0.0:
+    dependencies:
+      buffer-from: 1.1.2
+      inherits: 2.0.4
+      readable-stream: 3.6.2
+      typedarray: 0.0.6
 
   content-disposition@0.5.4:
     dependencies:
@@ -8581,6 +8650,13 @@ snapshots:
     optionalDependencies:
       msgpackr-extract: 3.0.4
 
+  multer@2.3.0:
+    dependencies:
+      append-field: 1.0.0
+      busboy: 1.6.0
+      concat-stream: 2.0.0
+      type-is: 1.6.18
+
   napi-postinstall@0.3.4: {}
 
   natural-compare@1.4.0: {}
@@ -8940,6 +9016,8 @@ snapshots:
       inherits: 2.0.4
       readable-stream: 3.6.2
 
+  streamsearch@1.1.0: {}
+
   streamx@2.28.0:
     dependencies:
       events-universal: 1.0.1
@@ -9172,6 +9250,8 @@ snapshots:
     dependencies:
       media-typer: 0.3.0
       mime-types: 2.1.35
+
+  typedarray@0.0.6: {}
 
   typescript-event-target@1.1.2: {}
 

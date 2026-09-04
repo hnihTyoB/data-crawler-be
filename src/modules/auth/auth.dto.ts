@@ -38,7 +38,6 @@ export interface RegisterDto {
 
 export interface UpdateMeDto {
   fullName?: string;
-  avatarUrl?: string | null;
 }
 
 export interface UserUsageDto {

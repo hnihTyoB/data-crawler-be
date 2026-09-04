@@ -1,5 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt, { SignOptions } from "jsonwebtoken";
+import path from "path";
+import { Readable } from "stream";
 import { AuthRepository } from "./auth.repository";
 import { AppError } from "../../common/errors/app-error";
 import { ERROR_CODE } from "../../common/errors/error-code";
@@ -23,6 +25,8 @@ import { CrawlJobRepository } from "../crawl-jobs/crawl-job.repository";
 import { JOB_STATUS } from "../../common/constants/job-status.constant";
 import { ROLES } from "../../common/constants/role.constant";
 import { DEFAULT_TIMEZONE } from "../../common/constants/timezone.constant";
+import { UPLOAD_SUBDIRS } from "../../common/constants/storage-path.constant";
+import { StorageFactory } from "../../common/storage/storage.factory";
 import {
   getZonedDateParts,
   createUtcDateFromZonedParts,
@@ -38,6 +42,7 @@ interface AuthJwtPayload {
 export class AuthService {
   private readonly repository = new AuthRepository();
   private readonly mailService = new MailService();
+  private readonly storageService = StorageFactory.getStorageService();
 
   private async deliverVerificationEmail(
     user: { id: string; email: string },
@@ -326,15 +331,12 @@ export class AuthService {
     }
 
     const normalizedFullName = data.fullName?.trim();
-    const avatarUrl = data.avatarUrl;
 
     const hasNameChange =
       normalizedFullName !== undefined &&
       normalizedFullName !== (user.fullName ?? "");
-    const hasAvatarChange =
-      avatarUrl !== undefined && avatarUrl !== (user.avatarUrl ?? null);
 
-    if (!hasNameChange && !hasAvatarChange) {
+    if (!hasNameChange) {
       throw new AppError(
         "Không có thay đổi nào để cập nhật.",
         400,
@@ -342,13 +344,10 @@ export class AuthService {
       );
     }
 
-    const updateData: { fullName?: string; avatarUrl?: string | null } = {};
+    const updateData: { fullName?: string } = {};
 
     if (hasNameChange) {
       updateData.fullName = normalizedFullName;
-    }
-    if (hasAvatarChange) {
-      updateData.avatarUrl = avatarUrl;
     }
 
     const updatedUser = await this.repository.updateUser(userId, updateData);
@@ -362,6 +361,104 @@ export class AuthService {
       isActive: updatedUser.isActive,
       createdAt: updatedUser.createdAt,
     };
+  }
+
+  async uploadAvatar(
+    userId: string,
+    file?: Express.Multer.File,
+  ): Promise<MeDto> {
+    if (!file) {
+      throw new AppError(
+        "Vui lòng chọn tệp hình ảnh để tải lên.",
+        422,
+        ERROR_CODE.VALIDATION_ERROR,
+      );
+    }
+
+    const user = await this.repository.findById(userId);
+    if (!user || !user.isActive) {
+      throw new AppError("User not found", 404, ERROR_CODE.NOT_FOUND);
+    }
+
+    const extension =
+      path.extname(file.originalname).toLowerCase() ||
+      (file.mimetype === "image/png"
+        ? ".png"
+        : file.mimetype === "image/webp"
+          ? ".webp"
+          : file.mimetype === "image/gif"
+            ? ".gif"
+            : ".jpg");
+
+    const fileName = `${userId}-${Date.now()}${extension}`;
+    const destinationKey = `${UPLOAD_SUBDIRS.AVATARS}/${fileName}`;
+
+    const stream = Readable.from(file.buffer);
+    const uploadResult = await this.storageService.uploadStream(
+      destinationKey,
+      stream,
+      {
+        contentType: file.mimetype,
+        contentLength: file.size,
+      },
+    );
+
+    const avatarUrl = uploadResult.url ?? `/api/v1/auth/avatar/${fileName}`;
+
+    if (user.avatarUrl) {
+      const oldFileName = this.extractAvatarFileName(user.avatarUrl);
+      if (oldFileName && oldFileName !== fileName) {
+        await this.storageService
+          .deleteFile(`${UPLOAD_SUBDIRS.AVATARS}/${oldFileName}`)
+          .catch(() => {});
+      }
+    }
+
+    const updatedUser = await this.repository.updateUser(userId, {
+      avatarUrl,
+    });
+
+    return {
+      id: updatedUser.id,
+      email: updatedUser.email,
+      fullName: updatedUser.fullName,
+      avatarUrl: updatedUser.avatarUrl,
+      role: updatedUser.role,
+      isActive: updatedUser.isActive,
+      createdAt: updatedUser.createdAt,
+    };
+  }
+
+  private extractAvatarFileName(avatarUrl: string): string | null {
+    const match =
+      avatarUrl.match(/\/avatars\/([^/?#]+)$/i) ||
+      avatarUrl.match(/\/api\/v1\/auth\/avatar\/([^/?#]+)$/i);
+    return match ? match[1] : null;
+  }
+
+  async getAvatarStream(
+    fileName: string,
+  ): Promise<{ stream: Readable; mimeType: string }> {
+    const sanitizedFileName = path.basename(fileName);
+    const destinationKey = `${UPLOAD_SUBDIRS.AVATARS}/${sanitizedFileName}`;
+
+    const exists = await this.storageService.exists(destinationKey);
+    if (!exists) {
+      throw new AppError("Avatar not found", 404, ERROR_CODE.NOT_FOUND);
+    }
+
+    const stream = await this.storageService.getReadStream(destinationKey);
+    const ext = path.extname(sanitizedFileName).toLowerCase();
+    const mimeMap: Record<string, string> = {
+      ".png": "image/png",
+      ".jpg": "image/jpeg",
+      ".jpeg": "image/jpeg",
+      ".webp": "image/webp",
+      ".gif": "image/gif",
+    };
+    const mimeType = mimeMap[ext] || "application/octet-stream";
+
+    return { stream, mimeType };
   }
 
   async getUsage(userId: string): Promise<UserUsageDto> {

@@ -263,6 +263,14 @@
             }
           }
         }
+      },
+      "patch": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
       }
     },
     "/auth/me/usage": {
@@ -344,6 +352,36 @@
           "Auth"
         ],
         "summary": "Xem hạn mức và mức độ sử dụng Quota hiện tại"
+      }
+    },
+    "/auth/avatar": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
+    "/auth/avatar/{fileName}": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "fileName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
       }
     },
     "/auth/change-password": {
