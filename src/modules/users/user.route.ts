@@ -67,7 +67,6 @@ router.delete(
   controller.delete,
 );
 
-// User Roles Management
 router.get(
   "/:id/roles",
   authMiddleware,
