@@ -83,7 +83,9 @@
             "description": "Email hoặc mật khẩu không chính xác"
           }
         },
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Đăng nhập người dùng",
         "requestBody": {
           "required": true,
@@ -139,7 +141,9 @@
             }
           }
         },
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Làm mới Access Token"
       }
     },
@@ -178,7 +182,9 @@
             }
           }
         },
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Đăng xuất"
       }
     },
@@ -209,7 +215,9 @@
             "description": "Chưa xác thực hoặc token không hợp lệ"
           }
         },
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Lấy thông tin người dùng hiện tại"
       },
       "put": {
@@ -241,7 +249,9 @@
             "description": "Chưa xác thực"
           }
         },
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Cập nhật thông tin cá nhân",
         "requestBody": {
           "required": true,
@@ -338,7 +348,9 @@
             "description": "Chưa xác thực"
           }
         },
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Xem hạn mức và mức độ sử dụng Quota hiện tại"
       }
     },
@@ -403,7 +415,9 @@
             "description": "Chưa xác thực"
           }
         },
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Đổi mật khẩu tài khoản",
         "requestBody": {
           "required": true,
@@ -444,7 +458,9 @@
             "description": "Email đã được sử dụng hoặc dữ liệu không hợp lệ"
           }
         },
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Đăng ký tài khoản mới",
         "requestBody": {
           "required": true,
@@ -486,7 +502,9 @@
             "description": "Email không hợp lệ"
           }
         },
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Yêu cầu đặt lại mật khẩu",
         "requestBody": {
           "required": true,
@@ -494,7 +512,9 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["email"],
+                "required": [
+                  "email"
+                ],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -536,7 +556,9 @@
             "description": "Token không hợp lệ, đã hết hạn hoặc mật khẩu không đúng định dạng"
           }
         },
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Đặt lại mật khẩu mới",
         "requestBody": {
           "required": true,
@@ -544,7 +566,10 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["token", "password"],
+                "required": [
+                  "token",
+                  "password"
+                ],
                 "properties": {
                   "token": {
                     "type": "string",
@@ -589,7 +614,9 @@
             "description": "Địa chỉ email không hợp lệ"
           }
         },
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Gửi lại email xác thực",
         "requestBody": {
           "required": true,
@@ -631,7 +658,9 @@
             "description": "Token không hợp lệ hoặc đã hết hạn"
           }
         },
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Xác thực địa chỉ email",
         "requestBody": {
           "required": true,
@@ -639,7 +668,9 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": ["token"],
+                "required": [
+                  "token"
+                ],
                 "properties": {
                   "token": {
                     "type": "string",
@@ -683,7 +714,9 @@
             "description": "Chưa xác thực hoặc mật khẩu không chính xác"
           }
         },
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Yêu cầu vô hiệu hóa tài khoản",
         "requestBody": {
           "required": true,
@@ -725,7 +758,9 @@
             "description": "Mã xác nhận không hợp lệ, đã hết hạn hoặc tài khoản đã bị vô hiệu hóa"
           }
         },
-        "tags": ["Auth"],
+        "tags": [
+          "Auth"
+        ],
         "summary": "Xác nhận vô hiệu hóa tài khoản",
         "requestBody": {
           "required": true,
@@ -822,7 +857,9 @@
             "description": "Không có quyền truy cập"
           }
         },
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Lấy danh sách người dùng"
       },
       "post": {
@@ -867,7 +904,9 @@
             }
           }
         },
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Tạo người dùng mới"
       }
     },
@@ -915,7 +954,9 @@
             "description": "Không tìm thấy người dùng"
           }
         },
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Lấy thông tin người dùng theo ID"
       },
       "put": {
@@ -968,7 +1009,9 @@
             }
           }
         },
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Cập nhật thông tin người dùng"
       },
       "delete": {
@@ -1009,7 +1052,9 @@
             "description": "Không tìm thấy người dùng"
           }
         },
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Xóa người dùng"
       }
     },
@@ -1038,7 +1083,9 @@
             "description": "Không có quyền users.roles.read"
           }
         },
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Xem Roles của User"
       },
       "put": {
@@ -1071,7 +1118,9 @@
             "description": "Không tìm thấy User hoặc Role"
           }
         },
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Cập nhật toàn bộ Roles của User",
         "requestBody": {
           "required": true,
@@ -1122,7 +1171,9 @@
             "description": "Không tìm thấy User hoặc Role"
           }
         },
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Gán thêm một Role cho User"
       },
       "delete": {
@@ -1164,7 +1215,9 @@
             "description": "Không tìm thấy User hoặc Role"
           }
         },
-        "tags": ["Users"],
+        "tags": [
+          "Users"
+        ],
         "summary": "Gỡ một Role khỏi User"
       }
     },
@@ -1221,7 +1274,9 @@
             "description": "Không có quyền roles.read"
           }
         },
-        "tags": ["Roles"],
+        "tags": [
+          "Roles"
+        ],
         "summary": "Danh sách Roles"
       },
       "post": {
@@ -1243,7 +1298,9 @@
             "description": "Role slug đã tồn tại"
           }
         },
-        "tags": ["Roles"],
+        "tags": [
+          "Roles"
+        ],
         "summary": "Tạo Role tùy chỉnh",
         "requestBody": {
           "required": true,
@@ -1285,7 +1342,9 @@
             "description": "Không tìm thấy Role"
           }
         },
-        "tags": ["Roles"],
+        "tags": [
+          "Roles"
+        ],
         "summary": "Chi tiết Role"
       },
       "patch": {
@@ -1318,7 +1377,9 @@
             "description": "Không tìm thấy Role"
           }
         },
-        "tags": ["Roles"],
+        "tags": [
+          "Roles"
+        ],
         "summary": "Cập nhật Role",
         "requestBody": {
           "required": true,
@@ -1361,7 +1422,9 @@
             "description": "Không tìm thấy Role"
           }
         },
-        "tags": ["Roles"],
+        "tags": [
+          "Roles"
+        ],
         "summary": "Xóa Role"
       }
     },
@@ -1393,7 +1456,9 @@
             "description": "Không tìm thấy Role"
           }
         },
-        "tags": ["Roles"],
+        "tags": [
+          "Roles"
+        ],
         "summary": "Xem danh sách Permissions của Role"
       },
       "put": {
@@ -1423,7 +1488,9 @@
             "description": "Không tìm thấy Role"
           }
         },
-        "tags": ["Roles"],
+        "tags": [
+          "Roles"
+        ],
         "summary": "Gán danh sách Permissions cho Role",
         "requestBody": {
           "required": true,
@@ -1462,7 +1529,9 @@
             "description": "Không có quyền roles.read"
           }
         },
-        "tags": ["Roles"],
+        "tags": [
+          "Roles"
+        ],
         "summary": "Danh sách Users thuộc Role"
       }
     },
@@ -1496,7 +1565,9 @@
             "description": "Không có quyền permissions.read"
           }
         },
-        "tags": ["Permissions"],
+        "tags": [
+          "Permissions"
+        ],
         "summary": "Danh mục Permissions hệ thống"
       }
     },
@@ -1528,7 +1599,9 @@
             "description": "Không tìm thấy Permission"
           }
         },
-        "tags": ["Permissions"],
+        "tags": [
+          "Permissions"
+        ],
         "summary": "Chi tiết Permission"
       }
     },
@@ -1581,7 +1654,9 @@
             "description": "Chưa xác thực"
           }
         },
-        "tags": ["Crawl Jobs"],
+        "tags": [
+          "Crawl Jobs"
+        ],
         "summary": "Tạo crawl job mới",
         "requestBody": {
           "required": true,
@@ -1670,7 +1745,9 @@
             }
           }
         },
-        "tags": ["Crawl Jobs"],
+        "tags": [
+          "Crawl Jobs"
+        ],
         "summary": "Lấy danh sách các crawl jobs"
       }
     },
@@ -1712,7 +1789,9 @@
             "description": "Không tìm thấy crawl job hoặc không có quyền truy cập"
           }
         },
-        "tags": ["Crawl Jobs"],
+        "tags": [
+          "Crawl Jobs"
+        ],
         "summary": "Lấy thông tin chi tiết một crawl job"
       },
       "delete": {
@@ -1863,7 +1942,9 @@
             "description": "Không tìm thấy crawl job"
           }
         },
-        "tags": ["Crawl Jobs"],
+        "tags": [
+          "Crawl Jobs"
+        ],
         "summary": "Hủy một crawl job đang chạy"
       }
     },
@@ -2067,7 +2148,10 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["asc", "desc"],
+              "enum": [
+                "asc",
+                "desc"
+              ],
               "default": "asc"
             },
             "description": "Thứ tự sắp xếp"
@@ -2128,7 +2212,9 @@
             }
           }
         },
-        "tags": ["Crawl Jobs"],
+        "tags": [
+          "Crawl Jobs"
+        ],
         "summary": "Lấy danh sách các trang đã crawl của job"
       }
     },
@@ -2332,7 +2418,10 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["asc", "desc"],
+              "enum": [
+                "asc",
+                "desc"
+              ],
               "default": "asc"
             },
             "description": "Thứ tự sắp xếp"
@@ -2467,7 +2556,9 @@
             "description": "Không tìm thấy crawl job hoặc không có quyền truy cập"
           }
         },
-        "tags": ["Crawl Jobs"],
+        "tags": [
+          "Crawl Jobs"
+        ],
         "summary": "Xem preview dữ liệu clean/raw của các trang đã crawl"
       }
     },
@@ -2509,7 +2600,9 @@
             }
           }
         },
-        "tags": ["Crawl Jobs"],
+        "tags": [
+          "Crawl Jobs"
+        ],
         "summary": "Lấy danh sách các bản export của job"
       },
       "post": {
@@ -2546,7 +2639,9 @@
             }
           }
         },
-        "tags": ["Crawl Jobs"],
+        "tags": [
+          "Crawl Jobs"
+        ],
         "summary": "Yêu cầu xuất dữ liệu cho job",
         "requestBody": {
           "required": true,
@@ -2585,7 +2680,9 @@
             }
           }
         },
-        "tags": ["Crawl Jobs"],
+        "tags": [
+          "Crawl Jobs"
+        ],
         "summary": "Tải xuống file export mới nhất"
       }
     },
@@ -2626,7 +2723,14 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": ["IMAGE", "LINK", "PDF", "FILE", "VIDEO", "OTHER"]
+              "enum": [
+                "IMAGE",
+                "LINK",
+                "PDF",
+                "FILE",
+                "VIDEO",
+                "OTHER"
+              ]
             },
             "description": "Lọc theo loại asset"
           }
@@ -2718,7 +2822,9 @@
             "description": "Không tìm thấy crawl job hoặc không có quyền truy cập"
           }
         },
-        "tags": ["Crawl Jobs"],
+        "tags": [
+          "Crawl Jobs"
+        ],
         "summary": "Lấy danh sách assets của job (có phân trang)"
       }
     },
@@ -2771,7 +2877,9 @@
             "description": "Không tìm thấy crawl job"
           }
         },
-        "tags": ["Crawl Jobs"],
+        "tags": [
+          "Crawl Jobs"
+        ],
         "summary": "Xem báo cáo thay đổi (Diff Report)"
       }
     },
@@ -2816,7 +2924,9 @@
             "description": "Không tìm thấy crawl job hoặc diff report"
           }
         },
-        "tags": ["Crawl Jobs"],
+        "tags": [
+          "Crawl Jobs"
+        ],
         "summary": "Tải file diff_report.json"
       }
     },
@@ -2858,7 +2968,9 @@
             "description": "Chưa xác thực"
           }
         },
-        "tags": ["Crawl Schedules"],
+        "tags": [
+          "Crawl Schedules"
+        ],
         "summary": "Tạo lịch crawl định kỳ mới",
         "requestBody": {
           "required": true,
@@ -2887,7 +2999,12 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": ["DAILY", "WEEKLY", "MONTHLY", "CUSTOM"]
+              "enum": [
+                "DAILY",
+                "WEEKLY",
+                "MONTHLY",
+                "CUSTOM"
+              ]
             },
             "description": "Lọc theo tần suất"
           },
@@ -2956,7 +3073,9 @@
             "description": "Chưa xác thực"
           }
         },
-        "tags": ["Crawl Schedules"],
+        "tags": [
+          "Crawl Schedules"
+        ],
         "summary": "Lấy danh sách lịch crawl định kỳ"
       }
     },
@@ -2992,7 +3111,9 @@
             "description": "Không tìm thấy lịch crawl"
           }
         },
-        "tags": ["Crawl Schedules"],
+        "tags": [
+          "Crawl Schedules"
+        ],
         "summary": "Xem chi tiết lịch crawl"
       },
       "patch": {
@@ -3037,7 +3158,9 @@
             "description": "Không tìm thấy lịch crawl"
           }
         },
-        "tags": ["Crawl Schedules"],
+        "tags": [
+          "Crawl Schedules"
+        ],
         "summary": "Cập nhật lịch crawl",
         "requestBody": {
           "required": true,
@@ -3087,7 +3210,9 @@
             "description": "Không tìm thấy lịch crawl"
           }
         },
-        "tags": ["Crawl Schedules"],
+        "tags": [
+          "Crawl Schedules"
+        ],
         "summary": "Xóa lịch crawl"
       }
     },
@@ -3132,7 +3257,9 @@
             "description": "Không tìm thấy lịch crawl"
           }
         },
-        "tags": ["Crawl Schedules"],
+        "tags": [
+          "Crawl Schedules"
+        ],
         "summary": "Kích hoạt chạy ngay lịch crawl"
       }
     },
@@ -3209,7 +3336,9 @@
             "description": "Không tìm thấy lịch crawl"
           }
         },
-        "tags": ["Crawl Schedules"],
+        "tags": [
+          "Crawl Schedules"
+        ],
         "summary": "Xem lịch sử các lần chạy của lịch crawl"
       }
     },
@@ -3251,7 +3380,9 @@
             "description": "Không tìm thấy file export"
           }
         },
-        "tags": ["Crawl Exports"],
+        "tags": [
+          "Crawl Exports"
+        ],
         "summary": "Tải xuống tệp export theo ID"
       }
     },
@@ -3389,7 +3520,9 @@
             "description": "Không có quyền truy cập (không phải ADMIN)"
           }
         },
-        "tags": ["Audit Logs"],
+        "tags": [
+          "Audit Logs"
+        ],
         "summary": "Lấy danh sách nhật ký hệ thống"
       }
     },
@@ -3423,7 +3556,9 @@
             "description": "Dữ liệu không hợp lệ hoặc thời điểm hết hạn không ở trong tương lai"
           }
         },
-        "tags": ["API Keys"],
+        "tags": [
+          "API Keys"
+        ],
         "security": [
           {
             "BearerAuth": []
@@ -3470,7 +3605,9 @@
             "description": "Chưa xác thực"
           }
         },
-        "tags": ["API Keys"],
+        "tags": [
+          "API Keys"
+        ],
         "security": [
           {
             "BearerAuth": []
@@ -3524,7 +3661,9 @@
             "description": "Trạng thái không hợp lệ"
           }
         },
-        "tags": ["API Keys"],
+        "tags": [
+          "API Keys"
+        ],
         "security": [
           {
             "BearerAuth": []
@@ -3583,7 +3722,9 @@
             "description": "Không tìm thấy API Key"
           }
         },
-        "tags": ["API Keys"],
+        "tags": [
+          "API Keys"
+        ],
         "security": [
           {
             "BearerAuth": []
@@ -3622,7 +3763,9 @@
             "description": "Chưa xác thực"
           }
         },
-        "tags": ["Webhooks"],
+        "tags": [
+          "Webhooks"
+        ],
         "summary": "Tạo cấu hình Webhook",
         "requestBody": {
           "required": true,
@@ -3664,7 +3807,9 @@
             "description": "Chưa xác thực"
           }
         },
-        "tags": ["Webhooks"],
+        "tags": [
+          "Webhooks"
+        ],
         "summary": "Xem danh sách Webhook configs"
       }
     },
@@ -3727,7 +3872,9 @@
             "description": "Không tìm thấy cấu hình Webhook"
           }
         },
-        "tags": ["Webhooks"],
+        "tags": [
+          "Webhooks"
+        ],
         "summary": "Xóa cấu hình Webhook"
       }
     },
@@ -3799,7 +3946,9 @@
             "description": "Chưa xác thực"
           }
         },
-        "tags": ["Webhooks"],
+        "tags": [
+          "Webhooks"
+        ],
         "summary": "Xem lịch sử gửi Webhook"
       }
     },
@@ -3930,7 +4079,11 @@
           },
           "role": {
             "type": "string",
-            "enum": ["ADMIN", "CRAWLER_USER", "VIEWER"]
+            "enum": [
+              "ADMIN",
+              "CRAWLER_USER",
+              "VIEWER"
+            ]
           },
           "isActive": {
             "type": "boolean"
@@ -3959,7 +4112,12 @@
           },
           "mode": {
             "type": "string",
-            "enum": ["SCRAPE", "CRAWL", "SITEMAP", "URL_LIST"]
+            "enum": [
+              "SCRAPE",
+              "CRAWL",
+              "SITEMAP",
+              "URL_LIST"
+            ]
           },
           "status": {
             "type": "string",
@@ -4170,7 +4328,10 @@
                 },
                 "type": {
                   "type": "string",
-                  "enum": ["internal", "external"]
+                  "enum": [
+                    "internal",
+                    "external"
+                  ]
                 }
               }
             }
@@ -4256,11 +4417,21 @@
           },
           "exportType": {
             "type": "string",
-            "enum": ["JSON", "CSV", "XLSX", "MARKDOWN", "ZIP"]
+            "enum": [
+              "JSON",
+              "CSV",
+              "XLSX",
+              "MARKDOWN",
+              "ZIP"
+            ]
           },
           "status": {
             "type": "string",
-            "enum": ["PENDING", "COMPLETED", "FAILED"]
+            "enum": [
+              "PENDING",
+              "COMPLETED",
+              "FAILED"
+            ]
           },
           "fileName": {
             "type": "string"
@@ -4283,7 +4454,10 @@
       },
       "LoginRequest": {
         "type": "object",
-        "required": ["email", "password"],
+        "required": [
+          "email",
+          "password"
+        ],
         "properties": {
           "email": {
             "type": "string",
@@ -4298,7 +4472,10 @@
       },
       "RegisterRequest": {
         "type": "object",
-        "required": ["email", "password"],
+        "required": [
+          "email",
+          "password"
+        ],
         "properties": {
           "email": {
             "type": "string",
@@ -4317,7 +4494,9 @@
       },
       "ResendVerificationRequest": {
         "type": "object",
-        "required": ["email"],
+        "required": [
+          "email"
+        ],
         "properties": {
           "email": {
             "type": "string",
@@ -4328,7 +4507,9 @@
       },
       "RequestDeactivationRequest": {
         "type": "object",
-        "required": ["password"],
+        "required": [
+          "password"
+        ],
         "properties": {
           "password": {
             "type": "string",
@@ -4339,7 +4520,9 @@
       },
       "ConfirmDeactivationRequest": {
         "type": "object",
-        "required": ["token"],
+        "required": [
+          "token"
+        ],
         "properties": {
           "token": {
             "type": "string",
@@ -4350,7 +4533,9 @@
       },
       "RefreshRequest": {
         "type": "object",
-        "required": ["refreshToken"],
+        "required": [
+          "refreshToken"
+        ],
         "properties": {
           "refreshToken": {
             "type": "string",
@@ -4360,7 +4545,9 @@
       },
       "LogoutRequest": {
         "type": "object",
-        "required": ["refreshToken"],
+        "required": [
+          "refreshToken"
+        ],
         "properties": {
           "refreshToken": {
             "type": "string",
@@ -4379,7 +4566,11 @@
       },
       "ChangePasswordRequest": {
         "type": "object",
-        "required": ["currentPassword", "newPassword", "confirmPassword"],
+        "required": [
+          "currentPassword",
+          "newPassword",
+          "confirmPassword"
+        ],
         "properties": {
           "currentPassword": {
             "type": "string",
@@ -4397,7 +4588,10 @@
       },
       "CreateUserRequest": {
         "type": "object",
-        "required": ["email", "password"],
+        "required": [
+          "email",
+          "password"
+        ],
         "properties": {
           "email": {
             "type": "string",
@@ -4414,7 +4608,11 @@
           },
           "role": {
             "type": "string",
-            "enum": ["ADMIN", "CRAWLER_USER", "VIEWER"],
+            "enum": [
+              "ADMIN",
+              "CRAWLER_USER",
+              "VIEWER"
+            ],
             "example": "CRAWLER_USER"
           },
           "maxPagesLimit": {
@@ -4440,7 +4638,11 @@
           },
           "role": {
             "type": "string",
-            "enum": ["ADMIN", "CRAWLER_USER", "VIEWER"],
+            "enum": [
+              "ADMIN",
+              "CRAWLER_USER",
+              "VIEWER"
+            ],
             "example": "VIEWER"
           },
           "isActive": {
@@ -4471,7 +4673,12 @@
           },
           "mode": {
             "type": "string",
-            "enum": ["SCRAPE", "CRAWL", "SITEMAP", "URL_LIST"],
+            "enum": [
+              "SCRAPE",
+              "CRAWL",
+              "SITEMAP",
+              "URL_LIST"
+            ],
             "example": "CRAWL"
           },
           "maxPages": {
@@ -4492,25 +4699,38 @@
               "type": "string",
               "format": "uri"
             },
-            "example": ["https://example.com/1", "https://example.com/2"],
+            "example": [
+              "https://example.com/1",
+              "https://example.com/2"
+            ],
             "description": "Bắt buộc khi mode là URL_LIST"
           }
         }
       },
       "CreateExportRequest": {
         "type": "object",
-        "required": ["exportType"],
+        "required": [
+          "exportType"
+        ],
         "properties": {
           "exportType": {
             "type": "string",
-            "enum": ["JSON", "CSV", "XLSX", "MARKDOWN", "ZIP"],
+            "enum": [
+              "JSON",
+              "CSV",
+              "XLSX",
+              "MARKDOWN",
+              "ZIP"
+            ],
             "example": "JSON"
           }
         }
       },
       "CreateApiKeyRequest": {
         "type": "object",
-        "required": ["name"],
+        "required": [
+          "name"
+        ],
         "properties": {
           "name": {
             "type": "string",
@@ -4529,7 +4749,9 @@
       },
       "UpdateApiKeyStatusRequest": {
         "type": "object",
-        "required": ["isActive"],
+        "required": [
+          "isActive"
+        ],
         "additionalProperties": false,
         "properties": {
           "isActive": {
@@ -4626,7 +4848,11 @@
       },
       "CreateWebhookConfigRequest": {
         "type": "object",
-        "required": ["url", "secret", "events"],
+        "required": [
+          "url",
+          "secret",
+          "events"
+        ],
         "properties": {
           "url": {
             "type": "string",
@@ -4641,9 +4867,15 @@
             "type": "array",
             "items": {
               "type": "string",
-              "enum": ["job.completed", "job.failed"]
+              "enum": [
+                "job.completed",
+                "job.failed"
+              ]
             },
-            "example": ["job.completed", "job.failed"]
+            "example": [
+              "job.completed",
+              "job.failed"
+            ]
           }
         }
       },
@@ -4704,7 +4936,11 @@
           },
           "status": {
             "type": "string",
-            "enum": ["PENDING", "SUCCESS", "FAILED"]
+            "enum": [
+              "PENDING",
+              "SUCCESS",
+              "FAILED"
+            ]
           },
           "statusCode": {
             "type": "integer",
@@ -4768,11 +5004,21 @@
           },
           "mode": {
             "type": "string",
-            "enum": ["SCRAPE", "CRAWL", "SITEMAP", "URL_LIST"]
+            "enum": [
+              "SCRAPE",
+              "CRAWL",
+              "SITEMAP",
+              "URL_LIST"
+            ]
           },
           "frequency": {
             "type": "string",
-            "enum": ["DAILY", "WEEKLY", "MONTHLY", "CUSTOM"]
+            "enum": [
+              "DAILY",
+              "WEEKLY",
+              "MONTHLY",
+              "CUSTOM"
+            ]
           },
           "cronExpression": {
             "type": "string",
@@ -4835,7 +5081,10 @@
       },
       "CreateCrawlScheduleRequest": {
         "type": "object",
-        "required": ["name", "startUrl"],
+        "required": [
+          "name",
+          "startUrl"
+        ],
         "properties": {
           "name": {
             "type": "string",
@@ -4848,12 +5097,22 @@
           },
           "mode": {
             "type": "string",
-            "enum": ["SCRAPE", "CRAWL", "SITEMAP", "URL_LIST"],
+            "enum": [
+              "SCRAPE",
+              "CRAWL",
+              "SITEMAP",
+              "URL_LIST"
+            ],
             "example": "CRAWL"
           },
           "frequency": {
             "type": "string",
-            "enum": ["DAILY", "WEEKLY", "MONTHLY", "CUSTOM"],
+            "enum": [
+              "DAILY",
+              "WEEKLY",
+              "MONTHLY",
+              "CUSTOM"
+            ],
             "example": "DAILY"
           },
           "cronExpression": {
@@ -4916,11 +5175,21 @@
           },
           "mode": {
             "type": "string",
-            "enum": ["SCRAPE", "CRAWL", "SITEMAP", "URL_LIST"]
+            "enum": [
+              "SCRAPE",
+              "CRAWL",
+              "SITEMAP",
+              "URL_LIST"
+            ]
           },
           "frequency": {
             "type": "string",
-            "enum": ["DAILY", "WEEKLY", "MONTHLY", "CUSTOM"]
+            "enum": [
+              "DAILY",
+              "WEEKLY",
+              "MONTHLY",
+              "CUSTOM"
+            ]
           },
           "cronExpression": {
             "type": "string"
@@ -5120,7 +5389,10 @@
       },
       "CreateRoleRequest": {
         "type": "object",
-        "required": ["name", "slug"],
+        "required": [
+          "name",
+          "slug"
+        ],
         "properties": {
           "name": {
             "type": "string",
@@ -5159,7 +5431,9 @@
       },
       "AssignRolePermissionsRequest": {
         "type": "object",
-        "required": ["permissionIds"],
+        "required": [
+          "permissionIds"
+        ],
         "properties": {
           "permissionIds": {
             "type": "array",
@@ -5172,7 +5446,9 @@
       },
       "AssignUserRolesRequest": {
         "type": "object",
-        "required": ["roleIds"],
+        "required": [
+          "roleIds"
+        ],
         "properties": {
           "roleIds": {
             "type": "array",
