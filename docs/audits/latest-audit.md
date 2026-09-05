@@ -25,33 +25,34 @@ All findings across authentication security, dynamic permission-based access con
 
 ## Findings Backlog & Resolution Summary
 
-| ID | Severity | Module | Summary of Issue | Verification | Resolution Status |
-| :--- | :--- | :--- | :--- | :--- | :--- |
-| **BUG-01** | 🔴 P0 | App / Security | CORS origin reflection allowed wildcard with credentials | CONFIRMED | **FIXED & TESTED** |
-| **BUG-02** | 🟠 P1 | Webhooks / Templates | Missing authorization guards on webhook and extraction template mutations | CONFIRMED | **FIXED & RBAC-PROTECTED** |
-| **BUG-03** | 🟠 P1 | Auth / DB | Non-atomic default role assignment during user registration | CONFIRMED | **FIXED (Atomic Transaction)** |
-| **BUG-04** | 🟠 P1 | Error Handling | Unhandled Prisma Known Request Errors (P2002, P2023, P2025, P2003) | CONFIRMED | **FIXED & STANDARDIZED** |
-| **BUG-05** | 🟠 P1 | Users / Auth | Soft-delete and self-deactivation failed to cascade deactivate schedules, keys, and webhooks | CONFIRMED | **FIXED (Cascade Deactivation)** |
-| **BUG-10** | 🟠 P1 | App / Security | Helmet Content Security Policy (CSP) disabled globally | CONFIRMED | **FIXED (Scaped via Branching)** |
-| **BUG-06** | 🟠 P1 | Roles / Users | Role assignment performed N+1 database queries in a loop | CONFIRMED | **FIXED (findByIds Batch Query)** |
-| **BUG-07** | 🟡 P2 | Health / Layering | Layer violation: `HealthService` directly executed `prisma.$queryRaw` | CONFIRMED | **FIXED (HealthRepository)** |
-| **BUG-08** | 🟠 P1 | Dashboard | 11 sequential `count()` queries overloaded database CPU | CONFIRMED | **FIXED (groupBy Aggregations)** |
-| **BUG-09** | 🟡 P2 | Database / Prisma | Missing `onDelete: Cascade` on CrawlAsset foreign key | CONFIRMED | **FIXED (Prisma Migration)** |
-| **BUG-15** | 🟡 P2 | Database / Prisma | Missing composite index `@@index([userId, createdAt])` on CrawlJob | CONFIRMED | **FIXED (Prisma Migration)** |
-| **BUG-11** | 🟡 P2 | CrawlExports | Inconsistent pagination envelope `{ success: true, data: items, pagination }` | CONFIRMED | **FIXED & STANDARDIZED** |
-| **BUG-12** | 🟡 P2 | Validation | Missing edge parameter & query validation (Avatar Path Traversal, Job/Export queries) | CONFIRMED | **FIXED (Zod Schemas)** |
-| **BUG-13** | 🟢 P3 | Cross-Cutting | Zero-hardcode principle violations with raw string literals | CONFIRMED | **FIXED (Domain Constants)** |
-| **BUG-14** | 🟢 P3 | ChangeDetection | Inline `@prisma/client` enum import in service | CONFIRMED | **FIXED (Domain Constants)** |
-| **BUG-16** | 🟢 P3 | Upload | Discrepancy between MIME type whitelist and validation error message | CONFIRMED | **FIXED (Added image/gif)** |
-| **BUG-17** | 🟢 P3 | Exports | Object destructuring rest-omission in large loops allocated redundant GC garbage | CONFIRMED | **FIXED (Explicit Projection)** |
-| **AUDIT-01** | 🟠 P1 | CrawlSchedules | Response envelope in `CrawlScheduleController` lacked `{ success: true, data }` wrapping | CONFIRMED | **FIXED & STANDARDIZED** |
-| **AUDIT-02** | 🟡 P2 | Routing / Edge | Missing `validateParams` on `:id`, `:roleId`, and `:permissionId` across all resource routers | CONFIRMED | **FIXED & BOUNDED** |
+| ID           | Severity | Module               | Summary of Issue                                                                              | Verification | Resolution Status                 |
+| :----------- | :------- | :------------------- | :-------------------------------------------------------------------------------------------- | :----------- | :-------------------------------- |
+| **BUG-01**   | 🔴 P0    | App / Security       | CORS origin reflection allowed wildcard with credentials                                      | CONFIRMED    | **FIXED & TESTED**                |
+| **BUG-02**   | 🟠 P1    | Webhooks / Templates | Missing authorization guards on webhook and extraction template mutations                     | CONFIRMED    | **FIXED & RBAC-PROTECTED**        |
+| **BUG-03**   | 🟠 P1    | Auth / DB            | Non-atomic default role assignment during user registration                                   | CONFIRMED    | **FIXED (Atomic Transaction)**    |
+| **BUG-04**   | 🟠 P1    | Error Handling       | Unhandled Prisma Known Request Errors (P2002, P2023, P2025, P2003)                            | CONFIRMED    | **FIXED & STANDARDIZED**          |
+| **BUG-05**   | 🟠 P1    | Users / Auth         | Soft-delete and self-deactivation failed to cascade deactivate schedules, keys, and webhooks  | CONFIRMED    | **FIXED (Cascade Deactivation)**  |
+| **BUG-10**   | 🟠 P1    | App / Security       | Helmet Content Security Policy (CSP) disabled globally                                        | CONFIRMED    | **FIXED (Scaped via Branching)**  |
+| **BUG-06**   | 🟠 P1    | Roles / Users        | Role assignment performed N+1 database queries in a loop                                      | CONFIRMED    | **FIXED (findByIds Batch Query)** |
+| **BUG-07**   | 🟡 P2    | Health / Layering    | Layer violation: `HealthService` directly executed `prisma.$queryRaw`                         | CONFIRMED    | **FIXED (HealthRepository)**      |
+| **BUG-08**   | 🟠 P1    | Dashboard            | 11 sequential `count()` queries overloaded database CPU                                       | CONFIRMED    | **FIXED (groupBy Aggregations)**  |
+| **BUG-09**   | 🟡 P2    | Database / Prisma    | Missing `onDelete: Cascade` on CrawlAsset foreign key                                         | CONFIRMED    | **FIXED (Prisma Migration)**      |
+| **BUG-15**   | 🟡 P2    | Database / Prisma    | Missing composite index `@@index([userId, createdAt])` on CrawlJob                            | CONFIRMED    | **FIXED (Prisma Migration)**      |
+| **BUG-11**   | 🟡 P2    | CrawlExports         | Inconsistent pagination envelope `{ success: true, data: items, pagination }`                 | CONFIRMED    | **FIXED & STANDARDIZED**          |
+| **BUG-12**   | 🟡 P2    | Validation           | Missing edge parameter & query validation (Avatar Path Traversal, Job/Export queries)         | CONFIRMED    | **FIXED (Zod Schemas)**           |
+| **BUG-13**   | 🟢 P3    | Cross-Cutting        | Zero-hardcode principle violations with raw string literals                                   | CONFIRMED    | **FIXED (Domain Constants)**      |
+| **BUG-14**   | 🟢 P3    | ChangeDetection      | Inline `@prisma/client` enum import in service                                                | CONFIRMED    | **FIXED (Domain Constants)**      |
+| **BUG-16**   | 🟢 P3    | Upload               | Discrepancy between MIME type whitelist and validation error message                          | CONFIRMED    | **FIXED (Added image/gif)**       |
+| **BUG-17**   | 🟢 P3    | Exports              | Object destructuring rest-omission in large loops allocated redundant GC garbage              | CONFIRMED    | **FIXED (Explicit Projection)**   |
+| **AUDIT-01** | 🟠 P1    | CrawlSchedules       | Response envelope in `CrawlScheduleController` lacked `{ success: true, data }` wrapping      | CONFIRMED    | **FIXED & STANDARDIZED**          |
+| **AUDIT-02** | 🟡 P2    | Routing / Edge       | Missing `validateParams` on `:id`, `:roleId`, and `:permissionId` across all resource routers | CONFIRMED    | **FIXED & BOUNDED**               |
 
 ---
 
 ## Fixed Issues Detail
 
 ### [BUG-01] CORS Origin Reflection With Credentials
+
 - **Severity**: 🔴 P0
 - **Module**: `app`
 - **Root Cause**: Wildcard origins combined with `credentials: true` caused the server to reflect the incoming `Origin` header dynamically, permitting malicious third-party origins to perform authenticated cross-origin reads.
@@ -63,6 +64,7 @@ All findings across authentication security, dynamic permission-based access con
 ---
 
 ### [BUG-02] Missing RBAC / Permissions on Webhooks and Extraction Templates
+
 - **Severity**: 🟠 P1
 - **Module**: `webhooks`, `extraction-templates`
 - **Root Cause**: Router definitions applied `authMiddleware` but lacked permission checks, allowing unprivileged accounts (`VIEWER`) to create webhooks (SSRF / Data exfiltration risk) or alter extraction templates.
@@ -75,6 +77,7 @@ All findings across authentication security, dynamic permission-based access con
 ---
 
 ### [BUG-03] Atomic Default Role Assignment During Registration
+
 - **Severity**: 🟠 P1
 - **Module**: `auth`
 - **Root Cause**: User creation and initial role assignment to `user_roles` were executed across separate, non-atomic steps, creating dangling unassigned users if interrupted.
@@ -86,6 +89,7 @@ All findings across authentication security, dynamic permission-based access con
 ---
 
 ### [BUG-04] Prisma Known Request Error Normalization
+
 - **Severity**: 🟠 P1
 - **Module**: `error-middleware`
 - **Root Cause**: Uncaught Prisma errors (`P2002`, `P2023`, `P2025`, `P2003`) fell into the generic 500 handler, leaking database table names and column identifiers to client logs.
@@ -97,6 +101,7 @@ All findings across authentication security, dynamic permission-based access con
 ---
 
 ### [BUG-05] Cascading Resource Deactivation on User Soft-Delete & Self-Deactivation
+
 - **Severity**: 🟠 P1
 - **Module**: `users`, `auth`
 - **Root Cause**: Deleting a user or confirming account deactivation left `crawl_schedules`, `api_keys`, and `webhook_configs` active, causing background BullMQ workers to continue crawling and dispatching webhooks.
@@ -109,6 +114,7 @@ All findings across authentication security, dynamic permission-based access con
 ---
 
 ### [BUG-10] Global Content Security Policy (CSP) Scoping
+
 - **Severity**: 🟠 P1
 - **Module**: `app`
 - **Root Cause**: Global Helmet CSP was previously turned off to allow Swagger UI inline assets, removing client-side injection protection for all API endpoints.
@@ -120,6 +126,7 @@ All findings across authentication security, dynamic permission-based access con
 ---
 
 ### [BUG-06] N+1 Query in User Role Assignment
+
 - **Severity**: 🟠 P1
 - **Module**: `roles`, `users`
 - **Root Cause**: `assignUserRoles` iterated sequentially over `roleIds` with individual `findById` queries.
@@ -132,6 +139,7 @@ All findings across authentication security, dynamic permission-based access con
 ---
 
 ### [BUG-07] Strict Layer Architecture Isolation in Health Check
+
 - **Severity**: 🟡 P2
 - **Module**: `health`
 - **Root Cause**: `HealthService` directly imported and called `prisma.$queryRaw`, violating the exclusive Prisma access rule in `AGENTS.md`.
@@ -144,6 +152,7 @@ All findings across authentication security, dynamic permission-based access con
 ---
 
 ### [BUG-08] Dashboard Query Aggregation Optimization
+
 - **Severity**: 🟠 P1
 - **Module**: `dashboard`
 - **Root Cause**: 11 sequential `count()` queries executed per dashboard stats request, overloading PostgreSQL.
@@ -155,6 +164,7 @@ All findings across authentication security, dynamic permission-based access con
 ---
 
 ### [BUG-09] & [BUG-15] Schema Cascade & Composite Index Optimization
+
 - **Severity**: 🟡 P2
 - **Module**: `database`
 - **Root Cause**: `CrawlAsset.crawlJob` lacked `onDelete: Cascade` (causing P2003 errors on job deletion), and `CrawlJob` lacked composite indexing for user timeline queries.
@@ -166,6 +176,7 @@ All findings across authentication security, dynamic permission-based access con
 ---
 
 ### [AUDIT-01] CrawlScheduleController Envelope Standardization
+
 - **Severity**: 🟠 P1
 - **Module**: `crawl-schedules`
 - **Root Cause**: Endpoints in `CrawlScheduleController` returned raw data or `{ message, data }` without `{ success: true, data }`, breaking frontend API consumer expectations.
@@ -177,6 +188,7 @@ All findings across authentication security, dynamic permission-based access con
 ---
 
 ### [AUDIT-02] Edge Route Parameter Validation Across All Routers
+
 - **Severity**: 🟡 P2
 - **Module**: `cross-cutting / routing`
 - **Root Cause**: Route identifiers (`:id`, `:roleId`, `:permissionId`) were passed directly to services without edge validation, risking malformed identifiers reaching Prisma.

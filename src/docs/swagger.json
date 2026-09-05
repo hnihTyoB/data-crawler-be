@@ -14,32 +14,132 @@
   "paths": {
     "/health/liveness": {
       "get": {
-        "description": "",
+        "description": "Endpoint kiểm tra xem ứng dụng còn phản hồi hay không (dành cho Kubernetes / Docker health check).",
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Ứng dụng hoạt động bình thường",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "uptimeSeconds": {
+                      "type": "integer",
+                      "example": 3600
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "nodeVersion": {
+                      "type": "string",
+                      "example": "v22.14.0"
+                    }
+                  }
+                }
+              }
+            }
           }
-        }
+        },
+        "tags": ["Health"],
+        "summary": "Kiểm tra liveness của service"
       }
     },
     "/health/readiness": {
       "get": {
-        "description": "",
+        "description": "Endpoint kiểm tra kết nối tới cơ sở dữ liệu PostgreSQL và hàng đợi Redis.",
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Hệ thống sẵn sàng tiếp nhận request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ready"
+                    },
+                    "checks": {
+                      "type": "object",
+                      "properties": {
+                        "database": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "example": "up"
+                            },
+                            "latencyMs": {
+                              "type": "integer",
+                              "example": 5
+                            }
+                          }
+                        },
+                        "redis": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "example": "up"
+                            },
+                            "latencyMs": {
+                              "type": "integer",
+                              "example": 2
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Hệ thống chưa sẵn sàng, dịch vụ phụ trợ gặp lỗi"
           }
-        }
+        },
+        "tags": ["Health"],
+        "summary": "Kiểm tra readiness của service (PostgreSQL & Redis)"
       }
     },
     "/health/metrics": {
       "get": {
-        "description": "",
+        "description": "Trả về thông tin chi tiết về bộ nhớ RAM tiến trình, thời gian uptime và trạng thái các hàng đợi BullMQ.",
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Lấy metrics thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "memory": {
+                      "type": "object"
+                    },
+                    "uptime": {
+                      "type": "number"
+                    },
+                    "queues": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
           }
-        }
+        },
+        "tags": ["Health"],
+        "summary": "Xem thông số metrics hệ thống và hàng đợi"
       }
     },
     "/auth/login": {
@@ -83,9 +183,7 @@
             "description": "Email hoặc mật khẩu không chính xác"
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Đăng nhập người dùng",
         "requestBody": {
           "required": true,
@@ -141,9 +239,7 @@
             }
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Làm mới Access Token"
       }
     },
@@ -182,9 +278,7 @@
             }
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Đăng xuất"
       }
     },
@@ -215,9 +309,7 @@
             "description": "Chưa xác thực hoặc token không hợp lệ"
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Lấy thông tin người dùng hiện tại"
       },
       "put": {
@@ -249,9 +341,7 @@
             "description": "Chưa xác thực"
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Cập nhật thông tin cá nhân",
         "requestBody": {
           "required": true,
@@ -265,10 +355,44 @@
         }
       },
       "patch": {
-        "description": "",
+        "description": "Cập nhật họ tên của người dùng hiện tại.",
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Cập nhật thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/User"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu yêu cầu không hợp lệ"
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          }
+        },
+        "tags": ["Auth"],
+        "summary": "Cập nhật một phần thông tin cá nhân",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMeRequest"
+              }
+            }
           }
         }
       }
@@ -348,25 +472,71 @@
             "description": "Chưa xác thực"
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Xem hạn mức và mức độ sử dụng Quota hiện tại"
       }
     },
     "/auth/avatar": {
       "post": {
-        "description": "",
+        "description": "Tải lên tệp ảnh đại diện cho người dùng hiện tại (JPG, PNG, WEBP, GIF, tối đa 2MB).",
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Tải lên ảnh đại diện thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "avatarUrl": {
+                          "type": "string",
+                          "example": "/api/v1/auth/avatar/avatar_123.jpg"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Tệp không hợp lệ hoặc vượt kích thước"
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          }
+        },
+        "tags": ["Auth"],
+        "summary": "Tải lên ảnh đại diện (Avatar)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "type": "object",
+                "required": ["avatar"],
+                "properties": {
+                  "avatar": {
+                    "type": "string",
+                    "format": "binary",
+                    "description": "Tệp ảnh avatar tải lên"
+                  }
+                }
+              }
+            }
           }
         }
       }
     },
     "/auth/avatar/{fileName}": {
       "get": {
-        "description": "",
+        "description": "Xem và tải tệp ảnh đại diện của người dùng.",
         "parameters": [
           {
             "name": "fileName",
@@ -374,14 +544,46 @@
             "required": true,
             "schema": {
               "type": "string"
-            }
+            },
+            "description": "Tên tệp ảnh đại diện"
           }
         ],
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Tệp ảnh dạng binary",
+            "content": {
+              "image/jpeg": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/png": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/webp": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              },
+              "image/gif": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Không tìm thấy tệp ảnh đại diện"
           }
-        }
+        },
+        "tags": ["Auth"],
+        "summary": "Tải hoặc hiển thị ảnh đại diện"
       }
     },
     "/auth/change-password": {
@@ -415,9 +617,7 @@
             "description": "Chưa xác thực"
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Đổi mật khẩu tài khoản",
         "requestBody": {
           "required": true,
@@ -458,9 +658,7 @@
             "description": "Email đã được sử dụng hoặc dữ liệu không hợp lệ"
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Đăng ký tài khoản mới",
         "requestBody": {
           "required": true,
@@ -502,9 +700,7 @@
             "description": "Email không hợp lệ"
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Yêu cầu đặt lại mật khẩu",
         "requestBody": {
           "required": true,
@@ -512,9 +708,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "email"
-                ],
+                "required": ["email"],
                 "properties": {
                   "email": {
                     "type": "string",
@@ -556,9 +750,7 @@
             "description": "Token không hợp lệ, đã hết hạn hoặc mật khẩu không đúng định dạng"
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Đặt lại mật khẩu mới",
         "requestBody": {
           "required": true,
@@ -566,10 +758,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "token",
-                  "password"
-                ],
+                "required": ["token", "password"],
                 "properties": {
                   "token": {
                     "type": "string",
@@ -614,9 +803,7 @@
             "description": "Địa chỉ email không hợp lệ"
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Gửi lại email xác thực",
         "requestBody": {
           "required": true,
@@ -658,9 +845,7 @@
             "description": "Token không hợp lệ hoặc đã hết hạn"
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Xác thực địa chỉ email",
         "requestBody": {
           "required": true,
@@ -668,9 +853,7 @@
             "application/json": {
               "schema": {
                 "type": "object",
-                "required": [
-                  "token"
-                ],
+                "required": ["token"],
                 "properties": {
                   "token": {
                     "type": "string",
@@ -714,9 +897,7 @@
             "description": "Chưa xác thực hoặc mật khẩu không chính xác"
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Yêu cầu vô hiệu hóa tài khoản",
         "requestBody": {
           "required": true,
@@ -758,9 +939,7 @@
             "description": "Mã xác nhận không hợp lệ, đã hết hạn hoặc tài khoản đã bị vô hiệu hóa"
           }
         },
-        "tags": [
-          "Auth"
-        ],
+        "tags": ["Auth"],
         "summary": "Xác nhận vô hiệu hóa tài khoản",
         "requestBody": {
           "required": true,
@@ -857,9 +1036,7 @@
             "description": "Không có quyền truy cập"
           }
         },
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Lấy danh sách người dùng"
       },
       "post": {
@@ -904,9 +1081,7 @@
             }
           }
         },
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Tạo người dùng mới"
       }
     },
@@ -954,9 +1129,7 @@
             "description": "Không tìm thấy người dùng"
           }
         },
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Lấy thông tin người dùng theo ID"
       },
       "put": {
@@ -1009,9 +1182,7 @@
             }
           }
         },
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Cập nhật thông tin người dùng"
       },
       "delete": {
@@ -1052,9 +1223,7 @@
             "description": "Không tìm thấy người dùng"
           }
         },
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Xóa người dùng"
       }
     },
@@ -1083,9 +1252,7 @@
             "description": "Không có quyền users.roles.read"
           }
         },
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Xem Roles của User"
       },
       "put": {
@@ -1118,9 +1285,7 @@
             "description": "Không tìm thấy User hoặc Role"
           }
         },
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Cập nhật toàn bộ Roles của User",
         "requestBody": {
           "required": true,
@@ -1171,9 +1336,7 @@
             "description": "Không tìm thấy User hoặc Role"
           }
         },
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Gán thêm một Role cho User"
       },
       "delete": {
@@ -1215,9 +1378,7 @@
             "description": "Không tìm thấy User hoặc Role"
           }
         },
-        "tags": [
-          "Users"
-        ],
+        "tags": ["Users"],
         "summary": "Gỡ một Role khỏi User"
       }
     },
@@ -1274,9 +1435,7 @@
             "description": "Không có quyền roles.read"
           }
         },
-        "tags": [
-          "Roles"
-        ],
+        "tags": ["Roles"],
         "summary": "Danh sách Roles"
       },
       "post": {
@@ -1298,9 +1457,7 @@
             "description": "Role slug đã tồn tại"
           }
         },
-        "tags": [
-          "Roles"
-        ],
+        "tags": ["Roles"],
         "summary": "Tạo Role tùy chỉnh",
         "requestBody": {
           "required": true,
@@ -1342,9 +1499,7 @@
             "description": "Không tìm thấy Role"
           }
         },
-        "tags": [
-          "Roles"
-        ],
+        "tags": ["Roles"],
         "summary": "Chi tiết Role"
       },
       "patch": {
@@ -1377,9 +1532,7 @@
             "description": "Không tìm thấy Role"
           }
         },
-        "tags": [
-          "Roles"
-        ],
+        "tags": ["Roles"],
         "summary": "Cập nhật Role",
         "requestBody": {
           "required": true,
@@ -1422,9 +1575,7 @@
             "description": "Không tìm thấy Role"
           }
         },
-        "tags": [
-          "Roles"
-        ],
+        "tags": ["Roles"],
         "summary": "Xóa Role"
       }
     },
@@ -1456,9 +1607,7 @@
             "description": "Không tìm thấy Role"
           }
         },
-        "tags": [
-          "Roles"
-        ],
+        "tags": ["Roles"],
         "summary": "Xem danh sách Permissions của Role"
       },
       "put": {
@@ -1488,9 +1637,7 @@
             "description": "Không tìm thấy Role"
           }
         },
-        "tags": [
-          "Roles"
-        ],
+        "tags": ["Roles"],
         "summary": "Gán danh sách Permissions cho Role",
         "requestBody": {
           "required": true,
@@ -1529,9 +1676,7 @@
             "description": "Không có quyền roles.read"
           }
         },
-        "tags": [
-          "Roles"
-        ],
+        "tags": ["Roles"],
         "summary": "Danh sách Users thuộc Role"
       }
     },
@@ -1565,9 +1710,7 @@
             "description": "Không có quyền permissions.read"
           }
         },
-        "tags": [
-          "Permissions"
-        ],
+        "tags": ["Permissions"],
         "summary": "Danh mục Permissions hệ thống"
       }
     },
@@ -1599,20 +1742,42 @@
             "description": "Không tìm thấy Permission"
           }
         },
-        "tags": [
-          "Permissions"
-        ],
+        "tags": ["Permissions"],
         "summary": "Chi tiết Permission"
       }
     },
     "/dashboard/stats": {
       "get": {
-        "description": "",
+        "description": "Thống kê tổng hợp số lượng crawl jobs theo trạng thái, số trang đã crawl, số lịch crawl đang chạy và tổng số tệp export.",
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Lấy thống kê thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/DashboardStats"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "403": {
+            "description": "Không có quyền DASHBOARD_READ"
           }
-        }
+        },
+        "tags": ["Dashboard"],
+        "summary": "Thống kê tổng quan hệ thống Crawler"
       }
     },
     "/crawl-jobs": {
@@ -1654,9 +1819,7 @@
             "description": "Chưa xác thực"
           }
         },
-        "tags": [
-          "Crawl Jobs"
-        ],
+        "tags": ["Crawl Jobs"],
         "summary": "Tạo crawl job mới",
         "requestBody": {
           "required": true,
@@ -1745,9 +1908,7 @@
             }
           }
         },
-        "tags": [
-          "Crawl Jobs"
-        ],
+        "tags": ["Crawl Jobs"],
         "summary": "Lấy danh sách các crawl jobs"
       }
     },
@@ -1789,116 +1950,234 @@
             "description": "Không tìm thấy crawl job hoặc không có quyền truy cập"
           }
         },
-        "tags": [
-          "Crawl Jobs"
-        ],
+        "tags": ["Crawl Jobs"],
         "summary": "Lấy thông tin chi tiết một crawl job"
       },
       "delete": {
-        "description": "",
+        "description": "Xóa hoàn toàn crawl job cùng toàn bộ dữ liệu trang, assets và export liên quan.",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-api-key",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID của crawl job"
           }
         ],
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Xóa crawl job thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Crawl job deleted successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Không thể xóa job đang chạy"
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "403": {
+            "description": "Không có quyền CRAWL_JOBS_DELETE"
+          },
+          "404": {
+            "description": "Không tìm thấy crawl job"
           }
-        }
+        },
+        "tags": ["Crawl Jobs"],
+        "summary": "Xóa crawl job"
       }
     },
     "/crawl-jobs/{id}/rerun": {
       "post": {
-        "description": "",
+        "description": "Khởi tạo một job mới kế thừa toàn bộ startUrl, mode, maxPages và maxDepth từ job trước đó.",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-api-key",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID của crawl job cần chạy lại"
           }
         ],
         "responses": {
-          "default": {
-            "description": ""
+          "201": {
+            "description": "Khởi tạo job chạy lại thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/CrawlJob"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "403": {
+            "description": "Không có quyền CRAWL_JOBS_RETRY"
+          },
+          "404": {
+            "description": "Không tìm thấy crawl job"
           }
-        }
+        },
+        "tags": ["Crawl Jobs"],
+        "summary": "Chạy lại crawl job với cấu hình ban đầu"
       }
     },
     "/crawl-jobs/{id}/logs": {
       "get": {
-        "description": "",
+        "description": "Lấy danh sách các bản ghi log tiến trình thực thi từ worker theo từng bước.",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID của crawl job"
           },
           {
-            "name": "x-api-key",
-            "in": "header",
+            "name": "page",
+            "in": "query",
             "schema": {
-              "type": "string"
-            }
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Số trang"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50
+            },
+            "description": "Số bản ghi mỗi trang (tối đa 100)"
           }
         ],
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Lấy nhật ký thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/CrawlJobLog"
+                          }
+                        },
+                        "meta": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "integer"
+                            },
+                            "page": {
+                              "type": "integer"
+                            },
+                            "limit": {
+                              "type": "integer"
+                            },
+                            "totalPages": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "404": {
+            "description": "Không tìm thấy crawl job"
           }
-        }
+        },
+        "tags": ["Crawl Jobs"],
+        "summary": "Xem nhật ký (logs) chi tiết của crawl job"
       }
     },
     "/crawl-jobs/{id}/events": {
       "get": {
-        "description": "",
+        "description": "Mở luồng SSE nhận dữ liệu tiến độ crawl định kỳ (mỗi 3 giây) cho đến khi job hoàn tất.",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
-          },
-          {
-            "name": "x-api-key",
-            "in": "header",
-            "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID của crawl job"
           }
         ],
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Luồng sự kiện SSE (text/event-stream)",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "404": {
+            "description": "Không tìm thấy crawl job"
           }
-        }
+        },
+        "tags": ["Crawl Jobs"],
+        "summary": "Server-Sent Events (SSE) theo dõi tiến độ Job thời gian thực"
       }
     },
     "/crawl-jobs/{id}/cancel": {
@@ -1942,9 +2221,7 @@
             "description": "Không tìm thấy crawl job"
           }
         },
-        "tags": [
-          "Crawl Jobs"
-        ],
+        "tags": ["Crawl Jobs"],
         "summary": "Hủy một crawl job đang chạy"
       }
     },
@@ -2148,10 +2425,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ],
+              "enum": ["asc", "desc"],
               "default": "asc"
             },
             "description": "Thứ tự sắp xếp"
@@ -2212,9 +2486,7 @@
             }
           }
         },
-        "tags": [
-          "Crawl Jobs"
-        ],
+        "tags": ["Crawl Jobs"],
         "summary": "Lấy danh sách các trang đã crawl của job"
       }
     },
@@ -2418,10 +2690,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ],
+              "enum": ["asc", "desc"],
               "default": "asc"
             },
             "description": "Thứ tự sắp xếp"
@@ -2556,9 +2825,7 @@
             "description": "Không tìm thấy crawl job hoặc không có quyền truy cập"
           }
         },
-        "tags": [
-          "Crawl Jobs"
-        ],
+        "tags": ["Crawl Jobs"],
         "summary": "Xem preview dữ liệu clean/raw của các trang đã crawl"
       }
     },
@@ -2600,9 +2867,7 @@
             }
           }
         },
-        "tags": [
-          "Crawl Jobs"
-        ],
+        "tags": ["Crawl Jobs"],
         "summary": "Lấy danh sách các bản export của job"
       },
       "post": {
@@ -2639,9 +2904,7 @@
             }
           }
         },
-        "tags": [
-          "Crawl Jobs"
-        ],
+        "tags": ["Crawl Jobs"],
         "summary": "Yêu cầu xuất dữ liệu cho job",
         "requestBody": {
           "required": true,
@@ -2680,9 +2943,7 @@
             }
           }
         },
-        "tags": [
-          "Crawl Jobs"
-        ],
+        "tags": ["Crawl Jobs"],
         "summary": "Tải xuống file export mới nhất"
       }
     },
@@ -2723,14 +2984,7 @@
             "required": false,
             "schema": {
               "type": "string",
-              "enum": [
-                "IMAGE",
-                "LINK",
-                "PDF",
-                "FILE",
-                "VIDEO",
-                "OTHER"
-              ]
+              "enum": ["IMAGE", "LINK", "PDF", "FILE", "VIDEO", "OTHER"]
             },
             "description": "Lọc theo loại asset"
           }
@@ -2822,9 +3076,7 @@
             "description": "Không tìm thấy crawl job hoặc không có quyền truy cập"
           }
         },
-        "tags": [
-          "Crawl Jobs"
-        ],
+        "tags": ["Crawl Jobs"],
         "summary": "Lấy danh sách assets của job (có phân trang)"
       }
     },
@@ -2877,9 +3129,7 @@
             "description": "Không tìm thấy crawl job"
           }
         },
-        "tags": [
-          "Crawl Jobs"
-        ],
+        "tags": ["Crawl Jobs"],
         "summary": "Xem báo cáo thay đổi (Diff Report)"
       }
     },
@@ -2924,9 +3174,7 @@
             "description": "Không tìm thấy crawl job hoặc diff report"
           }
         },
-        "tags": [
-          "Crawl Jobs"
-        ],
+        "tags": ["Crawl Jobs"],
         "summary": "Tải file diff_report.json"
       }
     },
@@ -2968,9 +3216,7 @@
             "description": "Chưa xác thực"
           }
         },
-        "tags": [
-          "Crawl Schedules"
-        ],
+        "tags": ["Crawl Schedules"],
         "summary": "Tạo lịch crawl định kỳ mới",
         "requestBody": {
           "required": true,
@@ -2999,12 +3245,7 @@
             "in": "query",
             "schema": {
               "type": "string",
-              "enum": [
-                "DAILY",
-                "WEEKLY",
-                "MONTHLY",
-                "CUSTOM"
-              ]
+              "enum": ["DAILY", "WEEKLY", "MONTHLY", "CUSTOM"]
             },
             "description": "Lọc theo tần suất"
           },
@@ -3073,9 +3314,7 @@
             "description": "Chưa xác thực"
           }
         },
-        "tags": [
-          "Crawl Schedules"
-        ],
+        "tags": ["Crawl Schedules"],
         "summary": "Lấy danh sách lịch crawl định kỳ"
       }
     },
@@ -3111,9 +3350,7 @@
             "description": "Không tìm thấy lịch crawl"
           }
         },
-        "tags": [
-          "Crawl Schedules"
-        ],
+        "tags": ["Crawl Schedules"],
         "summary": "Xem chi tiết lịch crawl"
       },
       "patch": {
@@ -3158,9 +3395,7 @@
             "description": "Không tìm thấy lịch crawl"
           }
         },
-        "tags": [
-          "Crawl Schedules"
-        ],
+        "tags": ["Crawl Schedules"],
         "summary": "Cập nhật lịch crawl",
         "requestBody": {
           "required": true,
@@ -3210,9 +3445,7 @@
             "description": "Không tìm thấy lịch crawl"
           }
         },
-        "tags": [
-          "Crawl Schedules"
-        ],
+        "tags": ["Crawl Schedules"],
         "summary": "Xóa lịch crawl"
       }
     },
@@ -3257,9 +3490,7 @@
             "description": "Không tìm thấy lịch crawl"
           }
         },
-        "tags": [
-          "Crawl Schedules"
-        ],
+        "tags": ["Crawl Schedules"],
         "summary": "Kích hoạt chạy ngay lịch crawl"
       }
     },
@@ -3336,20 +3567,84 @@
             "description": "Không tìm thấy lịch crawl"
           }
         },
-        "tags": [
-          "Crawl Schedules"
-        ],
+        "tags": ["Crawl Schedules"],
         "summary": "Xem lịch sử các lần chạy của lịch crawl"
       }
     },
     "/exports": {
       "get": {
-        "description": "",
-        "responses": {
-          "default": {
-            "description": ""
+        "description": "Lấy danh sách các tệp xuất dữ liệu crawl của người dùng có phân trang.",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 1
+            },
+            "description": "Số trang"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 20
+            },
+            "description": "Số bản ghi mỗi trang (tối đa 100)"
           }
-        }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lấy danh sách bản xuất thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "items": {
+                          "type": "array",
+                          "items": {
+                            "$ref": "#/components/schemas/CrawlExport"
+                          }
+                        },
+                        "meta": {
+                          "type": "object",
+                          "properties": {
+                            "total": {
+                              "type": "integer"
+                            },
+                            "page": {
+                              "type": "integer"
+                            },
+                            "limit": {
+                              "type": "integer"
+                            },
+                            "totalPages": {
+                              "type": "integer"
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          }
+        },
+        "tags": ["Exports"],
+        "summary": "Danh sách tất cả các bản xuất dữ liệu"
       }
     },
     "/exports/{exportId}/download": {
@@ -3380,30 +3675,58 @@
             "description": "Không tìm thấy file export"
           }
         },
-        "tags": [
-          "Crawl Exports"
-        ],
+        "tags": ["Crawl Exports"],
         "summary": "Tải xuống tệp export theo ID"
       }
     },
     "/exports/{exportId}": {
       "delete": {
-        "description": "",
+        "description": "Xóa bản ghi xuất dữ liệu và tệp lưu trữ vật lý tương ứng trên ổ cứng hoặc S3.",
         "parameters": [
           {
             "name": "exportId",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID của bản xuất dữ liệu"
           }
         ],
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Xóa bản xuất dữ liệu thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Export deleted successfully"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "403": {
+            "description": "Không có quyền EXPORTS_DELETE"
+          },
+          "404": {
+            "description": "Không tìm thấy bản xuất dữ liệu"
           }
-        }
+        },
+        "tags": ["Exports"],
+        "summary": "Xóa bản xuất dữ liệu"
       }
     },
     "/audit-logs": {
@@ -3520,9 +3843,7 @@
             "description": "Không có quyền truy cập (không phải ADMIN)"
           }
         },
-        "tags": [
-          "Audit Logs"
-        ],
+        "tags": ["Audit Logs"],
         "summary": "Lấy danh sách nhật ký hệ thống"
       }
     },
@@ -3556,9 +3877,7 @@
             "description": "Dữ liệu không hợp lệ hoặc thời điểm hết hạn không ở trong tương lai"
           }
         },
-        "tags": [
-          "API Keys"
-        ],
+        "tags": ["API Keys"],
         "security": [
           {
             "BearerAuth": []
@@ -3605,9 +3924,7 @@
             "description": "Chưa xác thực"
           }
         },
-        "tags": [
-          "API Keys"
-        ],
+        "tags": ["API Keys"],
         "security": [
           {
             "BearerAuth": []
@@ -3661,9 +3978,7 @@
             "description": "Trạng thái không hợp lệ"
           }
         },
-        "tags": [
-          "API Keys"
-        ],
+        "tags": ["API Keys"],
         "security": [
           {
             "BearerAuth": []
@@ -3722,9 +4037,7 @@
             "description": "Không tìm thấy API Key"
           }
         },
-        "tags": [
-          "API Keys"
-        ],
+        "tags": ["API Keys"],
         "security": [
           {
             "BearerAuth": []
@@ -3763,9 +4076,7 @@
             "description": "Chưa xác thực"
           }
         },
-        "tags": [
-          "Webhooks"
-        ],
+        "tags": ["Webhooks"],
         "summary": "Tạo cấu hình Webhook",
         "requestBody": {
           "required": true,
@@ -3807,28 +4118,65 @@
             "description": "Chưa xác thực"
           }
         },
-        "tags": [
-          "Webhooks"
-        ],
+        "tags": ["Webhooks"],
         "summary": "Xem danh sách Webhook configs"
       }
     },
     "/webhooks/configs/{id}": {
       "patch": {
-        "description": "",
+        "description": "Cập nhật endpoint URL, signing secret, danh sách sự kiện đăng ký hoặc bật/tắt Webhook.",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID cấu hình Webhook"
           }
         ],
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Cập nhật cấu hình thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/WebhookConfig"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu yêu cầu không hợp lệ"
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "404": {
+            "description": "Không tìm thấy cấu hình Webhook"
+          }
+        },
+        "tags": ["Webhooks"],
+        "summary": "Cập nhật cấu hình Webhook",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateWebhookConfigRequest"
+              }
+            }
           }
         }
       },
@@ -3872,30 +4220,68 @@
             "description": "Không tìm thấy cấu hình Webhook"
           }
         },
-        "tags": [
-          "Webhooks"
-        ],
+        "tags": ["Webhooks"],
         "summary": "Xóa cấu hình Webhook"
       }
     },
     "/webhooks/configs/{id}/test": {
       "post": {
-        "description": "",
+        "description": "Gửi một payload mẫu có kèm HMAC signature tới Webhook URL để kiểm tra khả năng tiếp nhận.",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID cấu hình Webhook"
           }
         ],
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Kiểm tra Webhook hoàn tất",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "statusCode": {
+                          "type": "integer",
+                          "example": 200
+                        },
+                        "responseBody": {
+                          "type": "string",
+                          "example": "ok"
+                        },
+                        "success": {
+                          "type": "boolean",
+                          "example": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "404": {
+            "description": "Không tìm thấy cấu hình Webhook"
           }
-        }
+        },
+        "tags": ["Webhooks"],
+        "summary": "Kiểm tra kết nối Webhook (Ping Test)"
       }
     },
     "/webhooks/deliveries": {
@@ -3946,104 +4332,281 @@
             "description": "Chưa xác thực"
           }
         },
-        "tags": [
-          "Webhooks"
-        ],
+        "tags": ["Webhooks"],
         "summary": "Xem lịch sử gửi Webhook"
       }
     },
     "/webhooks/deliveries/{id}/redeliver": {
       "post": {
-        "description": "",
+        "description": "Đưa thông báo webhook vào hàng đợi BullMQ để tiến hành gửi lại tới server đích.",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID của bản ghi webhook delivery"
           }
         ],
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Đã đưa vào hàng đợi gửi lại",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "message": {
+                      "type": "string",
+                      "example": "Webhook redelivery enqueued successfully"
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/WebhookDelivery"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "404": {
+            "description": "Không tìm thấy bản ghi webhook delivery"
           }
-        }
+        },
+        "tags": ["Webhooks"],
+        "summary": "Gửi lại (Redeliver) Webhook thất bại"
       }
     },
     "/extraction-templates": {
       "post": {
-        "description": "",
+        "description": "Định nghĩa bộ selector CSS và thuộc tính trích xuất nội dung cho một tên miền web cụ thể.",
         "responses": {
-          "default": {
-            "description": ""
+          "201": {
+            "description": "Tạo template thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ExtractionTemplate"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu yêu cầu không hợp lệ hoặc đã tồn tại template cho domain này"
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          }
+        },
+        "tags": ["Extraction Templates"],
+        "summary": "Tạo template trích xuất dữ liệu có cấu trúc",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExtractionTemplateRequest"
+              }
+            }
           }
         }
       },
       "get": {
-        "description": "",
+        "description": "Lấy toàn bộ danh sách các template trích xuất do người dùng hiện tại tạo.",
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Lấy danh sách template thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/ExtractionTemplate"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa xác thực"
           }
-        }
+        },
+        "tags": ["Extraction Templates"],
+        "summary": "Danh sách template trích xuất dữ liệu"
       }
     },
     "/extraction-templates/{id}": {
       "get": {
-        "description": "",
+        "description": "Xem chi tiết thông tin và danh sách selectors của template.",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID của template"
           }
         ],
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Lấy chi tiết template thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ExtractionTemplate"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "404": {
+            "description": "Không tìm thấy template"
           }
-        }
+        },
+        "tags": ["Extraction Templates"],
+        "summary": "Chi tiết template trích xuất"
       },
       "patch": {
-        "description": "",
+        "description": "Cập nhật tên hoặc danh sách trường trích xuất của template.",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID của template"
           }
         ],
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Cập nhật template thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "$ref": "#/components/schemas/ExtractionTemplate"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dữ liệu yêu cầu không hợp lệ"
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "404": {
+            "description": "Không tìm thấy template"
+          }
+        },
+        "tags": ["Extraction Templates"],
+        "summary": "Cập nhật template trích xuất",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateExtractionTemplateRequest"
+              }
+            }
           }
         }
       },
       "delete": {
-        "description": "",
+        "description": "Xóa cấu hình template trích xuất khỏi hệ thống.",
         "parameters": [
           {
             "name": "id",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
-            }
+              "type": "string",
+              "format": "uuid"
+            },
+            "description": "ID của template"
           }
         ],
         "responses": {
-          "default": {
-            "description": ""
+          "200": {
+            "description": "Xóa template thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "success": {
+                      "type": "boolean",
+                      "example": true
+                    },
+                    "data": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Chưa xác thực"
+          },
+          "404": {
+            "description": "Không tìm thấy template"
           }
-        }
+        },
+        "tags": ["Extraction Templates"],
+        "summary": "Xóa template trích xuất"
       }
     }
   },
@@ -4079,11 +4642,7 @@
           },
           "role": {
             "type": "string",
-            "enum": [
-              "ADMIN",
-              "CRAWLER_USER",
-              "VIEWER"
-            ]
+            "enum": ["ADMIN", "CRAWLER_USER", "VIEWER"]
           },
           "isActive": {
             "type": "boolean"
@@ -4112,12 +4671,7 @@
           },
           "mode": {
             "type": "string",
-            "enum": [
-              "SCRAPE",
-              "CRAWL",
-              "SITEMAP",
-              "URL_LIST"
-            ]
+            "enum": ["SCRAPE", "CRAWL", "SITEMAP", "URL_LIST"]
           },
           "status": {
             "type": "string",
@@ -4328,10 +4882,7 @@
                 },
                 "type": {
                   "type": "string",
-                  "enum": [
-                    "internal",
-                    "external"
-                  ]
+                  "enum": ["internal", "external"]
                 }
               }
             }
@@ -4417,21 +4968,11 @@
           },
           "exportType": {
             "type": "string",
-            "enum": [
-              "JSON",
-              "CSV",
-              "XLSX",
-              "MARKDOWN",
-              "ZIP"
-            ]
+            "enum": ["JSON", "CSV", "XLSX", "MARKDOWN", "ZIP"]
           },
           "status": {
             "type": "string",
-            "enum": [
-              "PENDING",
-              "COMPLETED",
-              "FAILED"
-            ]
+            "enum": ["PENDING", "COMPLETED", "FAILED"]
           },
           "fileName": {
             "type": "string"
@@ -4454,10 +4995,7 @@
       },
       "LoginRequest": {
         "type": "object",
-        "required": [
-          "email",
-          "password"
-        ],
+        "required": ["email", "password"],
         "properties": {
           "email": {
             "type": "string",
@@ -4472,10 +5010,7 @@
       },
       "RegisterRequest": {
         "type": "object",
-        "required": [
-          "email",
-          "password"
-        ],
+        "required": ["email", "password"],
         "properties": {
           "email": {
             "type": "string",
@@ -4494,9 +5029,7 @@
       },
       "ResendVerificationRequest": {
         "type": "object",
-        "required": [
-          "email"
-        ],
+        "required": ["email"],
         "properties": {
           "email": {
             "type": "string",
@@ -4507,9 +5040,7 @@
       },
       "RequestDeactivationRequest": {
         "type": "object",
-        "required": [
-          "password"
-        ],
+        "required": ["password"],
         "properties": {
           "password": {
             "type": "string",
@@ -4520,9 +5051,7 @@
       },
       "ConfirmDeactivationRequest": {
         "type": "object",
-        "required": [
-          "token"
-        ],
+        "required": ["token"],
         "properties": {
           "token": {
             "type": "string",
@@ -4533,9 +5062,7 @@
       },
       "RefreshRequest": {
         "type": "object",
-        "required": [
-          "refreshToken"
-        ],
+        "required": ["refreshToken"],
         "properties": {
           "refreshToken": {
             "type": "string",
@@ -4545,9 +5072,7 @@
       },
       "LogoutRequest": {
         "type": "object",
-        "required": [
-          "refreshToken"
-        ],
+        "required": ["refreshToken"],
         "properties": {
           "refreshToken": {
             "type": "string",
@@ -4566,11 +5091,7 @@
       },
       "ChangePasswordRequest": {
         "type": "object",
-        "required": [
-          "currentPassword",
-          "newPassword",
-          "confirmPassword"
-        ],
+        "required": ["currentPassword", "newPassword", "confirmPassword"],
         "properties": {
           "currentPassword": {
             "type": "string",
@@ -4588,10 +5109,7 @@
       },
       "CreateUserRequest": {
         "type": "object",
-        "required": [
-          "email",
-          "password"
-        ],
+        "required": ["email", "password"],
         "properties": {
           "email": {
             "type": "string",
@@ -4608,11 +5126,7 @@
           },
           "role": {
             "type": "string",
-            "enum": [
-              "ADMIN",
-              "CRAWLER_USER",
-              "VIEWER"
-            ],
+            "enum": ["ADMIN", "CRAWLER_USER", "VIEWER"],
             "example": "CRAWLER_USER"
           },
           "maxPagesLimit": {
@@ -4638,11 +5152,7 @@
           },
           "role": {
             "type": "string",
-            "enum": [
-              "ADMIN",
-              "CRAWLER_USER",
-              "VIEWER"
-            ],
+            "enum": ["ADMIN", "CRAWLER_USER", "VIEWER"],
             "example": "VIEWER"
           },
           "isActive": {
@@ -4673,12 +5183,7 @@
           },
           "mode": {
             "type": "string",
-            "enum": [
-              "SCRAPE",
-              "CRAWL",
-              "SITEMAP",
-              "URL_LIST"
-            ],
+            "enum": ["SCRAPE", "CRAWL", "SITEMAP", "URL_LIST"],
             "example": "CRAWL"
           },
           "maxPages": {
@@ -4699,38 +5204,25 @@
               "type": "string",
               "format": "uri"
             },
-            "example": [
-              "https://example.com/1",
-              "https://example.com/2"
-            ],
+            "example": ["https://example.com/1", "https://example.com/2"],
             "description": "Bắt buộc khi mode là URL_LIST"
           }
         }
       },
       "CreateExportRequest": {
         "type": "object",
-        "required": [
-          "exportType"
-        ],
+        "required": ["exportType"],
         "properties": {
           "exportType": {
             "type": "string",
-            "enum": [
-              "JSON",
-              "CSV",
-              "XLSX",
-              "MARKDOWN",
-              "ZIP"
-            ],
+            "enum": ["JSON", "CSV", "XLSX", "MARKDOWN", "ZIP"],
             "example": "JSON"
           }
         }
       },
       "CreateApiKeyRequest": {
         "type": "object",
-        "required": [
-          "name"
-        ],
+        "required": ["name"],
         "properties": {
           "name": {
             "type": "string",
@@ -4749,9 +5241,7 @@
       },
       "UpdateApiKeyStatusRequest": {
         "type": "object",
-        "required": [
-          "isActive"
-        ],
+        "required": ["isActive"],
         "additionalProperties": false,
         "properties": {
           "isActive": {
@@ -4848,11 +5338,7 @@
       },
       "CreateWebhookConfigRequest": {
         "type": "object",
-        "required": [
-          "url",
-          "secret",
-          "events"
-        ],
+        "required": ["url", "secret", "events"],
         "properties": {
           "url": {
             "type": "string",
@@ -4867,15 +5353,9 @@
             "type": "array",
             "items": {
               "type": "string",
-              "enum": [
-                "job.completed",
-                "job.failed"
-              ]
+              "enum": ["job.completed", "job.failed"]
             },
-            "example": [
-              "job.completed",
-              "job.failed"
-            ]
+            "example": ["job.completed", "job.failed"]
           }
         }
       },
@@ -4936,11 +5416,7 @@
           },
           "status": {
             "type": "string",
-            "enum": [
-              "PENDING",
-              "SUCCESS",
-              "FAILED"
-            ]
+            "enum": ["PENDING", "SUCCESS", "FAILED"]
           },
           "statusCode": {
             "type": "integer",
@@ -5004,21 +5480,11 @@
           },
           "mode": {
             "type": "string",
-            "enum": [
-              "SCRAPE",
-              "CRAWL",
-              "SITEMAP",
-              "URL_LIST"
-            ]
+            "enum": ["SCRAPE", "CRAWL", "SITEMAP", "URL_LIST"]
           },
           "frequency": {
             "type": "string",
-            "enum": [
-              "DAILY",
-              "WEEKLY",
-              "MONTHLY",
-              "CUSTOM"
-            ]
+            "enum": ["DAILY", "WEEKLY", "MONTHLY", "CUSTOM"]
           },
           "cronExpression": {
             "type": "string",
@@ -5081,10 +5547,7 @@
       },
       "CreateCrawlScheduleRequest": {
         "type": "object",
-        "required": [
-          "name",
-          "startUrl"
-        ],
+        "required": ["name", "startUrl"],
         "properties": {
           "name": {
             "type": "string",
@@ -5097,22 +5560,12 @@
           },
           "mode": {
             "type": "string",
-            "enum": [
-              "SCRAPE",
-              "CRAWL",
-              "SITEMAP",
-              "URL_LIST"
-            ],
+            "enum": ["SCRAPE", "CRAWL", "SITEMAP", "URL_LIST"],
             "example": "CRAWL"
           },
           "frequency": {
             "type": "string",
-            "enum": [
-              "DAILY",
-              "WEEKLY",
-              "MONTHLY",
-              "CUSTOM"
-            ],
+            "enum": ["DAILY", "WEEKLY", "MONTHLY", "CUSTOM"],
             "example": "DAILY"
           },
           "cronExpression": {
@@ -5175,21 +5628,11 @@
           },
           "mode": {
             "type": "string",
-            "enum": [
-              "SCRAPE",
-              "CRAWL",
-              "SITEMAP",
-              "URL_LIST"
-            ]
+            "enum": ["SCRAPE", "CRAWL", "SITEMAP", "URL_LIST"]
           },
           "frequency": {
             "type": "string",
-            "enum": [
-              "DAILY",
-              "WEEKLY",
-              "MONTHLY",
-              "CUSTOM"
-            ]
+            "enum": ["DAILY", "WEEKLY", "MONTHLY", "CUSTOM"]
           },
           "cronExpression": {
             "type": "string"
@@ -5389,10 +5832,7 @@
       },
       "CreateRoleRequest": {
         "type": "object",
-        "required": [
-          "name",
-          "slug"
-        ],
+        "required": ["name", "slug"],
         "properties": {
           "name": {
             "type": "string",
@@ -5431,9 +5871,7 @@
       },
       "AssignRolePermissionsRequest": {
         "type": "object",
-        "required": [
-          "permissionIds"
-        ],
+        "required": ["permissionIds"],
         "properties": {
           "permissionIds": {
             "type": "array",
@@ -5446,15 +5884,231 @@
       },
       "AssignUserRolesRequest": {
         "type": "object",
-        "required": [
-          "roleIds"
-        ],
+        "required": ["roleIds"],
         "properties": {
           "roleIds": {
             "type": "array",
             "items": {
               "type": "string",
               "format": "uuid"
+            }
+          }
+        }
+      },
+      "UpdateWebhookConfigRequest": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "example": "https://example.com/webhook"
+          },
+          "secret": {
+            "type": "string",
+            "minLength": 16,
+            "maxLength": 128,
+            "example": "new_webhook_secret_key_123456"
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": ["job.completed", "job.failed"]
+            },
+            "example": ["job.completed"]
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "ExtractionTemplateField": {
+        "type": "object",
+        "required": ["name", "selector", "attr", "required"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "title"
+          },
+          "selector": {
+            "type": "string",
+            "example": "h1.product-title"
+          },
+          "attr": {
+            "type": "string",
+            "example": "innerText"
+          },
+          "required": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "ExtractionTemplate": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string",
+            "example": "E-Commerce Product Extractor"
+          },
+          "domain": {
+            "type": "string",
+            "example": "example.com"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExtractionTemplateField"
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "CreateExtractionTemplateRequest": {
+        "type": "object",
+        "required": ["name", "domain", "fields"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "E-Commerce Product Extractor"
+          },
+          "domain": {
+            "type": "string",
+            "example": "example.com"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExtractionTemplateField"
+            }
+          }
+        }
+      },
+      "UpdateExtractionTemplateRequest": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Updated Template Name"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ExtractionTemplateField"
+            }
+          }
+        }
+      },
+      "CrawlJobLog": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "jobId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "level": {
+            "type": "string",
+            "enum": ["INFO", "WARN", "ERROR"]
+          },
+          "step": {
+            "type": "string",
+            "example": "FETCH_PAGE"
+          },
+          "message": {
+            "type": "string",
+            "example": "Successfully fetched page 1"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "DashboardStats": {
+        "type": "object",
+        "properties": {
+          "jobs": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "example": 42
+              },
+              "completed": {
+                "type": "integer",
+                "example": 35
+              },
+              "failed": {
+                "type": "integer",
+                "example": 3
+              },
+              "running": {
+                "type": "integer",
+                "example": 2
+              },
+              "pending": {
+                "type": "integer",
+                "example": 2
+              }
+            }
+          },
+          "pages": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "example": 1250
+              },
+              "successful": {
+                "type": "integer",
+                "example": 1200
+              },
+              "failed": {
+                "type": "integer",
+                "example": 50
+              }
+            }
+          },
+          "schedules": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "example": 5
+              },
+              "active": {
+                "type": "integer",
+                "example": 4
+              }
+            }
+          },
+          "exports": {
+            "type": "object",
+            "properties": {
+              "total": {
+                "type": "integer",
+                "example": 18
+              }
             }
           }
         }
