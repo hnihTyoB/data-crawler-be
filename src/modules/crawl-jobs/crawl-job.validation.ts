@@ -86,3 +86,7 @@ export const diffQuerySchema = z.object({
     .uuid("Invalid compareWithJobId format")
     .optional(),
 });
+
+export const crawlJobParamsSchema = z.object({
+  id: z.string().uuid("Invalid job ID format"),
+});

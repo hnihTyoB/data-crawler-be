@@ -47,3 +47,12 @@ export const assignUserRolesSchema = z.object({
     required_error: "roleIds array is required",
   }),
 });
+
+export const userParamsSchema = z.object({
+  id: z.string().uuid("Invalid user ID format"),
+});
+
+export const userRoleAssignmentParamsSchema = z.object({
+  id: z.string().uuid("Invalid user ID format"),
+  roleId: z.string().uuid("Invalid role ID format"),
+});

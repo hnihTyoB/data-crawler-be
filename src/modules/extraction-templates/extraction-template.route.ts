@@ -3,10 +3,14 @@ import { ExtractionTemplateController } from "./extraction-template.controller";
 import { authMiddleware } from "../../middlewares/auth.middleware";
 import { requirePermission } from "../../middlewares/permission.middleware";
 import { PERMISSIONS } from "../../common/constants/permission.constant";
-import { validate } from "../../middlewares/validate.middleware";
+import {
+  validate,
+  validateParams,
+} from "../../middlewares/validate.middleware";
 import {
   createExtractionTemplateSchema,
   updateExtractionTemplateSchema,
+  extractionTemplateParamsSchema,
 } from "./extraction-template.validation";
 
 const router = Router();
@@ -28,17 +32,20 @@ router.get(
 router.get(
   "/:id",
   requirePermission(PERMISSIONS.EXTRACTION_TEMPLATES_READ),
+  validateParams(extractionTemplateParamsSchema),
   controller.findById,
 );
 router.patch(
   "/:id",
   requirePermission(PERMISSIONS.EXTRACTION_TEMPLATES_UPDATE),
+  validateParams(extractionTemplateParamsSchema),
   validate(updateExtractionTemplateSchema),
   controller.update,
 );
 router.delete(
   "/:id",
   requirePermission(PERMISSIONS.EXTRACTION_TEMPLATES_DELETE),
+  validateParams(extractionTemplateParamsSchema),
   controller.delete,
 );
 

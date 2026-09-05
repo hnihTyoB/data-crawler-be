@@ -13,6 +13,7 @@ export class CrawlScheduleController {
         req.body,
       );
       res.status(201).json({
+        success: true,
         message: "Crawl schedule created successfully",
         data: schedule,
       });
@@ -28,7 +29,10 @@ export class CrawlScheduleController {
         req.user!.role,
         req.query as unknown as CrawlScheduleQueryDto,
       );
-      res.json(result);
+      res.json({
+        success: true,
+        data: result,
+      });
     } catch (error) {
       next(error);
     }
@@ -41,7 +45,10 @@ export class CrawlScheduleController {
         req.user!.role,
         req.params.id,
       );
-      res.json(schedule);
+      res.json({
+        success: true,
+        data: schedule,
+      });
     } catch (error) {
       next(error);
     }
@@ -56,6 +63,7 @@ export class CrawlScheduleController {
         req.body,
       );
       res.json({
+        success: true,
         message: "Crawl schedule updated successfully",
         data: updated,
       });
@@ -68,6 +76,7 @@ export class CrawlScheduleController {
     try {
       await this.service.delete(req.user!.id, req.user!.role, req.params.id);
       res.json({
+        success: true,
         message: "Crawl schedule deleted successfully",
       });
     } catch (error) {
@@ -83,6 +92,7 @@ export class CrawlScheduleController {
         req.params.id,
       );
       res.status(201).json({
+        success: true,
         message: "Scheduled crawl triggered successfully",
         data: job,
       });
@@ -104,7 +114,10 @@ export class CrawlScheduleController {
         page,
         limit,
       );
-      res.json(history);
+      res.json({
+        success: true,
+        data: history,
+      });
     } catch (error) {
       next(error);
     }

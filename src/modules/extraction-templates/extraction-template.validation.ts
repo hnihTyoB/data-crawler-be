@@ -27,3 +27,7 @@ export const updateExtractionTemplateSchema = z.object({
   name: z.string().min(1).optional(),
   fields: z.array(extractionFieldSchema).min(1).optional(),
 });
+
+export const extractionTemplateParamsSchema = z.object({
+  id: z.string().uuid("Invalid template ID format"),
+});

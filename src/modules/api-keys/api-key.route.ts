@@ -3,10 +3,14 @@ import { ApiKeyController } from "./api-key.controller";
 import { authMiddleware } from "../../middlewares/auth.middleware";
 import { requirePermission } from "../../middlewares/permission.middleware";
 import { PERMISSIONS } from "../../common/constants/permission.constant";
-import { validate } from "../../middlewares/validate.middleware";
+import {
+  validate,
+  validateParams,
+} from "../../middlewares/validate.middleware";
 import {
   createApiKeySchema,
   updateApiKeyStatusSchema,
+  apiKeyParamsSchema,
 } from "./api-key.validation";
 
 const router = Router();
@@ -29,6 +33,7 @@ router.patch(
   "/:id",
   authMiddleware,
   requirePermission(PERMISSIONS.API_KEYS_UPDATE),
+  validateParams(apiKeyParamsSchema),
   validate(updateApiKeyStatusSchema),
   controller.setActive,
 );
@@ -36,6 +41,7 @@ router.delete(
   "/:id",
   authMiddleware,
   requirePermission(PERMISSIONS.API_KEYS_DELETE),
+  validateParams(apiKeyParamsSchema),
   controller.revoke,
 );
 

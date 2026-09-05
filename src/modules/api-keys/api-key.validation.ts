@@ -24,3 +24,7 @@ export const updateApiKeyStatusSchema = z.object({
     invalid_type_error: "API Key status must be a boolean",
   }),
 });
+
+export const apiKeyParamsSchema = z.object({
+  id: z.string().uuid("Invalid API key ID format"),
+});
