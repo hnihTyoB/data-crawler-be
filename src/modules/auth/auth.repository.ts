@@ -140,6 +140,11 @@ export class AuthRepository {
         where: { userId, isActive: true },
         data: { isActive: false },
       });
+
+      await tx.webhookConfig.updateMany({
+        where: { userId, isActive: true },
+        data: { isActive: false },
+      });
     });
   }
 }

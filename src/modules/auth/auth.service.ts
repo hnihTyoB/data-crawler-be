@@ -43,6 +43,7 @@ export class AuthService {
   private readonly repository = new AuthRepository();
   private readonly mailService = new MailService();
   private readonly storageService = StorageFactory.getStorageService();
+  private readonly crawlJobRepository = new CrawlJobRepository();
 
   private async deliverVerificationEmail(
     user: { id: string; email: string },
@@ -467,7 +468,7 @@ export class AuthService {
       throw new AppError("User not found", 404, ERROR_CODE.NOT_FOUND);
     }
 
-    const crawlJobRepo = new CrawlJobRepository();
+    const crawlJobRepo = this.crawlJobRepository;
     const nowZoned = getZonedDateParts(new Date(), DEFAULT_TIMEZONE);
     const startOfDay = createUtcDateFromZonedParts(
       nowZoned.year,
