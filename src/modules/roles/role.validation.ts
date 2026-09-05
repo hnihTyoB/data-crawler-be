@@ -67,3 +67,12 @@ export const listRolesQuerySchema = z.object({
     )
     .optional(),
 });
+
+export const roleParamsSchema = z.object({
+  id: z.string().uuid("Invalid role ID format"),
+});
+
+export const rolePermissionParamsSchema = z.object({
+  id: z.string().uuid("Invalid role ID format"),
+  permissionId: z.string().uuid("Invalid permission ID format"),
+});

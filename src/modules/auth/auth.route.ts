@@ -5,7 +5,10 @@ import {
   copyRefreshTokenToBody,
 } from "../../middlewares/auth.middleware";
 import { authRateLimiter } from "../../middlewares/rate-limit.middleware";
-import { validate } from "../../middlewares/validate.middleware";
+import {
+  validate,
+  validateParams,
+} from "../../middlewares/validate.middleware";
 import { uploadAvatarMiddleware } from "../../middlewares/upload.middleware";
 import {
   loginSchema,
@@ -20,6 +23,7 @@ import {
   changePasswordSchema,
   requestDeactivationSchema,
   confirmDeactivationSchema,
+  avatarFileNameParamsSchema,
 } from "./auth.validation";
 
 const router = Router();
@@ -75,9 +79,13 @@ router.post(
     controller.uploadAvatar(req, res, next);
   },
 );
-router.get("/avatar/:fileName", (req, res, next) => {
-  controller.getAvatar(req, res, next);
-});
+router.get(
+  "/avatar/:fileName",
+  validateParams(avatarFileNameParamsSchema),
+  (req, res, next) => {
+    controller.getAvatar(req, res, next);
+  },
+);
 router.post(
   "/change-password",
   authMiddleware,

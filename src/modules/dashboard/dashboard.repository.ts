@@ -1,7 +1,7 @@
 import { prisma } from "../../database/prisma.client";
 import { ROLES } from "../../common/constants/role.constant";
 import { JOB_STATUS } from "../../common/constants/job-status.constant";
-import { CrawlPageStatus } from "@prisma/client";
+import { CRAWL_PAGE_STATUS } from "../../common/constants/crawl-page-status.constant";
 
 export class DashboardRepository {
   async getStats(userId: string, role: string) {
@@ -12,41 +12,24 @@ export class DashboardRepository {
     const exportWhere = isGlobal ? {} : { job: { userId } };
 
     const [
-      totalJobs,
-      completedJobs,
-      failedJobs,
-      runningJobs,
-      pendingJobs,
+      jobStatusGroups,
+      pageStatusGroups,
       totalPagesCrawled,
-      successfulPages,
-      failedPages,
       activeSchedules,
       totalSchedules,
       totalExports,
     ] = await Promise.all([
-      prisma.crawlJob.count({ where: jobWhere }),
-      prisma.crawlJob.count({
-        where: { ...jobWhere, status: JOB_STATUS.COMPLETED },
+      prisma.crawlJob.groupBy({
+        by: ["status"],
+        _count: { status: true },
+        where: jobWhere,
       }),
-      prisma.crawlJob.count({
-        where: { ...jobWhere, status: JOB_STATUS.FAILED },
-      }),
-      prisma.crawlJob.count({
-        where: { ...jobWhere, status: JOB_STATUS.RUNNING },
-      }),
-      prisma.crawlJob.count({
-        where: {
-          ...jobWhere,
-          status: { in: [JOB_STATUS.PENDING, JOB_STATUS.QUEUED] },
-        },
+      prisma.crawlPage.groupBy({
+        by: ["status"],
+        _count: { status: true },
+        where: pageWhere,
       }),
       prisma.crawlPage.count({ where: pageWhere }),
-      prisma.crawlPage.count({
-        where: { ...pageWhere, status: CrawlPageStatus.SUCCESS },
-      }),
-      prisma.crawlPage.count({
-        where: { ...pageWhere, status: CrawlPageStatus.FAILED },
-      }),
       prisma.crawlSchedule.count({
         where: { ...scheduleWhere, isActive: true },
       }),
@@ -54,18 +37,32 @@ export class DashboardRepository {
       prisma.crawlExport.count({ where: exportWhere }),
     ]);
 
+    const jobCounts: Record<string, number> = {};
+    let totalJobs = 0;
+    for (const group of jobStatusGroups) {
+      jobCounts[group.status] = group._count.status;
+      totalJobs += group._count.status;
+    }
+
+    const pageCounts: Record<string, number> = {};
+    for (const group of pageStatusGroups) {
+      pageCounts[group.status] = group._count.status;
+    }
+
     return {
       jobs: {
         total: totalJobs,
-        completed: completedJobs,
-        failed: failedJobs,
-        running: runningJobs,
-        pending: pendingJobs,
+        completed: jobCounts[JOB_STATUS.COMPLETED] ?? 0,
+        failed: jobCounts[JOB_STATUS.FAILED] ?? 0,
+        running: jobCounts[JOB_STATUS.RUNNING] ?? 0,
+        pending:
+          (jobCounts[JOB_STATUS.PENDING] ?? 0) +
+          (jobCounts[JOB_STATUS.QUEUED] ?? 0),
       },
       pages: {
         total: totalPagesCrawled,
-        successful: successfulPages,
-        failed: failedPages,
+        successful: pageCounts[CRAWL_PAGE_STATUS.SUCCESS] ?? 0,
+        failed: pageCounts[CRAWL_PAGE_STATUS.FAILED] ?? 0,
       },
       schedules: {
         total: totalSchedules,

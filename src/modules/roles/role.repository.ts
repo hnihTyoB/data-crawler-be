@@ -76,6 +76,22 @@ export class RoleRepository {
     });
   }
 
+  async findByIds(ids: string[]) {
+    return prisma.role.findMany({
+      where: { id: { in: ids } },
+      include: {
+        rolePermissions: {
+          include: {
+            permission: true,
+          },
+        },
+        _count: {
+          select: { userRoles: true },
+        },
+      },
+    });
+  }
+
   async findBySlug(slug: string) {
     return prisma.role.findUnique({
       where: { slug },

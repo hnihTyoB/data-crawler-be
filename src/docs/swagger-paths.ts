@@ -166,6 +166,117 @@ export const swaggerPaths: Record<string, any> = {
         401: { description: "Chưa xác thực" },
       },
     },
+    patch: {
+      tags: ["Auth"],
+      summary: "Cập nhật một phần thông tin cá nhân",
+      description: "Cập nhật họ tên của người dùng hiện tại.",
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/UpdateMeRequest" },
+          },
+        },
+      },
+      responses: {
+        200: {
+          description: "Cập nhật thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: { $ref: "#/components/schemas/User" },
+                },
+              },
+            },
+          },
+        },
+        400: { description: "Dữ liệu yêu cầu không hợp lệ" },
+        401: { description: "Chưa xác thực" },
+      },
+    },
+  },
+  "/auth/avatar": {
+    post: {
+      tags: ["Auth"],
+      summary: "Tải lên ảnh đại diện (Avatar)",
+      description:
+        "Tải lên tệp ảnh đại diện cho người dùng hiện tại (JPG, PNG, WEBP, GIF, tối đa 2MB).",
+      requestBody: {
+        required: true,
+        content: {
+          "multipart/form-data": {
+            schema: {
+              type: "object",
+              required: ["avatar"],
+              properties: {
+                avatar: {
+                  type: "string",
+                  format: "binary",
+                  description: "Tệp ảnh avatar tải lên",
+                },
+              },
+            },
+          },
+        },
+      },
+      responses: {
+        200: {
+          description: "Tải lên ảnh đại diện thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: {
+                    type: "object",
+                    properties: {
+                      avatarUrl: {
+                        type: "string",
+                        example: "/api/v1/auth/avatar/avatar_123.jpg",
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        400: { description: "Tệp không hợp lệ hoặc vượt kích thước" },
+        401: { description: "Chưa xác thực" },
+      },
+    },
+  },
+  "/auth/avatar/{fileName}": {
+    get: {
+      tags: ["Auth"],
+      summary: "Tải hoặc hiển thị ảnh đại diện",
+      description: "Xem và tải tệp ảnh đại diện của người dùng.",
+      parameters: [
+        {
+          name: "fileName",
+          in: "path",
+          required: true,
+          schema: { type: "string" },
+          description: "Tên tệp ảnh đại diện",
+        },
+      ],
+      responses: {
+        200: {
+          description: "Tệp ảnh dạng binary",
+          content: {
+            "image/jpeg": { schema: { type: "string", format: "binary" } },
+            "image/png": { schema: { type: "string", format: "binary" } },
+            "image/webp": { schema: { type: "string", format: "binary" } },
+            "image/gif": { schema: { type: "string", format: "binary" } },
+          },
+        },
+        404: { description: "Không tìm thấy tệp ảnh đại diện" },
+      },
+    },
   },
   "/auth/me/usage": {
     get: {
@@ -892,6 +1003,44 @@ export const swaggerPaths: Record<string, any> = {
         },
       },
     },
+    delete: {
+      tags: ["Crawl Jobs"],
+      summary: "Xóa crawl job",
+      description:
+        "Xóa hoàn toàn crawl job cùng toàn bộ dữ liệu trang, assets và export liên quan.",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+          description: "ID của crawl job",
+        },
+      ],
+      responses: {
+        200: {
+          description: "Xóa crawl job thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  message: {
+                    type: "string",
+                    example: "Crawl job deleted successfully",
+                  },
+                },
+              },
+            },
+          },
+        },
+        400: { description: "Không thể xóa job đang chạy" },
+        401: { description: "Chưa xác thực" },
+        403: { description: "Không có quyền CRAWL_JOBS_DELETE" },
+        404: { description: "Không tìm thấy crawl job" },
+      },
+    },
   },
   "/crawl-jobs/{id}/cancel": {
     post: {
@@ -923,6 +1072,135 @@ export const swaggerPaths: Record<string, any> = {
           },
         },
         400: { description: "Không thể hủy job ở trạng thái hiện tại" },
+        404: { description: "Không tìm thấy crawl job" },
+      },
+    },
+  },
+  "/crawl-jobs/{id}/rerun": {
+    post: {
+      tags: ["Crawl Jobs"],
+      summary: "Chạy lại crawl job với cấu hình ban đầu",
+      description:
+        "Khởi tạo một job mới kế thừa toàn bộ startUrl, mode, maxPages và maxDepth từ job trước đó.",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+          description: "ID của crawl job cần chạy lại",
+        },
+      ],
+      responses: {
+        201: {
+          description: "Khởi tạo job chạy lại thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: { $ref: "#/components/schemas/CrawlJob" },
+                },
+              },
+            },
+          },
+        },
+        401: { description: "Chưa xác thực" },
+        403: { description: "Không có quyền CRAWL_JOBS_RETRY" },
+        404: { description: "Không tìm thấy crawl job" },
+      },
+    },
+  },
+  "/crawl-jobs/{id}/logs": {
+    get: {
+      tags: ["Crawl Jobs"],
+      summary: "Xem nhật ký (logs) chi tiết của crawl job",
+      description:
+        "Lấy danh sách các bản ghi log tiến trình thực thi từ worker theo từng bước.",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+          description: "ID của crawl job",
+        },
+        {
+          name: "page",
+          in: "query",
+          schema: { type: "integer", default: 1 },
+          description: "Số trang",
+        },
+        {
+          name: "limit",
+          in: "query",
+          schema: { type: "integer", default: 50 },
+          description: "Số bản ghi mỗi trang (tối đa 100)",
+        },
+      ],
+      responses: {
+        200: {
+          description: "Lấy nhật ký thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: {
+                    type: "object",
+                    properties: {
+                      items: {
+                        type: "array",
+                        items: { $ref: "#/components/schemas/CrawlJobLog" },
+                      },
+                      meta: {
+                        type: "object",
+                        properties: {
+                          total: { type: "integer" },
+                          page: { type: "integer" },
+                          limit: { type: "integer" },
+                          totalPages: { type: "integer" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        401: { description: "Chưa xác thực" },
+        404: { description: "Không tìm thấy crawl job" },
+      },
+    },
+  },
+  "/crawl-jobs/{id}/events": {
+    get: {
+      tags: ["Crawl Jobs"],
+      summary: "Server-Sent Events (SSE) theo dõi tiến độ Job thời gian thực",
+      description:
+        "Mở luồng SSE nhận dữ liệu tiến độ crawl định kỳ (mỗi 3 giây) cho đến khi job hoàn tất.",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+          description: "ID của crawl job",
+        },
+      ],
+      responses: {
+        200: {
+          description: "Luồng sự kiện SSE (text/event-stream)",
+          content: {
+            "text/event-stream": {
+              schema: { type: "string" },
+            },
+          },
+        },
+        401: { description: "Chưa xác thực" },
         404: { description: "Không tìm thấy crawl job" },
       },
     },
@@ -1923,6 +2201,90 @@ export const swaggerPaths: Record<string, any> = {
         404: { description: "Không tìm thấy cấu hình Webhook" },
       },
     },
+    patch: {
+      tags: ["Webhooks"],
+      summary: "Cập nhật cấu hình Webhook",
+      description:
+        "Cập nhật endpoint URL, signing secret, danh sách sự kiện đăng ký hoặc bật/tắt Webhook.",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+          description: "ID cấu hình Webhook",
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/UpdateWebhookConfigRequest" },
+          },
+        },
+      },
+      responses: {
+        200: {
+          description: "Cập nhật cấu hình thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: { $ref: "#/components/schemas/WebhookConfig" },
+                },
+              },
+            },
+          },
+        },
+        400: { description: "Dữ liệu yêu cầu không hợp lệ" },
+        401: { description: "Chưa xác thực" },
+        404: { description: "Không tìm thấy cấu hình Webhook" },
+      },
+    },
+  },
+  "/webhooks/configs/{id}/test": {
+    post: {
+      tags: ["Webhooks"],
+      summary: "Kiểm tra kết nối Webhook (Ping Test)",
+      description:
+        "Gửi một payload mẫu có kèm HMAC signature tới Webhook URL để kiểm tra khả năng tiếp nhận.",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+          description: "ID cấu hình Webhook",
+        },
+      ],
+      responses: {
+        200: {
+          description: "Kiểm tra Webhook hoàn tất",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: {
+                    type: "object",
+                    properties: {
+                      statusCode: { type: "integer", example: 200 },
+                      responseBody: { type: "string", example: "ok" },
+                      success: { type: "boolean", example: true },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        401: { description: "Chưa xác thực" },
+        404: { description: "Không tìm thấy cấu hình Webhook" },
+      },
+    },
   },
   "/webhooks/deliveries": {
     get: {
@@ -1964,6 +2326,45 @@ export const swaggerPaths: Record<string, any> = {
           },
         },
         401: { description: "Chưa xác thực" },
+      },
+    },
+  },
+  "/webhooks/deliveries/{id}/redeliver": {
+    post: {
+      tags: ["Webhooks"],
+      summary: "Gửi lại (Redeliver) Webhook thất bại",
+      description:
+        "Đưa thông báo webhook vào hàng đợi BullMQ để tiến hành gửi lại tới server đích.",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+          description: "ID của bản ghi webhook delivery",
+        },
+      ],
+      responses: {
+        200: {
+          description: "Đã đưa vào hàng đợi gửi lại",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  message: {
+                    type: "string",
+                    example: "Webhook redelivery enqueued successfully",
+                  },
+                  data: { $ref: "#/components/schemas/WebhookDelivery" },
+                },
+              },
+            },
+          },
+        },
+        401: { description: "Chưa xác thực" },
+        404: { description: "Không tìm thấy bản ghi webhook delivery" },
       },
     },
   },
@@ -2645,6 +3046,400 @@ export const swaggerPaths: Record<string, any> = {
         401: { description: "Chưa xác thực" },
         403: { description: "Bị từ chối nâng quyền trái phép" },
         404: { description: "Không tìm thấy User hoặc Role" },
+      },
+    },
+  },
+  "/exports": {
+    get: {
+      tags: ["Exports"],
+      summary: "Danh sách tất cả các bản xuất dữ liệu",
+      description:
+        "Lấy danh sách các tệp xuất dữ liệu crawl của người dùng có phân trang.",
+      parameters: [
+        {
+          name: "page",
+          in: "query",
+          schema: { type: "integer", default: 1 },
+          description: "Số trang",
+        },
+        {
+          name: "limit",
+          in: "query",
+          schema: { type: "integer", default: 20 },
+          description: "Số bản ghi mỗi trang (tối đa 100)",
+        },
+      ],
+      responses: {
+        200: {
+          description: "Lấy danh sách bản xuất thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: {
+                    type: "object",
+                    properties: {
+                      items: {
+                        type: "array",
+                        items: { $ref: "#/components/schemas/CrawlExport" },
+                      },
+                      meta: {
+                        type: "object",
+                        properties: {
+                          total: { type: "integer" },
+                          page: { type: "integer" },
+                          limit: { type: "integer" },
+                          totalPages: { type: "integer" },
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        401: { description: "Chưa xác thực" },
+      },
+    },
+  },
+  "/exports/{exportId}": {
+    delete: {
+      tags: ["Exports"],
+      summary: "Xóa bản xuất dữ liệu",
+      description:
+        "Xóa bản ghi xuất dữ liệu và tệp lưu trữ vật lý tương ứng trên ổ cứng hoặc S3.",
+      parameters: [
+        {
+          name: "exportId",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+          description: "ID của bản xuất dữ liệu",
+        },
+      ],
+      responses: {
+        200: {
+          description: "Xóa bản xuất dữ liệu thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  message: {
+                    type: "string",
+                    example: "Export deleted successfully",
+                  },
+                },
+              },
+            },
+          },
+        },
+        401: { description: "Chưa xác thực" },
+        403: { description: "Không có quyền EXPORTS_DELETE" },
+        404: { description: "Không tìm thấy bản xuất dữ liệu" },
+      },
+    },
+  },
+  "/extraction-templates": {
+    post: {
+      tags: ["Extraction Templates"],
+      summary: "Tạo template trích xuất dữ liệu có cấu trúc",
+      description:
+        "Định nghĩa bộ selector CSS và thuộc tính trích xuất nội dung cho một tên miền web cụ thể.",
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              $ref: "#/components/schemas/CreateExtractionTemplateRequest",
+            },
+          },
+        },
+      },
+      responses: {
+        201: {
+          description: "Tạo template thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: { $ref: "#/components/schemas/ExtractionTemplate" },
+                },
+              },
+            },
+          },
+        },
+        400: {
+          description:
+            "Dữ liệu yêu cầu không hợp lệ hoặc đã tồn tại template cho domain này",
+        },
+        401: { description: "Chưa xác thực" },
+      },
+    },
+    get: {
+      tags: ["Extraction Templates"],
+      summary: "Danh sách template trích xuất dữ liệu",
+      description:
+        "Lấy toàn bộ danh sách các template trích xuất do người dùng hiện tại tạo.",
+      responses: {
+        200: {
+          description: "Lấy danh sách template thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: {
+                    type: "array",
+                    items: { $ref: "#/components/schemas/ExtractionTemplate" },
+                  },
+                },
+              },
+            },
+          },
+        },
+        401: { description: "Chưa xác thực" },
+      },
+    },
+  },
+  "/extraction-templates/{id}": {
+    get: {
+      tags: ["Extraction Templates"],
+      summary: "Chi tiết template trích xuất",
+      description:
+        "Xem chi tiết thông tin và danh sách selectors của template.",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+          description: "ID của template",
+        },
+      ],
+      responses: {
+        200: {
+          description: "Lấy chi tiết template thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: { $ref: "#/components/schemas/ExtractionTemplate" },
+                },
+              },
+            },
+          },
+        },
+        401: { description: "Chưa xác thực" },
+        404: { description: "Không tìm thấy template" },
+      },
+    },
+    patch: {
+      tags: ["Extraction Templates"],
+      summary: "Cập nhật template trích xuất",
+      description:
+        "Cập nhật tên hoặc danh sách trường trích xuất của template.",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+          description: "ID của template",
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: {
+              $ref: "#/components/schemas/UpdateExtractionTemplateRequest",
+            },
+          },
+        },
+      },
+      responses: {
+        200: {
+          description: "Cập nhật template thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: { $ref: "#/components/schemas/ExtractionTemplate" },
+                },
+              },
+            },
+          },
+        },
+        400: { description: "Dữ liệu yêu cầu không hợp lệ" },
+        401: { description: "Chưa xác thực" },
+        404: { description: "Không tìm thấy template" },
+      },
+    },
+    delete: {
+      tags: ["Extraction Templates"],
+      summary: "Xóa template trích xuất",
+      description: "Xóa cấu hình template trích xuất khỏi hệ thống.",
+      parameters: [
+        {
+          name: "id",
+          in: "path",
+          required: true,
+          schema: { type: "string", format: "uuid" },
+          description: "ID của template",
+        },
+      ],
+      responses: {
+        200: {
+          description: "Xóa template thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: { type: "null" },
+                },
+              },
+            },
+          },
+        },
+        401: { description: "Chưa xác thực" },
+        404: { description: "Không tìm thấy template" },
+      },
+    },
+  },
+  "/health/liveness": {
+    get: {
+      tags: ["Health"],
+      summary: "Kiểm tra liveness của service",
+      description:
+        "Endpoint kiểm tra xem ứng dụng còn phản hồi hay không (dành cho Kubernetes / Docker health check).",
+      responses: {
+        200: {
+          description: "Ứng dụng hoạt động bình thường",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  status: { type: "string", example: "ok" },
+                  uptimeSeconds: { type: "integer", example: 3600 },
+                  timestamp: { type: "string", format: "date-time" },
+                  nodeVersion: { type: "string", example: "v22.14.0" },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/health/readiness": {
+    get: {
+      tags: ["Health"],
+      summary: "Kiểm tra readiness của service (PostgreSQL & Redis)",
+      description:
+        "Endpoint kiểm tra kết nối tới cơ sở dữ liệu PostgreSQL và hàng đợi Redis.",
+      responses: {
+        200: {
+          description: "Hệ thống sẵn sàng tiếp nhận request",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  status: { type: "string", example: "ready" },
+                  checks: {
+                    type: "object",
+                    properties: {
+                      database: {
+                        type: "object",
+                        properties: {
+                          status: { type: "string", example: "up" },
+                          latencyMs: { type: "integer", example: 5 },
+                        },
+                      },
+                      redis: {
+                        type: "object",
+                        properties: {
+                          status: { type: "string", example: "up" },
+                          latencyMs: { type: "integer", example: 2 },
+                        },
+                      },
+                    },
+                  },
+                  timestamp: { type: "string", format: "date-time" },
+                },
+              },
+            },
+          },
+        },
+        503: {
+          description: "Hệ thống chưa sẵn sàng, dịch vụ phụ trợ gặp lỗi",
+        },
+      },
+    },
+  },
+  "/health/metrics": {
+    get: {
+      tags: ["Health"],
+      summary: "Xem thông số metrics hệ thống và hàng đợi",
+      description:
+        "Trả về thông tin chi tiết về bộ nhớ RAM tiến trình, thời gian uptime và trạng thái các hàng đợi BullMQ.",
+      responses: {
+        200: {
+          description: "Lấy metrics thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  memory: { type: "object" },
+                  uptime: { type: "number" },
+                  queues: { type: "object" },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/dashboard/stats": {
+    get: {
+      tags: ["Dashboard"],
+      summary: "Thống kê tổng quan hệ thống Crawler",
+      description:
+        "Thống kê tổng hợp số lượng crawl jobs theo trạng thái, số trang đã crawl, số lịch crawl đang chạy và tổng số tệp export.",
+      responses: {
+        200: {
+          description: "Lấy thống kê thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: { $ref: "#/components/schemas/DashboardStats" },
+                },
+              },
+            },
+          },
+        },
+        401: { description: "Chưa xác thực" },
+        403: { description: "Không có quyền DASHBOARD_READ" },
       },
     },
   },

@@ -152,6 +152,7 @@ model CrawlJob {
   @@index([status])
   @@index([createdAt])
   @@index([userId, status])
+  @@index([userId, createdAt])
   @@index([scheduleId])
   @@map("crawl_jobs")
 }
@@ -206,7 +207,7 @@ model CrawlAsset {
   createdAt DateTime @default(now()) @map("created_at")
 
   page       CrawlPage? @relation(fields: [pageId], references: [id], onDelete: SetNull)
-  crawlJob   CrawlJob?  @relation(fields: [crawlJobId], references: [id])
+  crawlJob   CrawlJob?  @relation(fields: [crawlJobId], references: [id], onDelete: Cascade)
   crawlJobId String?    @map("crawl_job_id") @db.Uuid
 
   @@index([pageId])

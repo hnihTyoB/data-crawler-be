@@ -41,11 +41,14 @@ export class CrawlExportController {
       const result = await this.service.findAllByUser(req.user.id, page, limit);
       res.json({
         success: true,
-        data: result.items,
-        pagination: {
-          total: result.total,
-          page: result.page,
-          limit: result.limit,
+        data: {
+          items: result.items,
+          meta: {
+            total: result.total,
+            page: result.page,
+            limit: result.limit,
+            totalPages: Math.ceil(result.total / (result.limit || 1)),
+          },
         },
       });
     } catch (error) {

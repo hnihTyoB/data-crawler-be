@@ -1,14 +1,20 @@
 import { Router } from "express";
 import { CrawlScheduleController } from "./crawl-schedule.controller";
 import { apiKeyOrAuthMiddleware } from "../../middlewares/api-key.middleware";
-import { validate, validateQuery } from "../../middlewares/validate.middleware";
+import {
+  validate,
+  validateQuery,
+  validateParams,
+} from "../../middlewares/validate.middleware";
 import {
   createCrawlScheduleSchema,
   updateCrawlScheduleSchema,
   crawlScheduleQuerySchema,
+  crawlScheduleHistoryQuerySchema,
+  crawlScheduleParamsSchema,
 } from "./crawl-schedule.validation";
-import { requireRole } from "../../middlewares/role.middleware";
-import { ROLES } from "../../common/constants/role.constant";
+import { requirePermission } from "../../middlewares/permission.middleware";
+import { PERMISSIONS } from "../../common/constants/permission.constant";
 
 const router = Router();
 const controller = new CrawlScheduleController();
@@ -16,7 +22,7 @@ const controller = new CrawlScheduleController();
 router.post(
   "/",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER),
+  requirePermission(PERMISSIONS.CRAWL_SCHEDULES_CREATE),
   validate(createCrawlScheduleSchema),
   controller.create,
 );
@@ -24,7 +30,7 @@ router.post(
 router.get(
   "/",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER),
+  requirePermission(PERMISSIONS.CRAWL_SCHEDULES_READ),
   validateQuery(crawlScheduleQuerySchema),
   controller.findAll,
 );
@@ -32,14 +38,16 @@ router.get(
 router.get(
   "/:id",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER),
+  requirePermission(PERMISSIONS.CRAWL_SCHEDULES_READ),
+  validateParams(crawlScheduleParamsSchema),
   controller.findById,
 );
 
 router.patch(
   "/:id",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER),
+  requirePermission(PERMISSIONS.CRAWL_SCHEDULES_UPDATE),
+  validateParams(crawlScheduleParamsSchema),
   validate(updateCrawlScheduleSchema),
   controller.update,
 );
@@ -47,21 +55,25 @@ router.patch(
 router.delete(
   "/:id",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER),
+  requirePermission(PERMISSIONS.CRAWL_SCHEDULES_DELETE),
+  validateParams(crawlScheduleParamsSchema),
   controller.delete,
 );
 
 router.post(
   "/:id/run",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER),
+  requirePermission(PERMISSIONS.CRAWL_SCHEDULES_RUN),
+  validateParams(crawlScheduleParamsSchema),
   controller.triggerRun,
 );
 
 router.get(
   "/:id/history",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER),
+  requirePermission(PERMISSIONS.CRAWL_SCHEDULES_READ),
+  validateParams(crawlScheduleParamsSchema),
+  validateQuery(crawlScheduleHistoryQuerySchema),
   controller.getHistory,
 );
 

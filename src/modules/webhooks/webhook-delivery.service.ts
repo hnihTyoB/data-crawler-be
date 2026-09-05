@@ -7,6 +7,7 @@ import { getErrorMessage } from "../../common/helpers/error-mapping.helper";
 
 import { AppError } from "../../common/errors/app-error";
 import { ERROR_CODE } from "../../common/errors/error-code";
+import { WEBHOOK_DELIVERY_STATUS } from "../../common/constants/webhook.constant";
 
 export class WebhookDeliveryService {
   private readonly repository = new WebhookRepository();
@@ -40,7 +41,7 @@ export class WebhookDeliveryService {
           crawlJobId,
           event,
           payload,
-          status: "PENDING",
+          status: WEBHOOK_DELIVERY_STATUS.PENDING,
           attempt: 1,
         });
 
@@ -100,7 +101,7 @@ export class WebhookDeliveryService {
           : JSON.stringify(response.data);
 
       await this.repository.updateDelivery(deliveryId, {
-        status: "SUCCESS",
+        status: WEBHOOK_DELIVERY_STATUS.SUCCESS,
         statusCode: response.status,
         responseBody: responseBody.substring(0, 2000), // Limit size stored in DB
         deliveredAt: new Date(),
@@ -141,7 +142,7 @@ export class WebhookDeliveryService {
    */
   async markFailed(deliveryId: string, errorReason: string): Promise<void> {
     await this.repository.updateDelivery(deliveryId, {
-      status: "FAILED",
+      status: WEBHOOK_DELIVERY_STATUS.FAILED,
       errorMessage:
         `Max attempts exhausted. Last error: ${errorReason}`.substring(0, 1000),
     });
@@ -162,7 +163,7 @@ export class WebhookDeliveryService {
     }
 
     const updated = await this.repository.updateDelivery(deliveryId, {
-      status: "PENDING",
+      status: WEBHOOK_DELIVERY_STATUS.PENDING,
       attempt: 1,
       errorMessage: null,
     });

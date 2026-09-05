@@ -19,22 +19,21 @@ const app = express();
 
 app.set("trust proxy", parseTrustProxy(envConfig.trustProxy));
 
-app.use(
-  helmet({
-    contentSecurityPolicy: false, // Vô hiệu hóa CSP để Swagger UI load stylesheet bình thường
-  }),
-);
+app.use((req, res, next) => {
+  if (req.path.startsWith("/api-docs")) {
+    return helmet({ contentSecurityPolicy: false })(req, res, next);
+  }
+  return helmet()(req, res, next);
+});
+
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      if (
-        envConfig.cors.allowedOrigins.includes(origin) ||
-        envConfig.cors.allowedOrigins.includes("*")
-      ) {
+      if (envConfig.cors.allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
-      return callback(new Error(`Origin ${origin} not allowed by CORS`));
+      return callback(null, false);
     },
     credentials: true,
     maxAge: 86400,

@@ -1,4 +1,4 @@
-import { prisma } from "../../database/prisma.client";
+import { HealthRepository } from "./health.repository";
 import { crawlQueue } from "../../queues/crawl.queue";
 import { webhookQueue } from "../../queues/webhook.queue";
 import { getErrorMessage } from "../../common/helpers/error-mapping.helper";
@@ -13,6 +13,8 @@ export interface QueueCountMetrics {
 export type QueueMetricsResult = QueueCountMetrics | "unavailable" | null;
 
 export class HealthService {
+  constructor(private readonly repository = new HealthRepository()) {}
+
   getLiveness() {
     return {
       status: "ok",
@@ -32,7 +34,7 @@ export class HealthService {
     // 1. Check Database
     const dbStart = Date.now();
     try {
-      await prisma.$queryRaw`SELECT 1`;
+      await this.repository.pingDatabase();
       checks.database = {
         status: "up",
         latencyMs: Date.now() - dbStart,

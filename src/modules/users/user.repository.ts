@@ -154,6 +154,21 @@ export class UserRepository {
         where: { userId: id },
       });
 
+      await tx.crawlSchedule.updateMany({
+        where: { userId: id },
+        data: { isActive: false },
+      });
+
+      await tx.apiKey.updateMany({
+        where: { userId: id },
+        data: { isActive: false },
+      });
+
+      await tx.webhookConfig.updateMany({
+        where: { userId: id },
+        data: { isActive: false },
+      });
+
       return user;
     });
   }

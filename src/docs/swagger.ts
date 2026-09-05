@@ -695,6 +695,122 @@ const rawSchemas = {
       },
     },
   },
+  UpdateWebhookConfigRequest: {
+    type: "object",
+    properties: {
+      url: {
+        type: "string",
+        format: "uri",
+        example: "https://example.com/webhook",
+      },
+      secret: {
+        type: "string",
+        minLength: 16,
+        maxLength: 128,
+        example: "new_webhook_secret_key_123456",
+      },
+      events: {
+        type: "array",
+        items: { type: "string", enum: ["job.completed", "job.failed"] },
+        example: ["job.completed"],
+      },
+      isActive: { type: "boolean", example: true },
+    },
+  },
+  ExtractionTemplateField: {
+    type: "object",
+    required: ["name", "selector", "attr", "required"],
+    properties: {
+      name: { type: "string", example: "title" },
+      selector: { type: "string", example: "h1.product-title" },
+      attr: { type: "string", example: "innerText" },
+      required: { type: "boolean", example: true },
+    },
+  },
+  ExtractionTemplate: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      userId: { type: "string", format: "uuid" },
+      name: { type: "string", example: "E-Commerce Product Extractor" },
+      domain: { type: "string", example: "example.com" },
+      fields: {
+        type: "array",
+        items: { $ref: "#/components/schemas/ExtractionTemplateField" },
+      },
+      createdAt: { type: "string", format: "date-time" },
+      updatedAt: { type: "string", format: "date-time" },
+    },
+  },
+  CreateExtractionTemplateRequest: {
+    type: "object",
+    required: ["name", "domain", "fields"],
+    properties: {
+      name: { type: "string", example: "E-Commerce Product Extractor" },
+      domain: { type: "string", example: "example.com" },
+      fields: {
+        type: "array",
+        items: { $ref: "#/components/schemas/ExtractionTemplateField" },
+      },
+    },
+  },
+  UpdateExtractionTemplateRequest: {
+    type: "object",
+    properties: {
+      name: { type: "string", example: "Updated Template Name" },
+      fields: {
+        type: "array",
+        items: { $ref: "#/components/schemas/ExtractionTemplateField" },
+      },
+    },
+  },
+  CrawlJobLog: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      jobId: { type: "string", format: "uuid" },
+      level: { type: "string", enum: ["INFO", "WARN", "ERROR"] },
+      step: { type: "string", example: "FETCH_PAGE" },
+      message: { type: "string", example: "Successfully fetched page 1" },
+      createdAt: { type: "string", format: "date-time" },
+    },
+  },
+  DashboardStats: {
+    type: "object",
+    properties: {
+      jobs: {
+        type: "object",
+        properties: {
+          total: { type: "integer", example: 42 },
+          completed: { type: "integer", example: 35 },
+          failed: { type: "integer", example: 3 },
+          running: { type: "integer", example: 2 },
+          pending: { type: "integer", example: 2 },
+        },
+      },
+      pages: {
+        type: "object",
+        properties: {
+          total: { type: "integer", example: 1250 },
+          successful: { type: "integer", example: 1200 },
+          failed: { type: "integer", example: 50 },
+        },
+      },
+      schedules: {
+        type: "object",
+        properties: {
+          total: { type: "integer", example: 5 },
+          active: { type: "integer", example: 4 },
+        },
+      },
+      exports: {
+        type: "object",
+        properties: {
+          total: { type: "integer", example: 18 },
+        },
+      },
+    },
+  },
 };
 
 const outputFile = "./src/docs/swagger.json";
