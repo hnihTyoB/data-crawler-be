@@ -12,7 +12,10 @@ import {
 import { crawlQueue } from "../../queues/crawl.queue";
 import { ROLES } from "../../common/constants/role.constant";
 import { JOB_STATUS } from "../../common/constants/job-status.constant";
-import { EXPORT_TYPE } from "../../common/constants/export-type.constant";
+import {
+  EXPORT_TYPE,
+  EXPORT_STATUS,
+} from "../../common/constants/export-type.constant";
 import { DEFAULT_TIMEZONE } from "../../common/constants/timezone.constant";
 import { CRAWL_MODE } from "../../common/constants/crawl-mode.constant";
 import { CreateCrawlJobDto, CrawlJobQueryDto } from "./crawl-job.dto";
@@ -246,7 +249,7 @@ export class CrawlJobService {
     for (const exportRecord of exports) {
       if (
         exportRecord.exportType === EXPORT_TYPE.ZIP &&
-        exportRecord.status === JOB_STATUS.COMPLETED &&
+        exportRecord.status === EXPORT_STATUS.COMPLETED &&
         (await storage.exists(exportRecord.filePath))
       ) {
         return exportRecord;

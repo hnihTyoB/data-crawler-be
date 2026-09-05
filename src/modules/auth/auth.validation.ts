@@ -104,3 +104,14 @@ export const requestDeactivationSchema = z.object({
 export const confirmDeactivationSchema = z.object({
   token: z.string().min(1, "Thiếu mã xác nhận vô hiệu hóa."),
 });
+
+export const avatarFileNameParamsSchema = z.object({
+  fileName: z
+    .string()
+    .trim()
+    .regex(
+      /^[a-zA-Z0-9_.-]+\.(jpg|jpeg|png|webp|gif)$/i,
+      "Invalid avatar filename format",
+    )
+    .refine((name) => !name.includes(".."), "Path traversal is not allowed"),
+});

@@ -19,6 +19,9 @@ import {
 import { runExtractionIfTemplate } from "../modules/extraction-templates/extraction-runner";
 import { JOB_STATUS } from "../common/constants/job-status.constant";
 import { CRAWL_MODE } from "../common/constants/crawl-mode.constant";
+import { ASSET_TYPE } from "../common/constants/asset-type.constant";
+import { CRAWL_PAGE_STATUS } from "../common/constants/crawl-page-status.constant";
+import { WEBHOOK_EVENT } from "../common/constants/webhook.constant";
 // Lazy getters — instantiated on first use so Jest mocks replace constructors before creation
 const getJobRepository = () => new CrawlJobRepository();
 const getPageRepository = () => new CrawlPageRepository();
@@ -58,7 +61,7 @@ export async function savePageAssets(
       assetsBatch.push({
         jobId,
         pageId,
-        assetType: "IMAGE" as const,
+        assetType: ASSET_TYPE.IMAGE,
         url: img.url,
         sourceUrl: item.url,
         altText: img.alt || undefined,
@@ -73,7 +76,7 @@ export async function savePageAssets(
       assetsBatch.push({
         jobId,
         pageId,
-        assetType: "LINK" as const,
+        assetType: ASSET_TYPE.LINK,
         url: link.url,
         sourceUrl: item.url,
         altText: link.text || undefined,
@@ -87,7 +90,7 @@ export async function savePageAssets(
       assetsBatch.push({
         jobId,
         pageId,
-        assetType: "PDF" as const,
+        assetType: ASSET_TYPE.PDF,
         url: pdfUrl,
         sourceUrl: item.url,
         orderIndex: index + 1,
@@ -196,7 +199,7 @@ export async function persistBatchResults(
       const normalized = getPageProcessor().normalizeFailedPage(
         { url: blockedUrl, error: "Blocked by robots.txt" },
         jobId,
-        "BLOCKED",
+        CRAWL_PAGE_STATUS.BLOCKED,
       );
       await getPageRepository().upsert(normalized);
       failedCount++;
@@ -581,8 +584,8 @@ export async function processCrawlJob(job: Job): Promise<void> {
 
         const event =
           updatedJob.status === JOB_STATUS.COMPLETED
-            ? "job.completed"
-            : "job.failed";
+            ? WEBHOOK_EVENT.JOB_COMPLETED
+            : WEBHOOK_EVENT.JOB_FAILED;
         void logStep(
           jobId,
           updatedJob.status === JOB_STATUS.COMPLETED ? "INFO" : "ERROR",

@@ -14,6 +14,8 @@ import {
   DATA_QUALITY_MIN_SCORE,
   DATA_CONTRACT_HASH_ALGORITHM,
 } from "../constants/data-contract.constant";
+import { ASSET_TYPE } from "../constants/asset-type.constant";
+import { CRAWL_PAGE_STATUS } from "../constants/crawl-page-status.constant";
 
 /**
  * Normalize một URL để phục vụ deduplicate và so sánh.
@@ -321,7 +323,7 @@ export function transformImages(assets: CrawlAsset[]): ImageRecord[] {
   const seenUrls = new Set<string>();
   return assets
     .filter((a) => {
-      if (a.assetType !== "IMAGE") return false;
+      if (a.assetType !== ASSET_TYPE.IMAGE) return false;
       if (seenUrls.has(a.url)) return false;
       seenUrls.add(a.url);
       return true;
@@ -366,7 +368,7 @@ export function transformPageToRecord(
   const { page, assets, tables = [], jobDomain, seenContentHashes } = options;
 
   const normalizedUrl = page.normalizedUrl || normalizeUrl(page.url);
-  const isSuccess = page.status === "SUCCESS";
+  const isSuccess = page.status === CRAWL_PAGE_STATUS.SUCCESS;
 
   // Clean text từ markdownContent
   const rawMarkdown = page.markdownContent ?? null;

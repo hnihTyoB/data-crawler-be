@@ -106,3 +106,8 @@ export const crawlScheduleQuerySchema = z.object({
     .default("createdAt"),
   order: z.enum(["asc", "desc"]).optional().default("desc"),
 });
+
+export const crawlScheduleHistoryQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});

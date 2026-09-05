@@ -14,6 +14,7 @@ import { buildJobRootFilePath } from "../../common/helpers/file.helper";
 import { normalizeUrl } from "../../common/helpers/data-contract.helper";
 import { AppError } from "../../common/errors/app-error";
 import { ERROR_CODE } from "../../common/errors/error-code";
+import { CrawlPageStatus } from "../../common/constants/crawl-page-status.constant";
 
 /**
  * Minimal page shape required for diff comparison.
@@ -26,7 +27,7 @@ type DiffPage = {
   normalizedUrl: string;
   contentHash: string | null;
   wordCount: number;
-  status: import("@prisma/client").CrawlPageStatus;
+  status: CrawlPageStatus;
   statusCode: number | null;
   title: string | null;
   crawledAt: Date | null;

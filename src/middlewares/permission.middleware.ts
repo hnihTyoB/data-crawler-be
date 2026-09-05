@@ -1,5 +1,9 @@
 import { Request, Response, NextFunction } from "express";
-import { PermissionSlug } from "../common/constants/permission.constant";
+import {
+  PermissionSlug,
+  SYSTEM_ROLE_DEFAULT_PERMISSIONS,
+} from "../common/constants/permission.constant";
+import { SystemRoleSlug } from "../common/constants/system-role.constant";
 import { AppError } from "../common/errors/app-error";
 import { ERROR_CODE } from "../common/errors/error-code";
 import { PermissionService } from "../modules/permissions/permission.service";
@@ -12,12 +16,19 @@ async function resolveUserPermissions(req: Request): Promise<string[]> {
   }
 
   const permissions = await permissionService.getUserPermissions(req.user.id);
-  req.user.permissions = permissions;
 
   if (!req.user.roles) {
     req.user.roles = await permissionService.getUserRoles(req.user.id);
   }
 
+  if (permissions.length === 0 && req.user.role) {
+    const defaultPerms =
+      SYSTEM_ROLE_DEFAULT_PERMISSIONS[req.user.role as SystemRoleSlug] || [];
+    req.user.permissions = defaultPerms;
+    return defaultPerms;
+  }
+
+  req.user.permissions = permissions;
   return permissions;
 }
 

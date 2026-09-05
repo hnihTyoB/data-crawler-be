@@ -1,11 +1,7 @@
 import { HealthService } from "../health.service";
-import { prisma } from "../../../database/prisma.client";
+import { HealthRepository } from "../health.repository";
 
-jest.mock("../../../database/prisma.client", () => ({
-  prisma: {
-    $queryRaw: jest.fn(),
-  },
-}));
+jest.mock("../health.repository");
 
 jest.mock("../../../queues/crawl.queue", () => ({
   crawlQueue: {
@@ -28,10 +24,12 @@ jest.mock("../../../queues/webhook.queue", () => ({
 
 describe("HealthService", () => {
   let service: HealthService;
+  let mockHealthRepo: jest.Mocked<HealthRepository>;
 
   beforeEach(() => {
     jest.clearAllMocks();
-    service = new HealthService();
+    mockHealthRepo = new HealthRepository() as jest.Mocked<HealthRepository>;
+    service = new HealthService(mockHealthRepo);
   });
 
   describe("getLiveness", () => {
@@ -45,7 +43,7 @@ describe("HealthService", () => {
 
   describe("getReadiness", () => {
     it("returns ready status when database is up", async () => {
-      (prisma.$queryRaw as jest.Mock).mockResolvedValue([{ 1: 1 }]);
+      mockHealthRepo.pingDatabase.mockResolvedValue();
 
       const result = await service.getReadiness();
       expect(result.status).toBe("ready");
@@ -54,7 +52,7 @@ describe("HealthService", () => {
     });
 
     it("returns unhealthy status when database query fails", async () => {
-      (prisma.$queryRaw as jest.Mock).mockRejectedValue(
+      mockHealthRepo.pingDatabase.mockRejectedValue(
         new Error("Connection timeout"),
       );
 

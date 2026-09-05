@@ -60,17 +60,22 @@ export class JsonExportService extends BaseExportService {
     fs.writeFileSync(filePath, JSON.stringify(wrapper, null, 2), "utf-8");
 
     // 1. Xuất pages.raw.json (Lọc bỏ các trường dữ liệu sạch & chất lượng)
-    const rawPages = pages.map(
-      ({
-        cleanText: _cleanText,
-        mainContent: _mainContent,
-        wordCount: _wordCount,
-        contentHash: _contentHash,
-        dataQualityScore: _dataQualityScore,
-        warnings: _warnings,
-        ...rawFields
-      }) => rawFields,
-    );
+    const rawPages = pages.map((page) => ({
+      id: page.id,
+      jobId: page.jobId,
+      url: page.url,
+      normalizedUrl: page.normalizedUrl,
+      status: page.status,
+      statusCode: page.statusCode,
+      errorMessage: page.errorMessage,
+      title: page.title,
+      description: page.description,
+      rawMarkdown: page.rawMarkdown,
+      links: page.links,
+      images: page.images,
+      tables: page.tables,
+      crawledAt: page.crawledAt,
+    }));
     const { filePath: rawFilePath } = buildJobDataRawFilePath(
       job.id,
       JOB_EXPORT_FILES.PAGES_RAW_JSON,
@@ -79,9 +84,27 @@ export class JsonExportService extends BaseExportService {
     fs.writeFileSync(rawFilePath, JSON.stringify(rawWrapper, null, 2), "utf-8");
 
     // 2. Xuất pages.clean.json (Lọc bỏ trường rawMarkdown)
-    const cleanPages = pages.map(
-      ({ rawMarkdown: _rawMarkdown, ...cleanFields }) => cleanFields,
-    );
+    const cleanPages = pages.map((page) => ({
+      id: page.id,
+      jobId: page.jobId,
+      url: page.url,
+      normalizedUrl: page.normalizedUrl,
+      status: page.status,
+      statusCode: page.statusCode,
+      errorMessage: page.errorMessage,
+      title: page.title,
+      description: page.description,
+      cleanText: page.cleanText,
+      mainContent: page.mainContent,
+      wordCount: page.wordCount,
+      contentHash: page.contentHash,
+      dataQualityScore: page.dataQualityScore,
+      warnings: page.warnings,
+      links: page.links,
+      images: page.images,
+      tables: page.tables,
+      crawledAt: page.crawledAt,
+    }));
     const { filePath: cleanFilePath } = buildJobDataCleanFilePath(
       job.id,
       JOB_EXPORT_FILES.PAGES_CLEAN_JSON,

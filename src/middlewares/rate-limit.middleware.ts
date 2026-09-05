@@ -1,5 +1,6 @@
 import rateLimit, { RateLimitRequestHandler } from "express-rate-limit";
 import { envConfig } from "../config/env.config";
+import { ERROR_CODE } from "../common/errors/error-code";
 
 /**
  * Global API rate limit per IP, configurable for each environment.
@@ -14,7 +15,7 @@ export const rateLimitMiddleware: RateLimitRequestHandler = rateLimit({
   message: {
     success: false,
     message: "Bạn đã gửi quá nhiều yêu cầu. Vui lòng thử lại sau.",
-    code: "RATE_LIMIT_EXCEEDED",
+    code: ERROR_CODE.RATE_LIMIT_EXCEEDED,
   },
 });
 
@@ -26,6 +27,6 @@ export const authRateLimiter: RateLimitRequestHandler = rateLimit({
   message: {
     success: false,
     message: "Quá nhiều yêu cầu xác thực. Vui lòng thử lại sau 1 phút.",
-    code: "RATE_LIMIT_EXCEEDED",
+    code: ERROR_CODE.RATE_LIMIT_EXCEEDED,
   },
 });

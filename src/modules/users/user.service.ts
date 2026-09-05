@@ -261,12 +261,9 @@ export class UserService {
     await this.findById(targetUserId);
 
     // 2. Fetch target roles to validate
-    const targetRoles = await Promise.all(
-      roleIds.map((id) => this.roleRepository.findById(id)),
-    );
+    const targetRoles = await this.roleRepository.findByIds(roleIds);
 
-    const missingRole = targetRoles.find((r) => !r);
-    if (missingRole || targetRoles.length !== roleIds.length) {
+    if (targetRoles.length !== roleIds.length) {
       throw new AppError(
         "One or more roles not found",
         404,

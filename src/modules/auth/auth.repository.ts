@@ -1,5 +1,6 @@
 import { prisma } from "../../database/prisma.client";
 import { ROLES } from "../../common/constants/role.constant";
+import { SYSTEM_ROLE_SLUGS } from "../../common/constants/system-role.constant";
 
 export class AuthRepository {
   findByEmail(email: string) {
@@ -14,20 +15,37 @@ export class AuthRepository {
     });
   }
 
-  createUser(data: {
+  async createUser(data: {
     email: string;
     passwordHash: string;
     fullName?: string;
     isActive?: boolean;
   }) {
-    return prisma.user.create({
-      data: {
-        email: data.email,
-        passwordHash: data.passwordHash,
-        fullName: data.fullName,
-        role: ROLES.CRAWLER_USER,
-        isActive: data.isActive ?? true,
-      },
+    return prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          email: data.email,
+          passwordHash: data.passwordHash,
+          fullName: data.fullName,
+          role: ROLES.CRAWLER_USER,
+          isActive: data.isActive ?? true,
+        },
+      });
+
+      const defaultRole = await tx.role.findUnique({
+        where: { slug: SYSTEM_ROLE_SLUGS.CRAWLER_USER },
+      });
+
+      if (defaultRole) {
+        await tx.userRoleAssignment.create({
+          data: {
+            userId: user.id,
+            roleId: defaultRole.id,
+          },
+        });
+      }
+
+      return user;
     });
   }
 

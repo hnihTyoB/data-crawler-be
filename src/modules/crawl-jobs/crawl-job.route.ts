@@ -7,10 +7,12 @@ import {
   createExportSchema,
   listCrawlJobsQuerySchema,
   getAssetsQuerySchema,
+  jobLogsQuerySchema,
+  diffQuerySchema,
 } from "./crawl-job.validation";
 import { crawlPageQuerySchema } from "../crawl-pages/crawl-page.validation";
-import { requireRole } from "../../middlewares/role.middleware";
-import { ROLES } from "../../common/constants/role.constant";
+import { requirePermission } from "../../middlewares/permission.middleware";
+import { PERMISSIONS } from "../../common/constants/permission.constant";
 
 const router = Router();
 const controller = new CrawlJobController();
@@ -18,7 +20,7 @@ const controller = new CrawlJobController();
 router.post(
   "/",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER),
+  requirePermission(PERMISSIONS.CRAWL_JOBS_CREATE),
   validate(createCrawlJobSchema),
   (req, res, next) => {
     controller.create(req, res, next);
@@ -27,70 +29,71 @@ router.post(
 router.get(
   "/",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER),
+  requirePermission(PERMISSIONS.CRAWL_JOBS_READ),
   validateQuery(listCrawlJobsQuerySchema),
   controller.findAll,
 );
 router.get(
   "/:id",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER),
+  requirePermission(PERMISSIONS.CRAWL_JOBS_READ),
   controller.findById,
 );
 router.delete(
   "/:id",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER),
+  requirePermission(PERMISSIONS.CRAWL_JOBS_DELETE),
   controller.delete,
 );
 router.post(
   "/:id/rerun",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER),
+  requirePermission(PERMISSIONS.CRAWL_JOBS_RETRY),
   controller.rerun,
 );
 router.get(
   "/:id/logs",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER),
+  requirePermission(PERMISSIONS.CRAWL_JOBS_READ),
+  validateQuery(jobLogsQuerySchema),
   controller.getLogs,
 );
 router.get(
   "/:id/events",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER),
+  requirePermission(PERMISSIONS.CRAWL_JOBS_READ),
   controller.streamEvents,
 );
 router.post(
   "/:id/cancel",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER),
+  requirePermission(PERMISSIONS.CRAWL_JOBS_CANCEL),
   controller.cancel,
 );
 router.get(
   "/:id/pages",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER),
+  requirePermission(PERMISSIONS.CRAWL_JOBS_READ),
   validateQuery(crawlPageQuerySchema),
   controller.getPages,
 );
 router.get(
   "/:id/pages/preview",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER),
+  requirePermission(PERMISSIONS.CRAWL_JOBS_READ),
   validateQuery(crawlPageQuerySchema),
   controller.getPagesPreview,
 );
 router.get(
   "/:id/exports",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER),
+  requirePermission(PERMISSIONS.EXPORTS_READ),
   controller.getExports,
 );
 router.post(
   "/:id/exports",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER),
+  requirePermission(PERMISSIONS.EXPORTS_CREATE),
   validate(createExportSchema),
   (req, res, next) => {
     controller.createExport(req, res, next);
@@ -99,26 +102,28 @@ router.post(
 router.get(
   "/:id/download",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER),
+  requirePermission(PERMISSIONS.EXPORTS_DOWNLOAD),
   controller.download,
 );
 router.get(
   "/:id/assets",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER),
+  requirePermission(PERMISSIONS.CRAWL_JOBS_READ),
   validateQuery(getAssetsQuerySchema),
   controller.getAssets,
 );
 router.get(
   "/:id/diff",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER),
+  requirePermission(PERMISSIONS.CRAWL_JOBS_READ),
+  validateQuery(diffQuerySchema),
   controller.getDiff,
 );
 router.get(
   "/:id/diff/download",
   apiKeyOrAuthMiddleware,
-  requireRole(ROLES.ADMIN, ROLES.CRAWLER_USER, ROLES.VIEWER),
+  requirePermission(PERMISSIONS.CRAWL_JOBS_READ),
+  validateQuery(diffQuerySchema),
   controller.downloadDiff,
 );
 export default router;

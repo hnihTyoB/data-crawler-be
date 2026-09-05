@@ -11,6 +11,7 @@ import {
   buildCrawlResultZipName,
 } from "../../common/constants/storage-path.constant";
 import { EXPORT_MIME_TYPES } from "../../common/constants/export-type.constant";
+import { CRAWL_PAGE_STATUS } from "../../common/constants/crawl-page-status.constant";
 import {
   buildJobLogsFilePath,
   buildJobRootFilePath,
@@ -101,9 +102,13 @@ export class ZipExportService extends BaseExportService {
 
   private writeSummary(job: CrawlJob & { pages: CrawlPage[] }): void {
     const { filePath } = buildJobRootFilePath(job.id, JOB_EXPORT_FILES.SUMMARY);
-    const successPages = job.pages.filter((p) => p.status === "SUCCESS").length;
+    const successPages = job.pages.filter(
+      (p) => p.status === CRAWL_PAGE_STATUS.SUCCESS,
+    ).length;
     const failedPages = job.pages.filter(
-      (p) => p.status !== "SUCCESS" && p.status !== "SKIPPED",
+      (p) =>
+        p.status !== CRAWL_PAGE_STATUS.SUCCESS &&
+        p.status !== CRAWL_PAGE_STATUS.SKIPPED,
     ).length;
 
     const summary = {
@@ -125,9 +130,9 @@ export class ZipExportService extends BaseExportService {
     const errors = job.pages
       .filter(
         (p) =>
-          p.status !== "SUCCESS" &&
-          p.status !== "PENDING" &&
-          p.status !== "SKIPPED",
+          p.status !== CRAWL_PAGE_STATUS.SUCCESS &&
+          p.status !== CRAWL_PAGE_STATUS.PENDING &&
+          p.status !== CRAWL_PAGE_STATUS.SKIPPED,
       )
       .map((p) => ({
         url: p.url,
@@ -145,12 +150,14 @@ export class ZipExportService extends BaseExportService {
       JOB_EXPORT_FILES.DATA_QUALITY_JSON,
     );
 
-    const successPages = job.pages.filter((p) => p.status === "SUCCESS");
+    const successPages = job.pages.filter(
+      (p) => p.status === CRAWL_PAGE_STATUS.SUCCESS,
+    );
     const errorPages = job.pages.filter(
       (p) =>
-        p.status !== "SUCCESS" &&
-        p.status !== "SKIPPED" &&
-        p.status !== "PENDING",
+        p.status !== CRAWL_PAGE_STATUS.SUCCESS &&
+        p.status !== CRAWL_PAGE_STATUS.SKIPPED &&
+        p.status !== CRAWL_PAGE_STATUS.PENDING,
     );
 
     const seenHashes = new Set<string>();

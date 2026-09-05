@@ -19,19 +19,12 @@ const app = express();
 
 app.set("trust proxy", parseTrustProxy(envConfig.trustProxy));
 
-app.use(
-  helmet({
-    contentSecurityPolicy: false, // Vô hiệu hóa CSP để Swagger UI load stylesheet bình thường
-  }),
-);
+app.use(helmet());
 app.use(
   cors({
     origin: (origin, callback) => {
       if (!origin) return callback(null, true);
-      if (
-        envConfig.cors.allowedOrigins.includes(origin) ||
-        envConfig.cors.allowedOrigins.includes("*")
-      ) {
+      if (envConfig.cors.allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
       return callback(new Error(`Origin ${origin} not allowed by CORS`));
@@ -46,7 +39,12 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use("/health", healthRoute);
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+app.use(
+  "/api-docs",
+  helmet({ contentSecurityPolicy: false }),
+  swaggerUi.serve,
+  swaggerUi.setup(swaggerDocument),
+);
 app.use("/api/v1", rateLimitMiddleware, routes);
 
 app.use(notFoundMiddleware);
