@@ -607,8 +607,20 @@ export class AuthService {
     const { email } = data;
     const user = await this.repository.findByEmail(email);
 
-    if (!user || !user.isActive) {
-      return { success: true };
+    if (!user) {
+      throw new AppError(
+        "Email không tồn tại trong hệ thống.",
+        404,
+        ERROR_CODE.NOT_FOUND,
+      );
+    }
+
+    if (!user.isActive) {
+      throw new AppError(
+        "Tài khoản chưa được kích hoạt hoặc đã bị khóa.",
+        403,
+        ERROR_CODE.USER_INACTIVE,
+      );
     }
 
     const secret = `${jwtConfig.accessSecret}-${user.passwordHash}`;

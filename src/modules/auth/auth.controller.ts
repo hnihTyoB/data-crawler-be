@@ -330,8 +330,7 @@ export class AuthController {
 
       res.json({
         success: true,
-        message:
-          "If the email exists in our system, a password reset link has been sent.",
+        message: "Đường dẫn đặt lại mật khẩu đã được gửi đến email của bạn.",
       });
     } catch (error) {
       next(error);

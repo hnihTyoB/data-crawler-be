@@ -209,7 +209,7 @@ describe("AuthService registration mail failures", () => {
       );
     });
 
-    it("returns { success: true } and does not call mail service if user is not found", async () => {
+    it("throws 404 NOT_FOUND and does not call mail service if user is not found", async () => {
       const service = new AuthService();
       const repository = {
         findByEmail: jest.fn().mockResolvedValue(null),
@@ -224,15 +224,15 @@ describe("AuthService registration mail failures", () => {
       mutableService.repository = repository;
       mutableService.mailService = mailService;
 
-      const result = await service.forgotPassword({
-        email: "nonexistent@example.com",
-      });
-
-      expect(result).toEqual({ success: true });
+      await expect(
+        service.forgotPassword({
+          email: "nonexistent@example.com",
+        })
+      ).rejects.toThrow("Email không tồn tại trong hệ thống.");
       expect(mailService.sendPasswordResetEmail).not.toHaveBeenCalled();
     });
 
-    it("returns { success: true } and does not call mail service if user is inactive", async () => {
+    it("throws 403 USER_INACTIVE and does not call mail service if user is inactive", async () => {
       const service = new AuthService();
       const repository = {
         findByEmail: jest
@@ -249,9 +249,9 @@ describe("AuthService registration mail failures", () => {
       mutableService.repository = repository;
       mutableService.mailService = mailService;
 
-      const result = await service.forgotPassword({ email: activeUser.email });
-
-      expect(result).toEqual({ success: true });
+      await expect(
+        service.forgotPassword({ email: activeUser.email })
+      ).rejects.toThrow("Tài khoản chưa được kích hoạt hoặc đã bị khóa.");
       expect(mailService.sendPasswordResetEmail).not.toHaveBeenCalled();
     });
   });
