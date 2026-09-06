@@ -3,48 +3,56 @@ import { envConfig } from "./config/env.config";
 import Redis from "ioredis";
 
 async function bootstrap() {
-  if (!envConfig.redis.enabled) {
-    console.error(
-      "[Server] REDIS_ENABLED is not set to true. Redis is required.",
-    );
-    console.error(
-      "[Server] Start Docker and set REDIS_ENABLED=true in .env, then try again.",
-    );
-    process.exit(1);
+  let isRedisAvailable = false;
+  if (envConfig.redis.enabled) {
+    const redis = new Redis({
+      host: envConfig.redis.host,
+      port: envConfig.redis.port,
+      maxRetriesPerRequest: 0,
+      lazyConnect: true,
+      connectTimeout: 1500,
+      retryStrategy: () => null,
+      enableOfflineQueue: false,
+    });
+
+    redis.on("error", () => {});
+
+    try {
+      await Promise.race([
+        redis.connect(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Redis connection timeout")), 1500)),
+      ]);
+      await Promise.race([
+        redis.ping(),
+        new Promise((_, reject) => setTimeout(() => reject(new Error("Redis ping timeout")), 1500)),
+      ]);
+      await redis.quit();
+      isRedisAvailable = true;
+      console.log("[Server] Redis connection confirmed.");
+    } catch {
+      try {
+        redis.disconnect();
+      } catch {}
+      console.warn("[Server] Redis is offline. Running in degraded mode without queue workers (Database & APIs active).");
+    }
+  } else {
+    console.warn("[Server] REDIS_ENABLED is false. Running in degraded mode without queue workers (Database & APIs active).");
   }
 
-  const redis = new Redis({
-    host: envConfig.redis.host,
-    port: envConfig.redis.port,
-    maxRetriesPerRequest: 0,
-    lazyConnect: true,
-  });
-
-  redis.on("error", () => {});
-
-  try {
-    await redis.connect();
-    await redis.ping();
-    await redis.quit();
-    console.log("[Server] Redis connection confirmed.");
-  } catch {
-    console.error("[Server] Cannot connect to Redis. Is Docker running?");
-    console.error("[Server] Run: docker compose up -d");
-    process.exit(1);
-  }
-
-  // Only import app AFTER Redis is confirmed — this delays crawlQueue instantiation
+  // Import app so Database endpoints and Express routes are fully available
   const { default: app } = await import("./app");
   const { initLocalStorage } = await import("./common/helpers/file.helper");
 
   initLocalStorage();
 
-  await import("./queues/webhook.worker");
-  console.log("[Server] Webhook worker initialized in background.");
+  if (isRedisAvailable) {
+    await import("./queues/webhook.worker");
+    console.log("[Server] Webhook worker initialized in background.");
 
-  const { startScheduleWorker } = await import("./queues/schedule.worker");
-  startScheduleWorker();
-  console.log("[Server] Schedule worker initialized in background.");
+    const { startScheduleWorker } = await import("./queues/schedule.worker");
+    startScheduleWorker();
+    console.log("[Server] Schedule worker initialized in background.");
+  }
 
   app.listen(envConfig.port, () => {
     console.log(

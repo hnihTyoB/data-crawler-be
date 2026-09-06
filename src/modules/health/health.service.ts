@@ -51,12 +51,22 @@ export class HealthService {
     if (crawlQueue) {
       const redisStart = Date.now();
       try {
-        const client = await crawlQueue.client;
+        const client = await Promise.race([
+          crawlQueue.client,
+          new Promise<never>((_, reject) =>
+            setTimeout(() => reject(new Error("Redis connection timeout")), 1500)
+          ),
+        ]);
         if (
           "ping" in client &&
           typeof (client as { ping: () => Promise<string> }).ping === "function"
         ) {
-          await (client as { ping: () => Promise<string> }).ping();
+          await Promise.race([
+            (client as { ping: () => Promise<string> }).ping(),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error("Redis ping timeout")), 1500)
+            ),
+          ]);
         }
         checks.redis = {
           status: "up",
@@ -88,11 +98,18 @@ export class HealthService {
 
     if (crawlQueue) {
       try {
-        const [waiting, active, completed, failed] = await Promise.all([
+        const metricsPromise = Promise.all([
           crawlQueue.getWaitingCount(),
           crawlQueue.getActiveCount(),
           crawlQueue.getCompletedCount(),
           crawlQueue.getFailedCount(),
+        ]);
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Queue metrics timeout")), 1500)
+        );
+        const [waiting, active, completed, failed] = await Promise.race([
+          metricsPromise,
+          timeoutPromise,
         ]);
         crawlQueueMetrics = { waiting, active, completed, failed };
       } catch {
@@ -102,11 +119,18 @@ export class HealthService {
 
     if (webhookQueue) {
       try {
-        const [waiting, active, completed, failed] = await Promise.all([
+        const metricsPromise = Promise.all([
           webhookQueue.getWaitingCount(),
           webhookQueue.getActiveCount(),
           webhookQueue.getCompletedCount(),
           webhookQueue.getFailedCount(),
+        ]);
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error("Webhook queue metrics timeout")), 1500)
+        );
+        const [waiting, active, completed, failed] = await Promise.race([
+          metricsPromise,
+          timeoutPromise,
         ]);
         webhookQueueMetrics = { waiting, active, completed, failed };
       } catch {
