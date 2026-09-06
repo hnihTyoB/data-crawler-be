@@ -1,6 +1,6 @@
 export const envConfig = {
   nodeEnv: process.env.NODE_ENV || "development",
-  port: parseInt(process.env.PORT || "3000", 10),
+  port: parseInt(process.env.PORT || "9898", 10),
   trustProxy: process.env.TRUST_PROXY || "false",
   database: {
     host: process.env.DB_HOST || "localhost",
