@@ -49,9 +49,31 @@ export class CrawlJobRepository {
       where.mode = query.mode;
     }
     if (query.search) {
+      const trimmedSearch = query.search.trim();
+      let matchingIds: string[] = [];
+
+      try {
+        const searchPattern = `%${trimmedSearch}%`;
+        const matched = await prisma.$queryRaw<{ id: string }[]>`
+          SELECT id FROM "crawl_jobs" 
+          WHERE id::text ILIKE ${searchPattern}
+          LIMIT 100
+        `;
+        matchingIds = matched.map((r) => r.id);
+      } catch {
+        const isFullUuid =
+          /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+            trimmedSearch,
+          );
+        if (isFullUuid) {
+          matchingIds = [trimmedSearch];
+        }
+      }
+
       where.OR = [
-        { startUrl: { contains: query.search, mode: "insensitive" } },
-        { domain: { contains: query.search, mode: "insensitive" } },
+        { startUrl: { contains: trimmedSearch, mode: "insensitive" } },
+        { domain: { contains: trimmedSearch, mode: "insensitive" } },
+        ...(matchingIds.length > 0 ? [{ id: { in: matchingIds } }] : []),
       ];
     }
 
@@ -113,13 +135,19 @@ export class CrawlJobRepository {
       prisma.crawlJob.count({ where }),
     ]);
 
+    const totalPages = Math.max(1, Math.ceil(total / limit));
     return {
       items,
+      total,
+      page,
+      limit,
+      pageSize: limit,
+      totalPages,
       meta: {
         total,
         page,
         limit,
-        totalPages: Math.ceil(total / limit),
+        totalPages,
       },
     };
   }
