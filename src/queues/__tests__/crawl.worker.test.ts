@@ -488,3 +488,95 @@ describe("processCrawlJob — URL_LIST mode", () => {
     expect(mockPageRepo.upsert).toHaveBeenCalledTimes(1);
   });
 });
+
+// ── Real-time persistence & Cancel preservation ────────────────────────────
+
+describe("processCrawlJob — Real-time persistence & Cancel preservation", () => {
+  it("persists pages incrementally during live crawl onProgress calls", async () => {
+    mockJobRepo.findById = jest.fn().mockResolvedValue(makeJob({ mode: "CRAWL" }));
+    mockFirecrawl.crawlSite = jest
+      .fn()
+      .mockImplementation(async (_url, _maxPages, _maxDepth, onProgress) => {
+        // First progress event with 1 page
+        await onProgress?.(1, 2, [
+          {
+            url: "https://example.com/p1",
+            success: true,
+            markdown: "# P1",
+            metadata: { statusCode: 200 },
+          },
+        ]);
+        return {
+          success: true,
+          status: "completed",
+          pages: [
+            {
+              url: "https://example.com/p1",
+              success: true,
+              markdown: "# P1",
+              metadata: { statusCode: 200 },
+            },
+            {
+              url: "https://example.com/p2",
+              success: true,
+              markdown: "# P2",
+              metadata: { statusCode: 200 },
+            },
+          ],
+          failedUrls: [],
+          robotsBlockedUrls: [],
+          total: 2,
+        };
+      });
+
+    await processCrawlJob(makeBullJob("job-1"));
+
+    // Upsert called twice for 2 pages
+    expect(mockPageRepo.upsert).toHaveBeenCalledTimes(2);
+    expect(mockJobRepo.updateStatus).toHaveBeenCalledWith(
+      "job-1",
+      "COMPLETED",
+      expect.objectContaining({
+        successPages: 2,
+        totalPages: 2,
+      }),
+    );
+  });
+
+  it("preserves scraped pages and maintains CANCELED status when cancelled during crawl", async () => {
+    mockJobRepo.findById = jest.fn().mockResolvedValue(makeJob({ mode: "CRAWL" }));
+    mockFirecrawl.crawlSite = jest
+      .fn()
+      .mockImplementation(async (_url, _maxPages, _maxDepth, onProgress) => {
+        await onProgress?.(1, 10, [
+          {
+            url: "https://example.com/p1",
+            success: true,
+            markdown: "# P1",
+            metadata: { statusCode: 200 },
+          },
+        ]);
+        return {
+          success: false,
+          status: "cancelled",
+          error: "Cancelled locally",
+          pages: [],
+          total: 10,
+        };
+      });
+
+    await processCrawlJob(makeBullJob("job-1"));
+
+    // Page p1 was persisted during onProgress
+    expect(mockPageRepo.upsert).toHaveBeenCalledTimes(1);
+    // Preserved CANCELED status instead of overwriting to FAILED
+    expect(mockJobRepo.updateStatus).toHaveBeenCalledWith(
+      "job-1",
+      "CANCELED",
+      expect.objectContaining({
+        successPages: 1,
+      }),
+    );
+  });
+});
+

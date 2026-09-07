@@ -165,7 +165,7 @@ export class CrawlJobService {
       );
     }
 
-    await crawlQueue.add("crawl-job", { jobId: job.id });
+    await crawlQueue.add("crawl-job", { jobId: job.id }, { jobId: job.id });
 
     return job;
   }
@@ -215,6 +215,25 @@ export class CrawlJobService {
       jobId,
       JOB_STATUS.CANCELED,
     );
+
+    // Remove from BullMQ queue if still waiting/delayed
+    if (crawlQueue) {
+      try {
+        const bullJob = await crawlQueue.getJob(jobId);
+        if (bullJob) {
+          await bullJob.remove();
+        } else {
+          const waitingJobs = await crawlQueue.getJobs(["waiting", "delayed", "prioritized"]);
+          for (const wj of waitingJobs) {
+            if (wj.data?.jobId === jobId) {
+              await wj.remove();
+            }
+          }
+        }
+      } catch {
+        // Ignored
+      }
+    }
 
     // For CRAWL mode: also cancel at the Firecrawl provider level to stop
     // quota consumption. firecrawlJobId is saved by the worker as soon as
@@ -288,20 +307,68 @@ export class CrawlJobService {
       await storage.deleteFile(job.diffReportPath).catch(() => {});
     }
 
+    if (crawlQueue) {
+      try {
+        const bullJob = await crawlQueue.getJob(jobId);
+        if (bullJob) {
+          await bullJob.remove();
+        } else {
+          const waitingJobs = await crawlQueue.getJobs(["waiting", "delayed", "prioritized"]);
+          for (const wj of waitingJobs) {
+            if (wj.data?.jobId === jobId) {
+              await wj.remove();
+            }
+          }
+        }
+      } catch {
+        // Ignored
+      }
+    }
+
     await this.repository.delete(jobId);
     return { success: true, message: "Crawl job deleted successfully" };
   }
 
+  private static readonly rerunLocks = new Set<string>();
+
   async rerun(userId: string, role: string, jobId: string) {
     const existing = await this.findById(userId, role, jobId);
 
-    return this.create(userId, {
-      startUrl: existing.startUrl,
-      mode: existing.mode,
-      maxPages: existing.maxPages,
-      maxDepth: existing.maxDepth,
-      urls: existing.urls,
-    });
+    const lockKey = `${userId}:${jobId}`;
+    if (CrawlJobService.rerunLocks.has(lockKey)) {
+      if (this.repository.findRecentActiveJob) {
+        const recent = await this.repository.findRecentActiveJob(
+          userId,
+          existing.startUrl,
+          10000,
+        );
+        if (recent) return recent;
+      }
+    }
+
+    if (this.repository.findRecentActiveJob) {
+      const recent = await this.repository.findRecentActiveJob(
+        userId,
+        existing.startUrl,
+        5000,
+      );
+      if (recent) {
+        return recent;
+      }
+    }
+
+    CrawlJobService.rerunLocks.add(lockKey);
+    try {
+      return await this.create(userId, {
+        startUrl: existing.startUrl,
+        mode: existing.mode,
+        maxPages: existing.maxPages,
+        maxDepth: existing.maxDepth,
+        urls: existing.urls,
+      });
+    } finally {
+      setTimeout(() => CrawlJobService.rerunLocks.delete(lockKey), 3000);
+    }
   }
 
   async getLogs(

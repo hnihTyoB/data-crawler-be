@@ -14,7 +14,7 @@ describe("CrawlJobController - SSE Events", () => {
       findById: jest.fn(),
     } as any;
 
-    (CrawlJobService as jest.Mock).mockReturnValue(mockService);
+    (CrawlJobService as unknown as jest.Mock).mockReturnValue(mockService);
     controller = new CrawlJobController();
   });
 

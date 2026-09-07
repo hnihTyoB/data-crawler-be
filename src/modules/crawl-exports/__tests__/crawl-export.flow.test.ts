@@ -94,7 +94,7 @@ describe("CrawlExportService", () => {
       expect(result).toEqual(exportRecord);
     });
 
-    it("throws 400 when job is not COMPLETED", async () => {
+    it("throws 400 when job is still RUNNING", async () => {
       (prisma.crawlJob.findUnique as jest.Mock).mockResolvedValue(
         makeJob({ status: "RUNNING" }),
       );
@@ -102,6 +102,58 @@ describe("CrawlExportService", () => {
       await expect(
         service.createExport("user-1", "CRAWLER_USER", "job-1", "JSON"),
       ).rejects.toMatchObject({ statusCode: 400 });
+    });
+
+    it("allows exporting a CANCELED job when successPages > 0", async () => {
+      (prisma.crawlJob.findUnique as jest.Mock).mockResolvedValue(
+        makeJob({ status: "CANCELED", successPages: 5 }),
+      );
+      const exportRecord = makeExport();
+      mockExportService.generate.mockResolvedValue(exportRecord as any);
+
+      const result = await service.createExport(
+        "user-1",
+        "CRAWLER_USER",
+        "job-1",
+        "JSON",
+      );
+
+      expect(mockExportService.generate).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "job-1" }),
+        "JSON",
+      );
+      expect(result).toEqual(exportRecord);
+    });
+
+    it("throws 400 when CANCELED job has 0 successPages", async () => {
+      (prisma.crawlJob.findUnique as jest.Mock).mockResolvedValue(
+        makeJob({ status: "CANCELED", successPages: 0 }),
+      );
+
+      await expect(
+        service.createExport("user-1", "CRAWLER_USER", "job-1", "JSON"),
+      ).rejects.toMatchObject({ statusCode: 400 });
+    });
+
+    it("allows exporting a FAILED job when successPages > 0", async () => {
+      (prisma.crawlJob.findUnique as jest.Mock).mockResolvedValue(
+        makeJob({ status: "FAILED", successPages: 10 }),
+      );
+      const exportRecord = makeExport();
+      mockExportService.generate.mockResolvedValue(exportRecord as any);
+
+      const result = await service.createExport(
+        "user-1",
+        "CRAWLER_USER",
+        "job-1",
+        "CSV",
+      );
+
+      expect(mockExportService.generate).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "job-1" }),
+        "CSV",
+      );
+      expect(result).toEqual(exportRecord);
     });
 
     it("throws 404 when job does not exist", async () => {

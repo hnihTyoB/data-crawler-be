@@ -111,7 +111,11 @@ export class FirecrawlService {
     url: string,
     maxPages: number,
     maxDepth: number,
-    onProgress?: (completed: number, total: number) => void | Promise<void>,
+    onProgress?: (
+      completed: number,
+      total: number,
+      currentPages?: FirecrawlPageResult[],
+    ) => void | Promise<void>,
     shouldCancel?: () => Promise<boolean>,
   ): Promise<CrawlStatusResult> {
     const client = getFirecrawlClient();
@@ -171,7 +175,16 @@ export class FirecrawlService {
         };
       }
 
-      await onProgress?.(status.completed, status.total);
+      let currentPages: FirecrawlPageResult[] | undefined;
+      if (status.data && status.data.length > 0) {
+        currentPages = status.data.map((doc) => normalizePage(doc, url));
+      }
+
+      if (currentPages) {
+        await onProgress?.(status.completed, status.total, currentPages);
+      } else {
+        await onProgress?.(status.completed, status.total);
+      }
 
       if (
         status.status === "completed" ||
@@ -292,7 +305,11 @@ export class FirecrawlService {
   async batchScrapePages(
     urls: string[],
     maxPages: number,
-    onProgress?: (completed: number, total: number) => void | Promise<void>,
+    onProgress?: (
+      completed: number,
+      total: number,
+      currentPages?: FirecrawlPageResult[],
+    ) => void | Promise<void>,
     shouldCancel?: () => Promise<boolean>,
   ): Promise<CrawlStatusResult> {
     const client = getFirecrawlClient();
@@ -361,7 +378,18 @@ export class FirecrawlService {
         };
       }
 
-      await onProgress?.(status.completed, status.total);
+      let currentPages: FirecrawlPageResult[] | undefined;
+      if (status.data && status.data.length > 0) {
+        currentPages = status.data.map((doc) =>
+          normalizePage(doc as FirecrawlDocument, urls[0]),
+        );
+      }
+
+      if (currentPages) {
+        await onProgress?.(status.completed, status.total, currentPages);
+      } else {
+        await onProgress?.(status.completed, status.total);
+      }
 
       if (
         status.status === "completed" ||
