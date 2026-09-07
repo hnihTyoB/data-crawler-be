@@ -141,6 +141,9 @@ model CrawlJob {
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
+  deletedAt      DateTime? @map("deleted_at")
+  deletedBy      String?   @map("deleted_by") @db.Uuid
+
   user         User           @relation(fields: [userId], references: [id])
   schedule     CrawlSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
   pages        CrawlPage[]
@@ -154,6 +157,8 @@ model CrawlJob {
   @@index([userId, status])
   @@index([userId, createdAt])
   @@index([scheduleId])
+  @@index([deletedAt])
+  @@index([userId, deletedAt])
   @@map("crawl_jobs")
 }
 

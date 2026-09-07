@@ -38,7 +38,7 @@ export class CrawlJobRepository {
   }
 
   private async find(query: CrawlJobQueryDto, userId?: string) {
-    const where: Prisma.CrawlJobWhereInput = {};
+    const where: Prisma.CrawlJobWhereInput = { deletedAt: null };
     if (userId) {
       where.userId = userId;
     }
@@ -152,17 +152,21 @@ export class CrawlJobRepository {
     };
   }
 
-  findById(id: string) {
-    return prisma.crawlJob.findUnique({
+  async findById(id: string) {
+    const job = await prisma.crawlJob.findUnique({
       where: { id },
       include: {
         exports: true,
       },
     });
+    if (!job || job.deletedAt) {
+      return null;
+    }
+    return job;
   }
 
-  findByIdWithPages(id: string) {
-    return prisma.crawlJob.findUnique({
+  async findByIdWithPages(id: string) {
+    const job = await prisma.crawlJob.findUnique({
       where: { id },
       include: {
         pages: {
@@ -180,6 +184,10 @@ export class CrawlJobRepository {
         },
       },
     });
+    if (!job || job.deletedAt) {
+      return null;
+    }
+    return job;
   }
 
   async updateStatus(
@@ -243,6 +251,7 @@ export class CrawlJobRepository {
         scheduleId,
         id: { not: currentJobId },
         status: JOB_STATUS.COMPLETED,
+        deletedAt: null,
       },
       orderBy: { createdAt: "desc" },
       include: {
@@ -274,6 +283,7 @@ export class CrawlJobRepository {
         userId,
         id: { not: currentJobId },
         status: JOB_STATUS.COMPLETED,
+        deletedAt: null,
         OR: [...(domain ? [{ domain }] : []), { startUrl }],
       },
       orderBy: { createdAt: "desc" },
@@ -313,12 +323,12 @@ export class CrawlJobRepository {
     const skip = (Math.max(1, page) - 1) * limit;
     return Promise.all([
       prisma.crawlJob.findMany({
-        where: { scheduleId },
+        where: { scheduleId, deletedAt: null },
         orderBy: { createdAt: "desc" },
         skip,
         take: limit,
       }),
-      prisma.crawlJob.count({ where: { scheduleId } }),
+      prisma.crawlJob.count({ where: { scheduleId, deletedAt: null } }),
     ]);
   }
 
@@ -340,6 +350,7 @@ export class CrawlJobRepository {
       where: {
         userId,
         status: { in: activeStatuses },
+        deletedAt: null,
         ...(sinceDate ? { createdAt: { gte: sinceDate } } : {}),
       },
     });
@@ -353,13 +364,19 @@ export class CrawlJobRepository {
     return aggregate._sum.totalPages ?? 0;
   }
 
-  async delete(id: string) {
+  async delete(id: string, deletedBy?: string) {
     return prisma.$transaction(async (tx) => {
       await tx.crawlAsset.deleteMany({ where: { crawlJobId: id } });
       await tx.crawlJobLog.deleteMany({ where: { jobId: id } });
       await tx.crawlExport.deleteMany({ where: { jobId: id } });
       await tx.crawlPage.deleteMany({ where: { jobId: id } });
-      return tx.crawlJob.delete({ where: { id } });
+      return tx.crawlJob.update({
+        where: { id },
+        data: {
+          deletedAt: new Date(),
+          ...(deletedBy ? { deletedBy } : {}),
+        },
+      });
     });
   }
 
@@ -399,6 +416,7 @@ export class CrawlJobRepository {
         status: {
           in: [JOB_STATUS.PENDING, JOB_STATUS.QUEUED, JOB_STATUS.RUNNING],
         },
+        deletedAt: null,
         createdAt: { gte: since },
       },
       orderBy: { createdAt: "desc" },

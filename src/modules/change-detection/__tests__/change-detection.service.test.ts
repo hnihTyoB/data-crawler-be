@@ -52,6 +52,8 @@ describe("ChangeDetectionService", () => {
     finishedAt: new Date(),
     createdAt: new Date(),
     updatedAt: new Date(),
+    deletedAt: null,
+    deletedBy: null,
   };
 
   const makePage = (
