@@ -17,6 +17,7 @@ export const createUserSchema = z.object({
 });
 
 export const updateUserSchema = z.object({
+  email: z.string().email("Email không đúng định dạng.").optional(),
   fullName: z.string().optional(),
   avatarUrl: z
     .string()

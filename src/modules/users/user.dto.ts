@@ -12,6 +12,7 @@ export interface CreateUserDto {
 }
 
 export interface UpdateUserDto {
+  email?: string;
   fullName?: string;
   avatarUrl?: string | null;
   isActive?: boolean;
@@ -19,6 +20,15 @@ export interface UpdateUserDto {
   maxPagesLimit?: number;
   maxJobsPerDayLimit?: number;
   maxConcurrentJobsLimit?: number;
+}
+
+export interface UserAssignedRoleSummaryDto {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  isSystem: boolean;
+  isActive: boolean;
 }
 
 export interface UserResponseDto {
@@ -33,6 +43,7 @@ export interface UserResponseDto {
   maxConcurrentJobsLimit: number;
   createdAt: Date;
   updatedAt: Date;
+  roles?: UserAssignedRoleSummaryDto[];
 }
 
 export interface UserQueryDto {

@@ -31,6 +31,7 @@ import {
   getZonedDateParts,
   createUtcDateFromZonedParts,
 } from "../../common/helpers/schedule-calculator.helper";
+import { PermissionService } from "../permissions/permission.service";
 
 interface AuthJwtPayload {
   id: string;
@@ -44,6 +45,7 @@ export class AuthService {
   private readonly mailService = new MailService();
   private readonly storageService = StorageFactory.getStorageService();
   private readonly crawlJobRepository = new CrawlJobRepository();
+  private readonly permissionService = new PermissionService();
 
   private async deliverVerificationEmail(
     user: { id: string; email: string },
@@ -146,6 +148,9 @@ export class AuthService {
       metadata?.ipAddress,
     );
 
+    const roles = await this.permissionService.getUserRoles(user.id);
+    const permissions = await this.permissionService.getUserPermissions(user.id);
+
     return {
       accessToken,
       refreshToken,
@@ -155,6 +160,8 @@ export class AuthService {
         fullName: user.fullName,
         avatarUrl: user.avatarUrl,
         role: user.role,
+        roles,
+        permissions,
       },
     };
   }
@@ -166,12 +173,17 @@ export class AuthService {
       throw new AppError("User not found", 404, ERROR_CODE.NOT_FOUND);
     }
 
+    const roles = await this.permissionService.getUserRoles(user.id);
+    const permissions = await this.permissionService.getUserPermissions(user.id);
+
     return {
       id: user.id,
       email: user.email,
       fullName: user.fullName,
       avatarUrl: user.avatarUrl,
       role: user.role,
+      roles,
+      permissions,
       isActive: user.isActive,
       createdAt: user.createdAt,
     };

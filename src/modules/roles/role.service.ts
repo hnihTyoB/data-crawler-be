@@ -200,6 +200,15 @@ export class RoleService {
       );
     }
 
+    // Protect roles that have assigned users from deletion
+    if (existing._count && existing._count.userRoles > 0) {
+      throw new AppError(
+        "Cannot delete role that has assigned users. Please reassign or remove all users from this role first.",
+        400,
+        ERROR_CODE.ROLE_HAS_USERS,
+      );
+    }
+
     await this.repository.delete(id);
 
     if (context?.actorId) {
