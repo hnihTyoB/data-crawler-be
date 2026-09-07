@@ -389,4 +389,19 @@ export class CrawlJobRepository {
     ]);
     return { items, total, page: safePage, limit: safeLimit };
   }
+
+  findRecentActiveJob(userId: string, startUrl: string, windowMs = 5000) {
+    const since = new Date(Date.now() - windowMs);
+    return prisma.crawlJob.findFirst({
+      where: {
+        userId,
+        startUrl,
+        status: {
+          in: [JOB_STATUS.PENDING, JOB_STATUS.QUEUED, JOB_STATUS.RUNNING],
+        },
+        createdAt: { gte: since },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }
 }

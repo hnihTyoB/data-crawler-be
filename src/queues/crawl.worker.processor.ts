@@ -127,10 +127,69 @@ export async function scanAndFlagPage(
  *
  * Updates crawl job progress counters every 10 pages saved.
  */
+/**
+ * Persists a single scraped page (upsert, assets, sensitive scan, extraction template).
+ */
+export async function persistSinglePage(
+  jobId: string,
+  item: FirecrawlPageResult,
+  userId?: string,
+): Promise<{ success: boolean; saved: boolean }> {
+  try {
+    const normalized = getPageProcessor().normalize(item, jobId);
+    const page = await getPageRepository().upsert(normalized);
+    await savePageAssets(jobId, page.id, item);
+    await scanAndFlagPage(
+      page.id,
+      normalized.markdownContent,
+      normalized.title,
+      normalized.description,
+    );
+    await runExtractionIfTemplate(jobId, page.id, item.url, item, userId);
+    return { success: item.success, saved: true };
+  } catch (err: unknown) {
+    console.error(
+      `[Worker] Failed to save page ${item.url}: ${getErrorMessage(err)}`,
+    );
+    return { success: false, saved: false };
+  }
+}
+
+/**
+ * Persists incremental scraped pages, skipping already persisted URLs.
+ */
+export async function persistIncrementalPages(
+  jobId: string,
+  pages: FirecrawlPageResult[],
+  persistedUrls: Set<string>,
+  userId?: string,
+): Promise<{ newSuccess: number; newFailed: number; newErrors: number }> {
+  let newSuccess = 0;
+  let newFailed = 0;
+  let newErrors = 0;
+
+  for (const item of pages) {
+    if (persistedUrls.has(item.url)) continue;
+    persistedUrls.add(item.url);
+
+    const res = await persistSinglePage(jobId, item, userId);
+    if (!res.saved) {
+      newErrors++;
+    } else if (res.success) {
+      newSuccess++;
+    } else {
+      newFailed++;
+    }
+  }
+
+  return { newSuccess, newFailed, newErrors };
+}
+
 export async function persistBatchResults(
   jobId: string,
   result: CrawlStatusResult,
   userId?: string,
+  persistedUrls = new Set<string>(),
 ): Promise<{
   successCount: number;
   failedCount: number;
@@ -140,30 +199,21 @@ export async function persistBatchResults(
   let successCount = 0;
   let failedCount = 0;
   let saveErrors = 0;
-  const seenUrls = new Set<string>();
 
   for (const item of result.pages) {
-    if (seenUrls.has(item.url)) continue;
-    seenUrls.add(item.url);
-    try {
-      const normalized = getPageProcessor().normalize(item, jobId);
-      // upsert on (jobId, url) — idempotent on BullMQ retries
-      const page = await getPageRepository().upsert(normalized);
-      await savePageAssets(jobId, page.id, item);
-      await scanAndFlagPage(
-        page.id,
-        normalized.markdownContent,
-        normalized.title,
-        normalized.description,
-      );
-      await runExtractionIfTemplate(jobId, page.id, item.url, item, userId);
+    if (persistedUrls.has(item.url)) {
       if (item.success) successCount++;
       else failedCount++;
-    } catch (err: unknown) {
-      console.error(
-        `[Worker] Failed to save page ${item.url}: ${getErrorMessage(err)}`,
-      );
+      continue;
+    }
+    persistedUrls.add(item.url);
+    const res = await persistSinglePage(jobId, item, userId);
+    if (!res.saved) {
       saveErrors++;
+    } else if (res.success) {
+      successCount++;
+    } else {
+      failedCount++;
     }
 
     // Update DB progress counters every 10 pages — avoids N DB writes for large batches
@@ -172,14 +222,14 @@ export async function persistBatchResults(
       void getJobRepository().updateProgress(jobId, {
         successPages: successCount,
         failedPages: failedCount + saveErrors,
-        totalPages: seenUrls.size,
+        totalPages: persistedUrls.size,
       });
     }
   }
 
   for (const failed of result.failedUrls ?? []) {
-    if (seenUrls.has(failed.url)) continue;
-    seenUrls.add(failed.url);
+    if (persistedUrls.has(failed.url)) continue;
+    persistedUrls.add(failed.url);
     try {
       const normalized = getPageProcessor().normalizeFailedPage(failed, jobId);
       await getPageRepository().upsert(normalized);
@@ -193,8 +243,8 @@ export async function persistBatchResults(
   }
 
   for (const blockedUrl of result.robotsBlockedUrls ?? []) {
-    if (seenUrls.has(blockedUrl)) continue;
-    seenUrls.add(blockedUrl);
+    if (persistedUrls.has(blockedUrl)) continue;
+    persistedUrls.add(blockedUrl);
     try {
       const normalized = getPageProcessor().normalizeFailedPage(
         { url: blockedUrl, error: "Blocked by robots.txt" },
@@ -211,7 +261,7 @@ export async function persistBatchResults(
     }
   }
 
-  return { successCount, failedCount, saveErrors, totalPages: seenUrls.size };
+  return { successCount, failedCount, saveErrors, totalPages: persistedUrls.size };
 }
 
 async function logStep(
@@ -369,17 +419,41 @@ export async function processCrawlJob(job: Job): Promise<void> {
           `[Worker] Job ${jobId} sitemap parsed: ${sitemapUrls.length} URLs`,
         );
 
+        const persistedUrls = new Set<string>();
+        let currentSuccessCount = 0;
+        let currentFailedCount = 0;
         let pollCount = 0;
+
         const result = await getFirecrawlService().batchScrapePages(
           sitemapUrls,
           crawlJob.maxPages,
-          async (completed, total) => {
+          async (completed, total, currentPages) => {
+            if (currentPages && currentPages.length > 0) {
+              const { newSuccess, newFailed } = await persistIncrementalPages(
+                jobId,
+                currentPages,
+                persistedUrls,
+                crawlJob.userId,
+              );
+              currentSuccessCount += newSuccess;
+              currentFailedCount += newFailed;
+            }
+
+            const effectiveSuccess = Math.max(completed, currentSuccessCount);
+            const progressData: {
+              successPages: number;
+              totalPages: number;
+              failedPages?: number;
+            } = {
+              successPages: effectiveSuccess,
+              totalPages: total,
+            };
+            if (currentFailedCount > 0) {
+              progressData.failedPages = currentFailedCount;
+            }
             await Promise.all([
-              job.updateProgress({ completed, total }),
-              getJobRepository().updateProgress(jobId, {
-                successPages: completed,
-                totalPages: total,
-              }),
+              job.updateProgress({ completed: effectiveSuccess, total }),
+              getJobRepository().updateProgress(jobId, progressData),
             ]);
           },
           async () => {
@@ -391,12 +465,24 @@ export async function processCrawlJob(job: Job): Promise<void> {
         );
 
         if (!result.success) {
+          if (result.status === "cancelled") {
+            console.log(
+              `[Worker] Job ${jobId} sitemap scrape was cancelled. Preserved ${persistedUrls.size} crawled pages.`,
+            );
+            await getJobRepository().updateStatus(jobId, JOB_STATUS.CANCELED, {
+              finishedAt: new Date(),
+              successPages: currentSuccessCount,
+              totalPages: Math.max(result.total, persistedUrls.size),
+            });
+            return;
+          }
+
           await getJobRepository().updateStatus(jobId, JOB_STATUS.FAILED, {
             finishedAt: new Date(),
             errorMessage: mapCrawlError(result.error ?? "Batch scrape failed"),
-            totalPages: result.total,
-            successPages: 0,
-            failedPages: result.total || 1,
+            totalPages: Math.max(result.total, persistedUrls.size),
+            successPages: currentSuccessCount,
+            failedPages: Math.max(1, result.total - currentSuccessCount),
           });
           console.log(
             `[Worker] Job ${jobId} batch scrape failed: ${result.error ?? "Batch scrape failed"}`,
@@ -405,7 +491,7 @@ export async function processCrawlJob(job: Job): Promise<void> {
         }
 
         const { successCount, failedCount, saveErrors, totalPages } =
-          await persistBatchResults(jobId, result, crawlJob.userId);
+          await persistBatchResults(jobId, result, crawlJob.userId, persistedUrls);
         console.log(
           `[Worker] Job ${jobId} completed: ${successCount} success, ${failedCount} failed, ${saveErrors} save errors, ${totalPages} total`,
         );
@@ -431,17 +517,41 @@ export async function processCrawlJob(job: Job): Promise<void> {
           return;
         }
 
+        const persistedUrls = new Set<string>();
+        let currentSuccessCount = 0;
+        let currentFailedCount = 0;
         let pollCount = 0;
+
         const result = await getFirecrawlService().batchScrapePages(
           crawlJob.urls,
           crawlJob.maxPages,
-          async (completed, total) => {
+          async (completed, total, currentPages) => {
+            if (currentPages && currentPages.length > 0) {
+              const { newSuccess, newFailed } = await persistIncrementalPages(
+                jobId,
+                currentPages,
+                persistedUrls,
+                crawlJob.userId,
+              );
+              currentSuccessCount += newSuccess;
+              currentFailedCount += newFailed;
+            }
+
+            const effectiveSuccess = Math.max(completed, currentSuccessCount);
+            const progressData: {
+              successPages: number;
+              totalPages: number;
+              failedPages?: number;
+            } = {
+              successPages: effectiveSuccess,
+              totalPages: total,
+            };
+            if (currentFailedCount > 0) {
+              progressData.failedPages = currentFailedCount;
+            }
             await Promise.all([
-              job.updateProgress({ completed, total }),
-              getJobRepository().updateProgress(jobId, {
-                successPages: completed,
-                totalPages: total,
-              }),
+              job.updateProgress({ completed: effectiveSuccess, total }),
+              getJobRepository().updateProgress(jobId, progressData),
             ]);
           },
           async () => {
@@ -453,18 +563,30 @@ export async function processCrawlJob(job: Job): Promise<void> {
         );
 
         if (!result.success) {
+          if (result.status === "cancelled") {
+            console.log(
+              `[Worker] Job ${jobId} URL_LIST scrape was cancelled. Preserved ${persistedUrls.size} crawled pages.`,
+            );
+            await getJobRepository().updateStatus(jobId, JOB_STATUS.CANCELED, {
+              finishedAt: new Date(),
+              successPages: currentSuccessCount,
+              totalPages: Math.max(result.total, persistedUrls.size),
+            });
+            return;
+          }
+
           await getJobRepository().updateStatus(jobId, JOB_STATUS.FAILED, {
             finishedAt: new Date(),
             errorMessage: mapCrawlError(result.error ?? "Batch scrape failed"),
-            totalPages: result.total,
-            successPages: 0,
-            failedPages: result.total || 1,
+            totalPages: Math.max(result.total, persistedUrls.size),
+            successPages: currentSuccessCount,
+            failedPages: Math.max(1, result.total - currentSuccessCount),
           });
           return;
         }
 
         const { successCount, failedCount, saveErrors, totalPages } =
-          await persistBatchResults(jobId, result, crawlJob.userId);
+          await persistBatchResults(jobId, result, crawlJob.userId, persistedUrls);
         console.log(
           `[Worker] Job ${jobId} completed: ${successCount} success, ${failedCount} failed, ${saveErrors} save errors, ${totalPages} total`,
         );
@@ -480,6 +602,9 @@ export async function processCrawlJob(job: Job): Promise<void> {
           `[Worker] Job ${jobId} started, mode=${crawlJob.mode}, url=${crawlJob.startUrl}`,
         );
 
+        const persistedUrls = new Set<string>();
+        let currentSuccessCount = 0;
+        let currentFailedCount = 0;
         let pollCount = 0;
         let firecrawlJobIdSaved = false;
 
@@ -487,13 +612,33 @@ export async function processCrawlJob(job: Job): Promise<void> {
           crawlJob.startUrl,
           crawlJob.maxPages,
           crawlJob.maxDepth,
-          async (completed, total) => {
+          async (completed, total, currentPages) => {
+            if (currentPages && currentPages.length > 0) {
+              const { newSuccess, newFailed } = await persistIncrementalPages(
+                jobId,
+                currentPages,
+                persistedUrls,
+                crawlJob.userId,
+              );
+              currentSuccessCount += newSuccess;
+              currentFailedCount += newFailed;
+            }
+
+            const effectiveSuccess = Math.max(completed, currentSuccessCount);
+            const progressData: {
+              successPages: number;
+              totalPages: number;
+              failedPages?: number;
+            } = {
+              successPages: effectiveSuccess,
+              totalPages: total,
+            };
+            if (currentFailedCount > 0) {
+              progressData.failedPages = currentFailedCount;
+            }
             await Promise.all([
-              job.updateProgress({ completed, total }),
-              getJobRepository().updateProgress(jobId, {
-                successPages: completed,
-                totalPages: total,
-              }),
+              job.updateProgress({ completed: effectiveSuccess, total }),
+              getJobRepository().updateProgress(jobId, progressData),
             ]);
           },
           async () => {
@@ -521,12 +666,24 @@ export async function processCrawlJob(job: Job): Promise<void> {
         }
 
         if (!result.success) {
+          if (result.status === "cancelled") {
+            console.log(
+              `[Worker] Job ${jobId} crawl was cancelled. Preserved ${persistedUrls.size} crawled pages.`,
+            );
+            await getJobRepository().updateStatus(jobId, JOB_STATUS.CANCELED, {
+              finishedAt: new Date(),
+              successPages: currentSuccessCount,
+              totalPages: Math.max(result.total, persistedUrls.size),
+            });
+            return;
+          }
+
           await getJobRepository().updateStatus(jobId, JOB_STATUS.FAILED, {
             finishedAt: new Date(),
             errorMessage: mapCrawlError(result.error ?? "Crawl failed"),
-            totalPages: result.total,
-            successPages: 0,
-            failedPages: result.total || 1,
+            totalPages: Math.max(result.total, persistedUrls.size),
+            successPages: currentSuccessCount,
+            failedPages: Math.max(1, result.total - currentSuccessCount),
           });
           console.log(
             `[Worker] Job ${jobId} crawl failed: ${result.error ?? "Crawl failed"}`,
@@ -535,7 +692,7 @@ export async function processCrawlJob(job: Job): Promise<void> {
         }
 
         const { successCount, failedCount, saveErrors, totalPages } =
-          await persistBatchResults(jobId, result, crawlJob.userId);
+          await persistBatchResults(jobId, result, crawlJob.userId, persistedUrls);
         console.log(
           `[Worker] Job ${jobId} completed: ${successCount} success, ${failedCount} failed, ${saveErrors} save errors, ${totalPages} total`,
         );

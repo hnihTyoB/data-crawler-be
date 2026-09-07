@@ -61,11 +61,28 @@ export class CrawlExportService {
       );
     }
 
-    if (job.status !== JOB_STATUS.COMPLETED) {
+    const isExportable =
+      job.status === JOB_STATUS.COMPLETED ||
+      (job.status === JOB_STATUS.CANCELED && (job.successPages ?? 0) > 0) ||
+      (job.status === JOB_STATUS.FAILED && (job.successPages ?? 0) > 0);
+
+    if (!isExportable) {
+      if (
+        job.status === JOB_STATUS.RUNNING ||
+        job.status === JOB_STATUS.PENDING ||
+        job.status === JOB_STATUS.QUEUED ||
+        job.status === JOB_STATUS.PROCESSING_EXPORT
+      ) {
+        throw new AppError(
+          "Crawl job is still in progress",
+          400,
+          ERROR_CODE.CRAWL_JOB_NOT_COMPLETED,
+        );
+      }
       throw new AppError(
-        "Crawl job is not completed yet",
+        "No successfully crawled pages available to export",
         400,
-        ERROR_CODE.CRAWL_JOB_NOT_COMPLETED,
+        ERROR_CODE.VALIDATION_ERROR,
       );
     }
 
