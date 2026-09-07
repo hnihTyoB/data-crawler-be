@@ -124,6 +124,7 @@ export class UserRepository {
   update(
     id: string,
     data: {
+      email?: string;
       fullName?: string;
       avatarUrl?: string | null;
       isActive?: boolean;

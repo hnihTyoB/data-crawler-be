@@ -27,7 +27,20 @@ export class UserService {
   private readonly roleRepository = new RoleRepository();
   private readonly auditLogService = new AuditLogService();
 
-  private formatUser(user: User): UserResponseDto {
+  private formatUser(user: any): UserResponseDto {
+    const roles = Array.isArray(user.userRoles)
+      ? user.userRoles
+          .filter((ur: any) => ur.role)
+          .map((ur: any) => ({
+            id: ur.role.id,
+            name: ur.role.name,
+            slug: ur.role.slug,
+            description: ur.role.description ?? null,
+            isSystem: ur.role.isSystem,
+            isActive: ur.role.isActive,
+          }))
+      : undefined;
+
     return {
       id: user.id,
       email: user.email,
@@ -40,6 +53,7 @@ export class UserService {
       maxConcurrentJobsLimit: user.maxConcurrentJobsLimit,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      ...(roles !== undefined ? { roles } : {}),
     };
   }
 
@@ -157,7 +171,19 @@ export class UserService {
       );
     }
 
+    if (data.email && data.email !== existingUser.email) {
+      const duplicate = await this.repository.findByEmail(data.email);
+      if (duplicate && duplicate.id !== id) {
+        throw new AppError(
+          "Email already exists",
+          409,
+          ERROR_CODE.DUPLICATE_ENTRY,
+        );
+      }
+    }
+
     const user = await this.repository.update(id, {
+      email: data.email,
       fullName: data.fullName,
       isActive: data.isActive,
       role: data.role,
