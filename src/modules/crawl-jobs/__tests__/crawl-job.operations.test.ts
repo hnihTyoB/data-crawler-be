@@ -54,7 +54,10 @@ describe("CrawlJobService delete, rerun, and getLogs", () => {
     expect(result.success).toBe(true);
     expect(mockStorage.deleteFile).toHaveBeenCalledWith("exports/exp-1.zip");
     expect(mockStorage.deleteFile).toHaveBeenCalledWith("diffs/job-123.json");
-    expect(CrawlJobRepository.prototype.delete).toHaveBeenCalledWith("job-123");
+    expect(CrawlJobRepository.prototype.delete).toHaveBeenCalledWith(
+      "job-123",
+      "user-1",
+    );
   });
 
   it("blocks deletion of an actively running job", async () => {

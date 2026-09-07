@@ -6,10 +6,23 @@ import { CRAWL_PAGE_STATUS } from "../../common/constants/crawl-page-status.cons
 export class DashboardRepository {
   async getStats(userId: string, role: string) {
     const isGlobal = role === ROLES.ADMIN;
-    const jobWhere = isGlobal ? {} : { userId };
-    const pageWhere = isGlobal ? {} : { job: { userId } };
+    const jobWhere = {
+      deletedAt: null,
+      ...(isGlobal ? {} : { userId }),
+    };
+    const pageWhere = {
+      job: {
+        deletedAt: null,
+        ...(isGlobal ? {} : { userId }),
+      },
+    };
     const scheduleWhere = isGlobal ? {} : { userId };
-    const exportWhere = isGlobal ? {} : { job: { userId } };
+    const exportWhere = {
+      job: {
+        deletedAt: null,
+        ...(isGlobal ? {} : { userId }),
+      },
+    };
 
     const [
       jobStatusGroups,

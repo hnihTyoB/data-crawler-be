@@ -335,16 +335,17 @@ async function seedCrawlSchedules(userId: string) {
 async function seedCrawlJobsAndPages(userId: string) {
   console.log("Seeding realistic sample Crawl Jobs, Pages, and Logs...");
 
-  // Job 1: RUNNING
+  // Job 1: COMPLETED (52 pages crawled, 49 success, 3 failed)
   const job1Id = "088f635c-9c3a-4467-93bb-e58f001bf001";
   const job1 = await prisma.crawlJob.upsert({
     where: { id: job1Id },
     update: {
-      status: CrawlJobStatus.RUNNING,
+      status: CrawlJobStatus.COMPLETED,
       totalPages: 52,
       successPages: 49,
       failedPages: 3,
       startedAt: new Date(Date.now() - 3600000 * 1.5),
+      finishedAt: new Date(Date.now() - 3600000 * 0.5),
     },
     create: {
       id: job1Id,
@@ -352,7 +353,7 @@ async function seedCrawlJobsAndPages(userId: string) {
       startUrl: "https://vnexpress.net/so-hoa/cong-nghe",
       domain: "vnexpress.net",
       mode: CrawlMode.CRAWL,
-      status: CrawlJobStatus.RUNNING,
+      status: CrawlJobStatus.COMPLETED,
       maxPages: 100,
       maxDepth: 3,
       urls: [],
@@ -365,6 +366,7 @@ async function seedCrawlJobsAndPages(userId: string) {
       userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
       delayMs: 1000,
       startedAt: new Date(Date.now() - 3600000 * 1.5),
+      finishedAt: new Date(Date.now() - 3600000 * 0.5),
       diffSummary: {
         totalCurrentPages: 52,
         totalPreviousPages: 45,

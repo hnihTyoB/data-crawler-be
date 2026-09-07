@@ -171,10 +171,23 @@ export class CrawlJobService {
   }
 
   async findAllByUser(userId: string, role: string, query: CrawlJobQueryDto) {
-    if (role === ROLES.ADMIN) {
-      return this.repository.findAll(query);
+    const result = role === ROLES.ADMIN
+      ? await this.repository.findAll(query)
+      : await this.repository.findAllByUser(userId, query);
+
+    // Auto-complete any jobs that reached all target pages but were left in RUNNING
+    for (const job of result.items) {
+      const processed = (job.successPages ?? 0) + (job.failedPages ?? 0);
+      const target = job.totalPages > 0 ? Math.min(job.maxPages, job.totalPages) : job.maxPages;
+      if (job.status === JOB_STATUS.RUNNING && job.totalPages > 0 && processed >= target) {
+        job.status = JOB_STATUS.COMPLETED;
+        void this.repository.updateStatus(job.id, JOB_STATUS.COMPLETED, {
+          finishedAt: job.finishedAt || new Date(),
+        });
+      }
     }
-    return this.repository.findAllByUser(userId, query);
+
+    return result;
   }
 
   async findById(userId: string, role: string, jobId: string) {
@@ -194,6 +207,24 @@ export class CrawlJobService {
         404,
         ERROR_CODE.CRAWL_JOB_NOT_FOUND,
       );
+    }
+
+    // Auto-complete if job is in RUNNING but all target pages have already been crawled
+    const processedPages = (job.successPages ?? 0) + (job.failedPages ?? 0);
+    const targetPages = job.totalPages > 0 ? Math.min(job.maxPages, job.totalPages) : job.maxPages;
+    if (
+      job.status === JOB_STATUS.RUNNING &&
+      job.totalPages > 0 &&
+      processedPages >= targetPages
+    ) {
+      const completedJob = await this.repository.updateStatus(
+        job.id,
+        JOB_STATUS.COMPLETED,
+        {
+          finishedAt: job.finishedAt || new Date(),
+        },
+      );
+      return completedJob || { ...job, status: JOB_STATUS.COMPLETED };
     }
 
     return job;
@@ -325,7 +356,7 @@ export class CrawlJobService {
       }
     }
 
-    await this.repository.delete(jobId);
+    await this.repository.delete(jobId, userId);
     return { success: true, message: "Crawl job deleted successfully" };
   }
 

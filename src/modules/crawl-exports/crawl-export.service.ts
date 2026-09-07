@@ -61,6 +61,23 @@ export class CrawlExportService {
       );
     }
 
+    const processedPages = (job.successPages ?? 0) + (job.failedPages ?? 0);
+    const targetPages =
+      job.totalPages > 0
+        ? Math.min(job.maxPages, job.totalPages)
+        : job.maxPages;
+    const isFinished =
+      job.totalPages > 0 &&
+      processedPages >= targetPages &&
+      (job.successPages ?? 0) > 0;
+
+    if (job.status === JOB_STATUS.RUNNING && isFinished) {
+      await this.jobRepository.updateStatus(job.id, JOB_STATUS.COMPLETED, {
+        finishedAt: job.finishedAt || new Date(),
+      });
+      job.status = JOB_STATUS.COMPLETED;
+    }
+
     const isExportable =
       job.status === JOB_STATUS.COMPLETED ||
       (job.status === JOB_STATUS.CANCELED && (job.successPages ?? 0) > 0) ||
