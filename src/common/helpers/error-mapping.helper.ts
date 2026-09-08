@@ -33,11 +33,13 @@ export function mapCrawlError(rawError: string | null | undefined): string {
     return "Trang web đích được bảo vệ bởi paywall (nội dung trả phí). Hệ thống không thể truy cập — trang được đánh dấu PAYWALL_DETECTED.";
   }
 
-  // 5. Lỗi API Key / Xác thực
+  // 5. Lỗi API Key / Xác thực / Hạn mức Provider
   if (
     err.includes("unauthorized") ||
     err.includes("api key") ||
     err.includes("apikey") ||
+    err.includes("credit") ||
+    err.includes("402") ||
     (err.includes("forbidden") && err.includes("key"))
   ) {
     return "Lỗi xác thực hệ thống cào dữ liệu (API Key không hợp lệ, hết hạn hoặc vượt quá giới hạn gói dịch vụ).";
@@ -106,3 +108,64 @@ export function getErrorMessage(error: unknown): string {
   }
   return String(error);
 }
+
+/**
+ * Kiểm tra xem lỗi cào dữ liệu có phải do mất kết nối mạng, timeout hoặc không thể truy cập host hay không.
+ * Các tác vụ thất bại do lỗi kết nối sẽ được miễn trừ và không tính vào hạn mức sử dụng (Quota) của người dùng.
+ */
+export function isConnectionLossError(
+  rawError: string | null | undefined,
+): boolean {
+  if (!rawError) {
+    return false;
+  }
+
+  const err = rawError.toLowerCase();
+
+  return (
+    // Timeout / quá thời gian chờ kết nối
+    err.includes("timeout") ||
+    err.includes("timed out") ||
+    err.includes("etimedout") ||
+    err.includes("esockettimedout") ||
+    // Lỗi đứt kết nối mạng, reset hoặc từ chối kết nối
+    err.includes("econnrefused") ||
+    err.includes("econnreset") ||
+    err.includes("econnaborted") ||
+    err.includes("network error") ||
+    err.includes("network_error") ||
+    err.includes("connection reset") ||
+    err.includes("connection refused") ||
+    err.includes("connection lost") ||
+    err.includes("connection closed") ||
+    err.includes("connection error") ||
+    err.includes("socket hang up") ||
+    err.includes("network is unreachable") ||
+    err.includes("host unreachable") ||
+    err.includes("offline") ||
+    // Lỗi DNS / không tìm thấy host
+    err.includes("dns") ||
+    err.includes("getaddrinfo") ||
+    err.includes("enotfound") ||
+    // Lỗi từ nhà cung cấp cào / proxy / gateway (402, 500, 502, 503, 504, credit, bad gateway)
+    err.includes("402") ||
+    err.includes("credit") ||
+    err.includes("500") ||
+    err.includes("502") ||
+    err.includes("503") ||
+    err.includes("504") ||
+    err.includes("bad gateway") ||
+    err.includes("gateway") ||
+    err.includes("service unavailable") ||
+    // Các thông báo tiếng Việt tương ứng
+    err.includes("mất kết nối") ||
+    err.includes("lỗi kết nối") ||
+    err.includes("không thể kết nối") ||
+    err.includes("kết nối đến trang web đích bị quá thời gian") ||
+    err.includes("không thể phân giải tên miền") ||
+    err.includes("đã xảy ra lỗi trong quá trình cào dữ liệu") ||
+    err.includes("lỗi không xác định") ||
+    err.includes("lỗi xác thực hệ thống cào dữ liệu")
+  );
+}
+

@@ -1,5 +1,8 @@
 import { CrawlPageProcessorService } from "../crawl-page-processor.service";
-import { mapCrawlError } from "../../../common/helpers/error-mapping.helper";
+import {
+  mapCrawlError,
+  isConnectionLossError,
+} from "../../../common/helpers/error-mapping.helper";
 import {
   FirecrawlPageResult,
   CrawlErrorItem,
@@ -230,6 +233,38 @@ describe("mapCrawlError()", () => {
   it("returns fallback message for unknown error", () => {
     const msg = mapCrawlError("something completely unknown");
     expect(msg).toContain("Vui lòng thử lại");
+  });
+});
+
+describe("isConnectionLossError()", () => {
+  it("detects timeout errors", () => {
+    expect(isConnectionLossError("request timed out")).toBe(true);
+    expect(isConnectionLossError("ETIMEDOUT 10.0.0.1")).toBe(true);
+    expect(isConnectionLossError("ESOCKETTIMEDOUT")).toBe(true);
+    expect(isConnectionLossError("Kết nối đến trang web đích bị quá thời gian (Timeout). Trang web phản hồi quá chậm.")).toBe(true);
+  });
+
+  it("detects connection resets and network errors", () => {
+    expect(isConnectionLossError("read ECONNRESET")).toBe(true);
+    expect(isConnectionLossError("connect ECONNREFUSED 127.0.0.1")).toBe(true);
+    expect(isConnectionLossError("socket hang up")).toBe(true);
+    expect(isConnectionLossError("network error occurred")).toBe(true);
+    expect(isConnectionLossError("Mất kết nối với máy chủ đích")).toBe(true);
+  });
+
+  it("detects DNS lookup errors", () => {
+    expect(isConnectionLossError("getaddrinfo ENOTFOUND api.example.com")).toBe(true);
+    expect(isConnectionLossError("dns lookup failure")).toBe(true);
+    expect(isConnectionLossError("không thể phân giải tên miền")).toBe(true);
+  });
+
+  it("returns false for non-connection errors", () => {
+    expect(isConnectionLossError(null)).toBe(false);
+    expect(isConnectionLossError(undefined)).toBe(false);
+    expect(isConnectionLossError("")).toBe(false);
+    expect(isConnectionLossError("blocked by robots.txt")).toBe(false);
+    expect(isConnectionLossError("captcha required")).toBe(false);
+    expect(isConnectionLossError("paywall detected")).toBe(false);
   });
 });
 
