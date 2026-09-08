@@ -3443,4 +3443,251 @@ export const swaggerPaths: Record<string, any> = {
       },
     },
   },
+  "/system/public": {
+    get: {
+      tags: ["System Config"],
+      summary: "Lấy cấu hình công khai và Feature Flags",
+      description: "Cho phép client/frontend đọc toàn bộ cấu hình có isPublic: true mà không cần đăng nhập.",
+      responses: {
+        200: {
+          description: "Lấy cấu hình công khai thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: {
+                    type: "object",
+                    properties: {
+                      configs: {
+                        type: "array",
+                        items: { $ref: "#/components/schemas/SystemConfig" },
+                      },
+                      map: { type: "object" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+  "/system/configs": {
+    get: {
+      tags: ["System Config"],
+      summary: "Danh sách cấu hình hệ thống",
+      description: "Lấy danh sách cấu hình và cờ tính năng, hỗ trợ tìm kiếm và lọc theo danh mục (Yêu cầu quyền SYSTEM_CONFIG_READ).",
+      parameters: [
+        {
+          name: "category",
+          in: "query",
+          schema: {
+            type: "string",
+            enum: ["GENERAL", "FEATURE_FLAG", "INTEGRATION", "SECURITY"],
+          },
+          description: "Lọc theo danh mục cấu hình",
+        },
+        {
+          name: "search",
+          in: "query",
+          schema: { type: "string" },
+          description: "Tìm kiếm theo khóa hoặc mô tả",
+        },
+        {
+          name: "page",
+          in: "query",
+          schema: { type: "integer", default: 1 },
+        },
+        {
+          name: "limit",
+          in: "query",
+          schema: { type: "integer", default: 20 },
+        },
+      ],
+      responses: {
+        200: {
+          description: "Lấy danh sách thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: {
+                    type: "object",
+                    properties: {
+                      items: {
+                        type: "array",
+                        items: { $ref: "#/components/schemas/SystemConfig" },
+                      },
+                      total: { type: "integer" },
+                      page: { type: "integer" },
+                      limit: { type: "integer" },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+        401: { description: "Chưa xác thực" },
+        403: { description: "Không có quyền SYSTEM_CONFIG_READ" },
+      },
+    },
+    post: {
+      tags: ["System Config"],
+      summary: "Tạo cấu hình mới",
+      description: "Tạo mới một khóa cấu hình hoặc Feature Flag (Yêu cầu quyền SYSTEM_CONFIG_MANAGE).",
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/CreateSystemConfigRequest" },
+          },
+        },
+      },
+      responses: {
+        201: {
+          description: "Tạo cấu hình thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: { $ref: "#/components/schemas/SystemConfig" },
+                  message: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        400: { description: "Dữ liệu không hợp lệ" },
+        409: { description: "Khóa cấu hình đã tồn tại" },
+      },
+    },
+  },
+  "/system/configs/{key}": {
+    get: {
+      tags: ["System Config"],
+      summary: "Chi tiết một cấu hình",
+      parameters: [
+        {
+          name: "key",
+          in: "path",
+          required: true,
+          schema: { type: "string" },
+          description: "Khóa định danh cấu hình",
+        },
+      ],
+      responses: {
+        200: {
+          description: "Lấy chi tiết thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: { $ref: "#/components/schemas/SystemConfig" },
+                },
+              },
+            },
+          },
+        },
+        404: { description: "Không tìm thấy cấu hình" },
+      },
+    },
+    put: {
+      tags: ["System Config"],
+      summary: "Cập nhật cấu hình",
+      parameters: [
+        {
+          name: "key",
+          in: "path",
+          required: true,
+          schema: { type: "string" },
+        },
+      ],
+      requestBody: {
+        required: true,
+        content: {
+          "application/json": {
+            schema: { $ref: "#/components/schemas/UpdateSystemConfigRequest" },
+          },
+        },
+      },
+      responses: {
+        200: {
+          description: "Cập nhật thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: { $ref: "#/components/schemas/SystemConfig" },
+                },
+              },
+            },
+          },
+        },
+        404: { description: "Không tìm thấy cấu hình" },
+      },
+    },
+    delete: {
+      tags: ["System Config"],
+      summary: "Xóa cấu hình",
+      parameters: [
+        {
+          name: "key",
+          in: "path",
+          required: true,
+          schema: { type: "string" },
+        },
+      ],
+      responses: {
+        200: { description: "Xóa thành công" },
+        404: { description: "Không tìm thấy cấu hình" },
+      },
+    },
+  },
+  "/system/features/{key}/toggle": {
+    patch: {
+      tags: ["System Config"],
+      summary: "Bật/tắt nhanh Feature Flag",
+      description: "Chuyển đổi trạng thái boolean (true <-> false) cho một cờ tính năng (Yêu cầu quyền SYSTEM_CONFIG_MANAGE).",
+      parameters: [
+        {
+          name: "key",
+          in: "path",
+          required: true,
+          schema: { type: "string" },
+        },
+      ],
+      responses: {
+        200: {
+          description: "Chuyển đổi trạng thái thành công",
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  success: { type: "boolean", example: true },
+                  data: { $ref: "#/components/schemas/SystemConfig" },
+                  message: { type: "string" },
+                },
+              },
+            },
+          },
+        },
+        400: { description: "Cấu hình không phải boolean Feature Flag" },
+        404: { description: "Không tìm thấy cấu hình" },
+      },
+    },
+  },
 };
+

@@ -12,6 +12,7 @@ import healthRoute from "../modules/health/health.route";
 import dashboardRoute from "../modules/dashboard/dashboard.route";
 import roleRoute from "../modules/roles/role.route";
 import permissionRoute from "../modules/permissions/permission.route";
+import systemConfigRoute from "../modules/system-config/system-config.route";
 
 const router = Router();
 
@@ -20,6 +21,7 @@ router.use("/auth", authRoute);
 router.use("/users", userRoute);
 router.use("/roles", roleRoute);
 router.use("/permissions", permissionRoute);
+router.use("/system", systemConfigRoute);
 router.use("/dashboard", dashboardRoute);
 router.use("/crawl-jobs", crawlJobRoute);
 router.use("/crawl-schedules", crawlScheduleRoute);

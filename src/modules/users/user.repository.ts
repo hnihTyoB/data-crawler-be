@@ -4,6 +4,7 @@ import { UserQueryDto } from "./user.dto";
 import { envConfig } from "../../config/env.config";
 import { ROLES } from "../../common/constants/role.constant";
 import { SYSTEM_ROLE_SLUGS } from "../../common/constants/system-role.constant";
+import { systemConfigService } from "../system-config/system-config.service";
 
 export class UserRepository {
   async findAll(query: UserQueryDto = {}) {
@@ -94,7 +95,7 @@ export class UserRepository {
     });
   }
 
-  create(data: {
+  async create(data: {
     email: string;
     passwordHash: string;
     fullName?: string;
@@ -104,6 +105,19 @@ export class UserRepository {
     maxJobsPerDayLimit?: number;
     maxConcurrentJobsLimit?: number;
   }): Promise<User> {
+    const defaultMaxPages = await systemConfigService.get<number>(
+      "quota.user_max_pages",
+      envConfig.quota.defaultMaxPages,
+    );
+    const defaultMaxJobsPerDay = await systemConfigService.get<number>(
+      "quota.user_max_jobs_per_day",
+      envConfig.quota.defaultMaxJobsPerDay,
+    );
+    const defaultMaxConcurrentJobs = await systemConfigService.get<number>(
+      "quota.user_max_concurrent_jobs",
+      envConfig.quota.defaultMaxConcurrentJobs,
+    );
+
     return prisma.user.create({
       data: {
         email: data.email,
@@ -111,12 +125,10 @@ export class UserRepository {
         fullName: data.fullName,
         avatarUrl: data.avatarUrl,
         role: data.role ?? ROLES.CRAWLER_USER,
-        maxPagesLimit: data.maxPagesLimit ?? envConfig.quota.defaultMaxPages,
-        maxJobsPerDayLimit:
-          data.maxJobsPerDayLimit ?? envConfig.quota.defaultMaxJobsPerDay,
+        maxPagesLimit: data.maxPagesLimit ?? defaultMaxPages,
+        maxJobsPerDayLimit: data.maxJobsPerDayLimit ?? defaultMaxJobsPerDay,
         maxConcurrentJobsLimit:
-          data.maxConcurrentJobsLimit ??
-          envConfig.quota.defaultMaxConcurrentJobs,
+          data.maxConcurrentJobsLimit ?? defaultMaxConcurrentJobs,
       },
     });
   }

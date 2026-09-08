@@ -17,6 +17,7 @@ import {
   SYSTEM_PERMISSIONS_CATALOG,
   SYSTEM_ROLE_DEFAULT_PERMISSIONS,
 } from "../src/common/constants/permission.constant";
+import { DEFAULT_SYSTEM_CONFIGS } from "../src/common/constants/system-config.constant";
 
 const prisma = new PrismaClient();
 
@@ -597,10 +598,32 @@ async function seedCrawlJobsAndPages(userId: string) {
   });
 }
 
+async function seedSystemConfigs(): Promise<void> {
+  console.log("Seeding default system configs...");
+  for (const item of DEFAULT_SYSTEM_CONFIGS) {
+    await prisma.systemConfig.upsert({
+      where: { key: item.key },
+      update: {
+        description: item.description ?? null,
+        category: item.category,
+        isPublic: item.isPublic,
+      },
+      create: {
+        key: item.key,
+        value: item.value as any,
+        description: item.description ?? null,
+        category: item.category,
+        isPublic: item.isPublic,
+      },
+    });
+  }
+}
+
 async function main() {
   const permissionMap = await seedPermissions();
   const roleMap = await seedRoles(permissionMap);
   await seedUsers(roleMap);
+  await seedSystemConfigs();
 
   const crawlerUser = await prisma.user.findUnique({
     where: { email: "crawl@crawl.local" },

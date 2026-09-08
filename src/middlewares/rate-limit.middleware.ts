@@ -1,6 +1,7 @@
 import rateLimit, { RateLimitRequestHandler } from "express-rate-limit";
 import { envConfig } from "../config/env.config";
 import { ERROR_CODE } from "../common/errors/error-code";
+import { systemConfigService } from "../modules/system-config/system-config.service";
 
 /**
  * Global API rate limit per IP, configurable for each environment.
@@ -9,7 +10,11 @@ import { ERROR_CODE } from "../common/errors/error-code";
  */
 export const rateLimitMiddleware: RateLimitRequestHandler = rateLimit({
   windowMs: envConfig.rateLimit.windowMs,
-  max: envConfig.rateLimit.max,
+  max: async () =>
+    systemConfigService.get<number>(
+      "rate_limit.max_requests",
+      envConfig.rateLimit.max,
+    ),
   standardHeaders: true,
   legacyHeaders: false,
   message: {
