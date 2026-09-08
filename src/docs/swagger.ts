@@ -811,6 +811,50 @@ const rawSchemas = {
       },
     },
   },
+  SystemConfig: {
+    type: "object",
+    properties: {
+      id: { type: "string", format: "uuid" },
+      key: { type: "string", example: "feature.ai.enabled" },
+      value: { example: true },
+      description: { type: "string", nullable: true, example: "Kích hoạt AI" },
+      category: {
+        type: "string",
+        enum: ["GENERAL", "FEATURE_FLAG", "INTEGRATION", "SECURITY"],
+        example: "FEATURE_FLAG",
+      },
+      isPublic: { type: "boolean", example: true },
+      createdAt: { type: "string", format: "date-time" },
+      updatedAt: { type: "string", format: "date-time" },
+    },
+  },
+  CreateSystemConfigRequest: {
+    type: "object",
+    required: ["key", "value"],
+    properties: {
+      key: { type: "string", example: "feature.new_module.enabled" },
+      value: { example: true },
+      description: { type: "string", example: "Bật tắt tính năng mới" },
+      category: {
+        type: "string",
+        enum: ["GENERAL", "FEATURE_FLAG", "INTEGRATION", "SECURITY"],
+        example: "FEATURE_FLAG",
+      },
+      isPublic: { type: "boolean", example: false },
+    },
+  },
+  UpdateSystemConfigRequest: {
+    type: "object",
+    properties: {
+      value: { example: false },
+      description: { type: "string", example: "Mô tả mới" },
+      category: {
+        type: "string",
+        enum: ["GENERAL", "FEATURE_FLAG", "INTEGRATION", "SECURITY"],
+      },
+      isPublic: { type: "boolean" },
+    },
+  },
 };
 
 const outputFile = "./src/docs/swagger.json";

@@ -68,6 +68,10 @@ export const PERMISSIONS = {
   // Dashboard
   DASHBOARD_READ: "dashboard.read",
   DASHBOARD_READ_ALL: "dashboard.read_all",
+
+  // System Configs
+  SYSTEM_CONFIG_READ: "system_configs.read",
+  SYSTEM_CONFIG_MANAGE: "system_configs.manage",
 } as const;
 
 export type PermissionSlug = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -471,6 +475,24 @@ export const SYSTEM_PERMISSIONS_CATALOG: PermissionDefinition[] = [
     action: "read_all",
     isSystem: true,
   },
+
+  // System Configs
+  {
+    name: "View System Configs",
+    slug: PERMISSIONS.SYSTEM_CONFIG_READ,
+    description: "Xem danh sách và chi tiết cấu hình hệ thống & feature flags",
+    resource: "system_configs",
+    action: "read",
+    isSystem: true,
+  },
+  {
+    name: "Manage System Configs",
+    slug: PERMISSIONS.SYSTEM_CONFIG_MANAGE,
+    description: "Thêm, cập nhật, bật/tắt hoặc xóa cấu hình hệ thống & feature flags",
+    resource: "system_configs",
+    action: "manage",
+    isSystem: true,
+  },
 ];
 
 export const SYSTEM_ROLE_DEFAULT_PERMISSIONS: Record<
@@ -525,6 +547,8 @@ export const SYSTEM_ROLE_DEFAULT_PERMISSIONS: Record<
     PERMISSIONS.AUDIT_LOGS_READ,
     PERMISSIONS.DASHBOARD_READ,
     PERMISSIONS.DASHBOARD_READ_ALL,
+    PERMISSIONS.SYSTEM_CONFIG_READ,
+    PERMISSIONS.SYSTEM_CONFIG_MANAGE,
   ],
   [SYSTEM_ROLE_SLUGS.CRAWLER_USER]: [
     PERMISSIONS.CRAWL_JOBS_CREATE,

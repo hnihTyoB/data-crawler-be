@@ -12,6 +12,7 @@ import routes from "./routes";
 import swaggerDocument from "./docs/swagger.json";
 import healthRoute from "./modules/health/health.route";
 import { rateLimitMiddleware } from "./middlewares/rate-limit.middleware";
+import { maintenanceMiddleware } from "./middlewares/maintenance.middleware";
 import { envConfig } from "./config/env.config";
 import { parseTrustProxy } from "./common/helpers/proxy.helper";
 
@@ -46,7 +47,7 @@ app.use(express.urlencoded({ extended: true }));
 
 app.use("/health", healthRoute);
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-app.use("/api/v1", rateLimitMiddleware, routes);
+app.use("/api/v1", rateLimitMiddleware, maintenanceMiddleware, routes);
 
 app.use(notFoundMiddleware);
 app.use(errorMiddleware);

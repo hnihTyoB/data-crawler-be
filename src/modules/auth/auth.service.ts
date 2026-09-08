@@ -32,6 +32,7 @@ import {
   createUtcDateFromZonedParts,
 } from "../../common/helpers/schedule-calculator.helper";
 import { PermissionService } from "../permissions/permission.service";
+import { systemConfigService } from "../system-config/system-config.service";
 
 interface AuthJwtPayload {
   id: string;
@@ -279,6 +280,18 @@ export class AuthService {
   }
 
   async register(data: RegisterDto): Promise<MeDto> {
+    const isRegistrationEnabled = await systemConfigService.isFeatureEnabled(
+      "feature.registration.enabled",
+      true,
+    );
+    if (!isRegistrationEnabled) {
+      throw new AppError(
+        "Tính năng đăng ký tài khoản hiện đang tạm khóa bởi Quản trị viên.",
+        403,
+        ERROR_CODE.FORBIDDEN,
+      );
+    }
+
     const existing = await this.repository.findByEmail(data.email);
 
     if (existing) {

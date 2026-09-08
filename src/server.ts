@@ -45,7 +45,19 @@ async function bootstrap() {
 
   initLocalStorage();
 
+  const { systemConfigService } = await import(
+    "./modules/system-config/system-config.service"
+  );
+  try {
+    await systemConfigService.ensureDefaultConfigs();
+    console.log("[Server] Default system configs initialized successfully.");
+  } catch (err) {
+    console.warn("[Server] Failed to initialize default system configs:", err);
+  }
+
   if (isRedisAvailable) {
+    systemConfigService.initRedisSubscriber();
+
     await import("./queues/webhook.worker");
     console.log("[Server] Webhook worker initialized in background.");
 

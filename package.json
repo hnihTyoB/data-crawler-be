@@ -18,6 +18,7 @@
     "db:migrate:reset": "node scripts/prisma-run.js migrate reset",
     "db:migrate:status": "node scripts/prisma-run.js migrate status",
     "db:seed": "node scripts/prisma-run.js db seed -- --tsx prisma/seed.ts",
+    "config:sync": "tsx scripts/sync-system-configs.ts",
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "jest"

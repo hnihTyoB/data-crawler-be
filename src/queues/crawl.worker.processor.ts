@@ -22,6 +22,7 @@ import { CRAWL_MODE } from "../common/constants/crawl-mode.constant";
 import { ASSET_TYPE } from "../common/constants/asset-type.constant";
 import { CRAWL_PAGE_STATUS } from "../common/constants/crawl-page-status.constant";
 import { WEBHOOK_EVENT } from "../common/constants/webhook.constant";
+import { systemConfigService } from "../modules/system-config/system-config.service";
 // Lazy getters — instantiated on first use so Jest mocks replace constructors before creation
 const getJobRepository = () => new CrawlJobRepository();
 const getPageRepository = () => new CrawlPageRepository();
@@ -704,20 +705,30 @@ export async function processCrawlJob(job: Job): Promise<void> {
         });
       }
 
-      // Generate diff_report.json upon successful job completion
-      try {
-        const { ChangeDetectionService } =
-          await import("../modules/change-detection/change-detection.service");
-        const changeDetectionService = new ChangeDetectionService();
-        const diffReport =
-          await changeDetectionService.generateAndSaveDiffReport(jobId);
+      // Generate diff_report.json upon successful job completion (if feature flag is enabled)
+      const isDiffEnabled = await systemConfigService.isFeatureEnabled(
+        "feature.change_detection.enabled",
+        true,
+      );
+      if (isDiffEnabled) {
+        try {
+          const { ChangeDetectionService } =
+            await import("../modules/change-detection/change-detection.service");
+          const changeDetectionService = new ChangeDetectionService();
+          const diffReport =
+            await changeDetectionService.generateAndSaveDiffReport(jobId);
+          console.log(
+            `[Worker] Diff report generated for job ${jobId}: ${diffReport.summary.newPagesCount} new, ${diffReport.summary.modifiedPagesCount} modified, ${diffReport.summary.deletedPagesCount} deleted, ${diffReport.summary.unchangedPagesCount} unchanged`,
+          );
+        } catch (diffErr: unknown) {
+          console.error(
+            `[Worker] Failed to generate diff report for job ${jobId}:`,
+            getErrorMessage(diffErr),
+          );
+        }
+      } else {
         console.log(
-          `[Worker] Diff report generated for job ${jobId}: ${diffReport.summary.newPagesCount} new, ${diffReport.summary.modifiedPagesCount} modified, ${diffReport.summary.deletedPagesCount} deleted, ${diffReport.summary.unchangedPagesCount} unchanged`,
-        );
-      } catch (diffErr: unknown) {
-        console.error(
-          `[Worker] Failed to generate diff report for job ${jobId}:`,
-          getErrorMessage(diffErr),
+          `[Worker] Skipped diff report for job ${jobId}: feature.change_detection.enabled is false`,
         );
       }
     } catch (error: unknown) {
@@ -735,46 +746,52 @@ export async function processCrawlJob(job: Job): Promise<void> {
         (updatedJob.status === JOB_STATUS.COMPLETED ||
           updatedJob.status === JOB_STATUS.FAILED)
       ) {
-        const { WebhookDeliveryService } =
-          await import("../modules/webhooks/webhook-delivery.service");
-        const webhookDeliveryService = new WebhookDeliveryService();
-
-        const event =
-          updatedJob.status === JOB_STATUS.COMPLETED
-            ? WEBHOOK_EVENT.JOB_COMPLETED
-            : WEBHOOK_EVENT.JOB_FAILED;
-        void logStep(
-          jobId,
-          updatedJob.status === JOB_STATUS.COMPLETED ? "INFO" : "ERROR",
-          updatedJob.status,
-          `Job finished with status ${updatedJob.status}${updatedJob.errorMessage ? `: ${updatedJob.errorMessage}` : ""}`,
+        const isWebhookEnabled = await systemConfigService.isFeatureEnabled(
+          "feature.webhook.deliveries.enabled",
+          true,
         );
-        const diffSummary =
-          updatedJob &&
-          typeof updatedJob === "object" &&
-          "diffSummary" in updatedJob
-            ? ((updatedJob as { diffSummary: unknown }).diffSummary ?? null)
-            : null;
-        const payload = {
-          jobId: updatedJob.id,
-          status: updatedJob.status,
-          startUrl: updatedJob.startUrl,
-          mode: updatedJob.mode,
-          totalPages: updatedJob.totalPages,
-          successPages: updatedJob.successPages,
-          failedPages: updatedJob.failedPages,
-          errorMessage: updatedJob.errorMessage,
-          diffSummary,
-          startedAt: updatedJob.startedAt,
-          finishedAt: updatedJob.finishedAt,
-        };
+        if (isWebhookEnabled) {
+          const { WebhookDeliveryService } =
+            await import("../modules/webhooks/webhook-delivery.service");
+          const webhookDeliveryService = new WebhookDeliveryService();
 
-        void webhookDeliveryService.dispatch(
-          updatedJob.id,
-          updatedJob.userId,
-          event,
-          payload,
-        );
+          const event =
+            updatedJob.status === JOB_STATUS.COMPLETED
+              ? WEBHOOK_EVENT.JOB_COMPLETED
+              : WEBHOOK_EVENT.JOB_FAILED;
+          void logStep(
+            jobId,
+            updatedJob.status === JOB_STATUS.COMPLETED ? "INFO" : "ERROR",
+            updatedJob.status,
+            `Job finished with status ${updatedJob.status}${updatedJob.errorMessage ? `: ${updatedJob.errorMessage}` : ""}`,
+          );
+          const diffSummary =
+            updatedJob &&
+            typeof updatedJob === "object" &&
+            "diffSummary" in updatedJob
+              ? ((updatedJob as { diffSummary: unknown }).diffSummary ?? null)
+              : null;
+          const payload = {
+            jobId: updatedJob.id,
+            status: updatedJob.status,
+            startUrl: updatedJob.startUrl,
+            mode: updatedJob.mode,
+            totalPages: updatedJob.totalPages,
+            successPages: updatedJob.successPages,
+            failedPages: updatedJob.failedPages,
+            errorMessage: updatedJob.errorMessage,
+            diffSummary,
+            startedAt: updatedJob.startedAt,
+            finishedAt: updatedJob.finishedAt,
+          };
+
+          void webhookDeliveryService.dispatch(
+            updatedJob.id,
+            updatedJob.userId,
+            event,
+            payload,
+          );
+        }
       }
     } catch (webhookErr) {
       console.error(

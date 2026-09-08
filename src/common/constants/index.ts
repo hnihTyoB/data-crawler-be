@@ -12,3 +12,4 @@ export * from "./crawl-page-status.constant";
 export * from "./webhook.constant";
 export * from "./system-role.constant";
 export * from "./permission.constant";
+export * from "./system-config.constant";
