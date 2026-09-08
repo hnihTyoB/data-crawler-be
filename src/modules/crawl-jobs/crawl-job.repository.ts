@@ -2,6 +2,7 @@ import { prisma } from "../../database/prisma.client";
 import { CrawlJobStatus, CrawlMode, LogLevel, Prisma } from "@prisma/client";
 import { CrawlJobQueryDto } from "./crawl-job.dto";
 import { JOB_STATUS } from "../../common/constants/job-status.constant";
+import { isConnectionLossError } from "../../common/helpers/error-mapping.helper";
 
 export class CrawlJobRepository {
   create(data: {
@@ -332,13 +333,36 @@ export class CrawlJobRepository {
     ]);
   }
 
-  countJobsSince(userId: string, sinceDate: Date): Promise<number> {
-    return prisma.crawlJob.count({
+  async countJobsSince(userId: string, sinceDate: Date): Promise<number> {
+    const totalCount = await prisma.crawlJob.count({
       where: {
         userId,
         createdAt: { gte: sinceDate },
       },
     });
+
+    try {
+      // Find jobs that failed due to connection loss with 0 successful pages
+      const failedJobs = await prisma.crawlJob.findMany({
+        where: {
+          userId,
+          status: JOB_STATUS.FAILED,
+          createdAt: { gte: sinceDate },
+          successPages: 0,
+        },
+        select: {
+          errorMessage: true,
+        },
+      });
+
+      const waivedCount = failedJobs.filter(
+        (job) => !job.errorMessage || isConnectionLossError(job.errorMessage),
+      ).length;
+
+      return Math.max(0, totalCount - waivedCount);
+    } catch {
+      return totalCount;
+    }
   }
 
   countConcurrentJobs(
@@ -361,7 +385,33 @@ export class CrawlJobRepository {
       where: { userId },
       _sum: { totalPages: true },
     });
-    return aggregate._sum.totalPages ?? 0;
+    const totalPages = aggregate._sum.totalPages ?? 0;
+
+    try {
+      // Deduct un-crawled totalPages for jobs that failed due to connection error with 0 success pages
+      const failedJobs = await prisma.crawlJob.findMany({
+        where: {
+          userId,
+          status: JOB_STATUS.FAILED,
+          successPages: 0,
+        },
+        select: {
+          totalPages: true,
+          errorMessage: true,
+        },
+      });
+
+      const waivedPages = failedJobs
+        .filter(
+          (job) =>
+            !job.errorMessage || isConnectionLossError(job.errorMessage),
+        )
+        .reduce((sum, job) => sum + (job.totalPages ?? 0), 0);
+
+      return Math.max(0, totalPages - waivedPages);
+    } catch {
+      return totalPages;
+    }
   }
 
   async delete(id: string, deletedBy?: string) {

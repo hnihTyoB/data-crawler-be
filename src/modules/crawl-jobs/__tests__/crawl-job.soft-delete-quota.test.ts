@@ -122,4 +122,32 @@ describe("CrawlJobRepository soft-delete and quota retention", () => {
       }),
     );
   });
+
+  it("countJobsSince() waives jobs that failed due to connection loss from quota count", async () => {
+    const sinceDate = new Date("2026-09-08T00:00:00Z");
+    (prisma.crawlJob.count as jest.Mock).mockResolvedValue(4);
+    (prisma.crawlJob.findMany as jest.Mock).mockResolvedValue([
+      { id: "job-failed-timeout", errorMessage: "Kết nối đến trang web đích bị quá thời gian (Timeout). Trang web phản hồi quá chậm." },
+      { id: "job-failed-connreset", errorMessage: "connect ECONNRESET 192.168.1.1" },
+    ]);
+
+    const billableCount = await repository.countJobsSince("user-1", sinceDate);
+
+    // 4 total minus 2 connection loss failed jobs = 2 billable jobs
+    expect(billableCount).toBe(2);
+  });
+
+  it("sumPagesCrawledByUser() waives pages from jobs that failed due to connection loss", async () => {
+    (prisma.crawlJob.aggregate as jest.Mock).mockResolvedValue({
+      _sum: { totalPages: 100 },
+    });
+    (prisma.crawlJob.findMany as jest.Mock).mockResolvedValue([
+      { totalPages: 20, errorMessage: "getaddrinfo ENOTFOUND invalid-domain.xyz" },
+    ]);
+
+    const pages = await repository.sumPagesCrawledByUser("user-1");
+
+    // 100 total minus 20 waived pages from DNS connection failure = 80 pages
+    expect(pages).toBe(80);
+  });
 });
