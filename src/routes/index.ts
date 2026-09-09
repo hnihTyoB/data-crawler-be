@@ -13,6 +13,7 @@ import dashboardRoute from "../modules/dashboard/dashboard.route";
 import roleRoute from "../modules/roles/role.route";
 import permissionRoute from "../modules/permissions/permission.route";
 import systemConfigRoute from "../modules/system-config/system-config.route";
+import cronRoute from "../modules/cron/cron.route";
 
 const router = Router();
 
@@ -22,6 +23,7 @@ router.use("/users", userRoute);
 router.use("/roles", roleRoute);
 router.use("/permissions", permissionRoute);
 router.use("/system", systemConfigRoute);
+router.use("/cron", cronRoute);
 router.use("/dashboard", dashboardRoute);
 router.use("/crawl-jobs", crawlJobRoute);
 router.use("/crawl-schedules", crawlScheduleRoute);
@@ -31,3 +33,4 @@ router.use("/api-keys", apiKeyRoute);
 router.use("/webhooks", webhookRoute);
 router.use("/extraction-templates", extractionTemplateRoute);
 export default router;
+

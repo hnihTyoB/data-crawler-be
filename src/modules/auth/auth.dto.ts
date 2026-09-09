@@ -49,6 +49,8 @@ export interface UserUsageDto {
     maxPagesLimit: number;
     maxJobsPerDayLimit: number;
     maxConcurrentJobsLimit: number;
+    maxPagesPerMonthLimit?: number | null;
+    maxJobsPerMonthLimit?: number | null;
   };
   usage: {
     jobsUsedToday: number;
@@ -56,8 +58,16 @@ export interface UserUsageDto {
     concurrentJobsRunning: number;
     concurrentJobsAvailable: number;
     totalPagesCrawled: number;
+    pagesCrawledToday: number;
+    pagesRemainingToday: number;
+    jobsUsedThisMonth: number;
+    jobsRemainingThisMonth?: number | null;
+    pagesCrawledThisMonth: number;
+    pagesRemainingThisMonth?: number | null;
   };
   resetAt: string;
+  monthlyResetAt?: string;
+  quotaResetAt?: string | null;
 }
 
 export interface ChangePasswordDto {

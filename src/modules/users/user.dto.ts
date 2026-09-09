@@ -9,6 +9,8 @@ export interface CreateUserDto {
   maxPagesLimit?: number;
   maxJobsPerDayLimit?: number;
   maxConcurrentJobsLimit?: number;
+  maxPagesPerMonthLimit?: number | null;
+  maxJobsPerMonthLimit?: number | null;
 }
 
 export interface UpdateUserDto {
@@ -20,6 +22,12 @@ export interface UpdateUserDto {
   maxPagesLimit?: number;
   maxJobsPerDayLimit?: number;
   maxConcurrentJobsLimit?: number;
+  maxPagesPerMonthLimit?: number | null;
+  maxJobsPerMonthLimit?: number | null;
+}
+
+export interface ResetUserQuotaDto {
+  resetLimitsToRole?: boolean;
 }
 
 export interface UserAssignedRoleSummaryDto {
@@ -41,6 +49,9 @@ export interface UserResponseDto {
   maxPagesLimit: number;
   maxJobsPerDayLimit: number;
   maxConcurrentJobsLimit: number;
+  maxPagesPerMonthLimit?: number | null;
+  maxJobsPerMonthLimit?: number | null;
+  quotaResetAt?: Date | null;
   createdAt: Date;
   updatedAt: Date;
   roles?: UserAssignedRoleSummaryDto[];

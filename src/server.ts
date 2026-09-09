@@ -55,6 +55,16 @@ async function bootstrap() {
     console.warn("[Server] Failed to initialize default system configs:", err);
   }
 
+  const { permissionService } = await import(
+    "./modules/permissions/permission.service"
+  );
+  try {
+    await permissionService.ensureSystemPermissions();
+    console.log("[Server] System permissions and role bindings synchronized successfully.");
+  } catch (err) {
+    console.warn("[Server] Failed to synchronize system permissions:", err);
+  }
+
   if (isRedisAvailable) {
     systemConfigService.initRedisSubscriber();
 
@@ -64,6 +74,19 @@ async function bootstrap() {
     const { startScheduleWorker } = await import("./queues/schedule.worker");
     startScheduleWorker();
     console.log("[Server] Schedule worker initialized in background.");
+
+    const { cronQueue } = await import("./queues/cron.queue");
+    const { cronRepository } = await import("./modules/cron/cron.repository");
+    try {
+      const jobStatuses = await cronRepository.getJobStatuses();
+      await cronQueue.registerDefaultSchedulers(jobStatuses);
+      console.log("[Server] Cron job schedulers registered successfully.");
+    } catch (cronErr) {
+      console.warn("[Server] Failed to register cron schedulers:", cronErr);
+    }
+
+    await import("./queues/cron.worker");
+    console.log("[Server] Cron worker initialized in background.");
   }
 
   app.listen(envConfig.port, () => {

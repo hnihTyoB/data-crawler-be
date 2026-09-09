@@ -10,6 +10,7 @@ import {
 import {
   createRoleSchema,
   updateRoleSchema,
+  resetRoleQuotaSchema,
   assignRolePermissionsSchema,
   listRolesQuerySchema,
   roleParamsSchema,
@@ -58,6 +59,15 @@ router.delete(
   requirePermission(PERMISSIONS.ROLES_DELETE),
   validateParams(roleParamsSchema),
   controller.delete,
+);
+
+router.post(
+  "/:id/reset-quota",
+  authMiddleware,
+  requirePermission(PERMISSIONS.ROLES_UPDATE),
+  validateParams(roleParamsSchema),
+  validate(resetRoleQuotaSchema),
+  controller.resetRoleQuota,
 );
 
 router.get(

@@ -25,6 +25,11 @@ interface RoleWithPermissions {
   description: string | null;
   isSystem: boolean;
   isActive: boolean;
+  maxPagesLimit: number;
+  maxJobsPerDayLimit: number;
+  maxConcurrentJobsLimit: number;
+  maxPagesPerMonthLimit: number | null;
+  maxJobsPerMonthLimit: number | null;
   createdAt: Date;
   updatedAt: Date;
   rolePermissions?: Array<{
@@ -53,6 +58,11 @@ export class RoleService {
       description: role.description ?? null,
       isSystem: role.isSystem,
       isActive: role.isActive,
+      maxPagesLimit: role.maxPagesLimit,
+      maxJobsPerDayLimit: role.maxJobsPerDayLimit,
+      maxConcurrentJobsLimit: role.maxConcurrentJobsLimit,
+      maxPagesPerMonthLimit: role.maxPagesPerMonthLimit,
+      maxJobsPerMonthLimit: role.maxJobsPerMonthLimit,
       createdAt: role.createdAt,
       updatedAt: role.updatedAt,
       permissions: role.rolePermissions
@@ -121,6 +131,11 @@ export class RoleService {
       description: dto.description,
       isSystem: false,
       permissionIds: dto.permissionIds,
+      maxPagesLimit: dto.maxPagesLimit,
+      maxJobsPerDayLimit: dto.maxJobsPerDayLimit,
+      maxConcurrentJobsLimit: dto.maxConcurrentJobsLimit,
+      maxPagesPerMonthLimit: dto.maxPagesPerMonthLimit,
+      maxJobsPerMonthLimit: dto.maxJobsPerMonthLimit,
     });
 
     if (context?.actorId) {
@@ -165,7 +180,22 @@ export class RoleService {
       name: dto.name,
       description: dto.description,
       isActive: dto.isActive,
+      maxPagesLimit: dto.maxPagesLimit,
+      maxJobsPerDayLimit: dto.maxJobsPerDayLimit,
+      maxConcurrentJobsLimit: dto.maxConcurrentJobsLimit,
+      maxPagesPerMonthLimit: dto.maxPagesPerMonthLimit,
+      maxJobsPerMonthLimit: dto.maxJobsPerMonthLimit,
     });
+
+    if (dto.syncUsersQuota) {
+      await this.repository.syncUsersQuota(id, {
+        maxPagesLimit: updated.maxPagesLimit,
+        maxJobsPerDayLimit: updated.maxJobsPerDayLimit,
+        maxConcurrentJobsLimit: updated.maxConcurrentJobsLimit,
+        maxPagesPerMonthLimit: updated.maxPagesPerMonthLimit,
+        maxJobsPerMonthLimit: updated.maxJobsPerMonthLimit,
+      });
+    }
 
     if (context?.actorId) {
       await this.auditLogService.log({
@@ -183,6 +213,36 @@ export class RoleService {
 
     authorizationCache.invalidateAll();
     return this.formatRole(updated);
+  }
+
+  async resetRoleQuota(
+    id: string,
+    syncLimits: boolean = false,
+    context?: AuditContext,
+  ): Promise<{ affectedUsers: number }> {
+    const existing = await this.repository.findById(id);
+    if (!existing) {
+      throw new AppError("Role not found", 404, ERROR_CODE.ROLE_NOT_FOUND);
+    }
+
+    const result = await this.repository.resetRoleQuota(id, syncLimits);
+
+    if (context?.actorId) {
+      await this.auditLogService.log({
+        userId: context.actorId,
+        action: AUDIT_ACTIONS.ROLE_QUOTA_RESET,
+        ipAddress: context.ipAddress,
+        userAgent: context.userAgent,
+        details: {
+          roleId: id,
+          roleSlug: existing.slug,
+          syncLimits,
+          affectedUsers: result.count,
+        },
+      });
+    }
+
+    return { affectedUsers: result.count };
   }
 
   async delete(id: string, context?: AuditContext): Promise<void> {

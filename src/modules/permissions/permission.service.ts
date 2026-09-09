@@ -66,4 +66,11 @@ export class PermissionService {
     authorizationCache.setCachedRoles(userId, roles);
     return roles;
   }
+
+  async ensureSystemPermissions(): Promise<void> {
+    await this.repository.ensureSystemPermissions();
+    authorizationCache.invalidateAll();
+  }
 }
+
+export const permissionService = new PermissionService();

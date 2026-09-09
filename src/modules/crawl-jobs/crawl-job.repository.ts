@@ -380,9 +380,12 @@ export class CrawlJobRepository {
     });
   }
 
-  async sumPagesCrawledByUser(userId: string): Promise<number> {
+  async sumPagesCrawledByUser(userId: string, since?: Date): Promise<number> {
     const aggregate = await prisma.crawlJob.aggregate({
-      where: { userId },
+      where: {
+        userId,
+        ...(since ? { createdAt: { gte: since } } : {}),
+      },
       _sum: { totalPages: true },
     });
     const totalPages = aggregate._sum.totalPages ?? 0;
@@ -394,6 +397,7 @@ export class CrawlJobRepository {
           userId,
           status: JOB_STATUS.FAILED,
           successPages: 0,
+          ...(since ? { createdAt: { gte: since } } : {}),
         },
         select: {
           totalPages: true,

@@ -321,6 +321,8 @@ export const swaggerPaths: Record<string, any> = {
                             example: 3,
                           },
                           totalPagesCrawled: { type: "integer", example: 45 },
+                          pagesCrawledToday: { type: "integer", example: 0 },
+                          pagesRemainingToday: { type: "integer", example: 100 },
                         },
                       },
                       resetAt: {

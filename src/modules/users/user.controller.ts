@@ -91,6 +91,33 @@ export class UserController {
     }
   };
 
+  resetQuota = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const resetLimitsToRole = !!req.body?.resetLimitsToRole;
+      const result = await this.service.resetQuota(
+        req.params.id,
+        resetLimitsToRole,
+        {
+          actorId: req.user.id,
+          ipAddress: req.ip,
+          userAgent: req.headers["user-agent"] as string,
+        },
+      );
+
+      res.json({
+        success: true,
+        message: "User quota reset successfully",
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   delete = async (req: Request, res: Response, next: NextFunction) => {
     try {
       await this.service.delete(

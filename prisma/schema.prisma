@@ -89,9 +89,12 @@ model User {
   role         UserRole @default(CRAWLER_USER)
   isActive     Boolean  @default(true) @map("is_active")
 
-  maxPagesLimit          Int @default(100) @map("max_pages_limit")
-  maxJobsPerDayLimit     Int @default(10) @map("max_jobs_per_day_limit")
-  maxConcurrentJobsLimit Int @default(3) @map("max_concurrent_jobs_limit")
+  maxPagesLimit          Int       @default(100) @map("max_pages_limit")
+  maxJobsPerDayLimit     Int       @default(10) @map("max_jobs_per_day_limit")
+  maxConcurrentJobsLimit Int       @default(3) @map("max_concurrent_jobs_limit")
+  maxPagesPerMonthLimit  Int?      @default(1000) @map("max_pages_per_month_limit")
+  maxJobsPerMonthLimit   Int?      @default(100) @map("max_jobs_per_month_limit")
+  quotaResetAt           DateTime? @map("quota_reset_at")
 
   crawlJobs           CrawlJob[]
   crawlSchedules      CrawlSchedule[]
@@ -408,6 +411,13 @@ model Role {
   description String?
   isSystem    Boolean  @default(false) @map("is_system")
   isActive    Boolean  @default(true) @map("is_active")
+
+  maxPagesLimit          Int       @default(100) @map("max_pages_limit")
+  maxJobsPerDayLimit     Int       @default(10) @map("max_jobs_per_day_limit")
+  maxConcurrentJobsLimit Int       @default(3) @map("max_concurrent_jobs_limit")
+  maxPagesPerMonthLimit  Int?      @default(1000) @map("max_pages_per_month_limit")
+  maxJobsPerMonthLimit   Int?      @default(100) @map("max_jobs_per_month_limit")
+
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 

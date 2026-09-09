@@ -114,6 +114,11 @@ export class RoleRepository {
     description?: string;
     isSystem?: boolean;
     permissionIds?: string[];
+    maxPagesLimit?: number;
+    maxJobsPerDayLimit?: number;
+    maxConcurrentJobsLimit?: number;
+    maxPagesPerMonthLimit?: number | null;
+    maxJobsPerMonthLimit?: number | null;
   }) {
     return prisma.$transaction(async (tx) => {
       const role = await tx.role.create({
@@ -123,6 +128,11 @@ export class RoleRepository {
           description: data.description,
           isSystem: data.isSystem ?? false,
           isActive: true,
+          ...(data.maxPagesLimit !== undefined && { maxPagesLimit: data.maxPagesLimit }),
+          ...(data.maxJobsPerDayLimit !== undefined && { maxJobsPerDayLimit: data.maxJobsPerDayLimit }),
+          ...(data.maxConcurrentJobsLimit !== undefined && { maxConcurrentJobsLimit: data.maxConcurrentJobsLimit }),
+          ...(data.maxPagesPerMonthLimit !== undefined && { maxPagesPerMonthLimit: data.maxPagesPerMonthLimit }),
+          ...(data.maxJobsPerMonthLimit !== undefined && { maxJobsPerMonthLimit: data.maxJobsPerMonthLimit }),
         },
       });
 
@@ -156,6 +166,11 @@ export class RoleRepository {
       name?: string;
       description?: string;
       isActive?: boolean;
+      maxPagesLimit?: number;
+      maxJobsPerDayLimit?: number;
+      maxConcurrentJobsLimit?: number;
+      maxPagesPerMonthLimit?: number | null;
+      maxJobsPerMonthLimit?: number | null;
     },
   ) {
     return prisma.role.update({
@@ -169,6 +184,72 @@ export class RoleRepository {
           select: { userRoles: true },
         },
       },
+    });
+  }
+
+  async syncUsersQuota(
+    roleId: string,
+    limits: {
+      maxPagesLimit?: number;
+      maxJobsPerDayLimit?: number;
+      maxConcurrentJobsLimit?: number;
+      maxPagesPerMonthLimit?: number | null;
+      maxJobsPerMonthLimit?: number | null;
+    },
+  ) {
+    const updateData: Prisma.UserUpdateManyMutationInput = {};
+    if (limits.maxPagesLimit !== undefined) updateData.maxPagesLimit = limits.maxPagesLimit;
+    if (limits.maxJobsPerDayLimit !== undefined) updateData.maxJobsPerDayLimit = limits.maxJobsPerDayLimit;
+    if (limits.maxConcurrentJobsLimit !== undefined) updateData.maxConcurrentJobsLimit = limits.maxConcurrentJobsLimit;
+    if (limits.maxPagesPerMonthLimit !== undefined) updateData.maxPagesPerMonthLimit = limits.maxPagesPerMonthLimit;
+    if (limits.maxJobsPerMonthLimit !== undefined) updateData.maxJobsPerMonthLimit = limits.maxJobsPerMonthLimit;
+
+    if (Object.keys(updateData).length === 0) return { count: 0 };
+
+    return prisma.user.updateMany({
+      where: {
+        userRoles: {
+          some: { roleId },
+        },
+      },
+      data: updateData,
+    });
+  }
+
+  async resetRoleQuota(roleId: string, syncLimits: boolean = false) {
+    const now = new Date();
+    const updateData: Prisma.UserUpdateManyMutationInput = {
+      quotaResetAt: now,
+    };
+
+    if (syncLimits) {
+      const role = await prisma.role.findUnique({
+        where: { id: roleId },
+        select: {
+          maxPagesLimit: true,
+          maxJobsPerDayLimit: true,
+          maxConcurrentJobsLimit: true,
+          maxPagesPerMonthLimit: true,
+          maxJobsPerMonthLimit: true,
+        },
+      });
+
+      if (role) {
+        updateData.maxPagesLimit = role.maxPagesLimit;
+        updateData.maxJobsPerDayLimit = role.maxJobsPerDayLimit;
+        updateData.maxConcurrentJobsLimit = role.maxConcurrentJobsLimit;
+        updateData.maxPagesPerMonthLimit = role.maxPagesPerMonthLimit;
+        updateData.maxJobsPerMonthLimit = role.maxJobsPerMonthLimit;
+      }
+    }
+
+    return prisma.user.updateMany({
+      where: {
+        userRoles: {
+          some: { roleId },
+        },
+      },
+      data: updateData,
     });
   }
 

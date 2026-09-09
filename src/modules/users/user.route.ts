@@ -10,6 +10,7 @@ import {
 import {
   createUserSchema,
   updateUserSchema,
+  resetUserQuotaSchema,
   listUsersQuerySchema,
   assignUserRolesSchema,
   userParamsSchema,
@@ -65,6 +66,15 @@ router.delete(
   requirePermission(PERMISSIONS.USERS_DELETE),
   validateParams(userParamsSchema),
   controller.delete,
+);
+
+router.post(
+  "/:id/reset-quota",
+  authMiddleware,
+  requirePermission(PERMISSIONS.USERS_UPDATE),
+  validateParams(userParamsSchema),
+  validate(resetUserQuotaSchema),
+  controller.resetQuota,
 );
 
 router.get(

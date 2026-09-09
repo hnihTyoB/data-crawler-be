@@ -72,6 +72,10 @@ export const PERMISSIONS = {
   // System Configs
   SYSTEM_CONFIG_READ: "system_configs.read",
   SYSTEM_CONFIG_MANAGE: "system_configs.manage",
+
+  // Cron Jobs
+  CRON_JOB_READ: "cron_jobs.read",
+  CRON_JOB_MANAGE: "cron_jobs.manage",
 } as const;
 
 export type PermissionSlug = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
@@ -493,6 +497,23 @@ export const SYSTEM_PERMISSIONS_CATALOG: PermissionDefinition[] = [
     action: "manage",
     isSystem: true,
   },
+  // Cron Jobs
+  {
+    name: "View Cron Jobs",
+    slug: PERMISSIONS.CRON_JOB_READ,
+    description: "Xem danh sách tác vụ định kỳ và lịch chạy nền",
+    resource: "cron_jobs",
+    action: "read",
+    isSystem: true,
+  },
+  {
+    name: "Manage Cron Jobs",
+    slug: PERMISSIONS.CRON_JOB_MANAGE,
+    description: "Kích hoạt chạy thủ công và bật/tắt lịch chạy tự động",
+    resource: "cron_jobs",
+    action: "manage",
+    isSystem: true,
+  },
 ];
 
 export const SYSTEM_ROLE_DEFAULT_PERMISSIONS: Record<
@@ -549,6 +570,8 @@ export const SYSTEM_ROLE_DEFAULT_PERMISSIONS: Record<
     PERMISSIONS.DASHBOARD_READ_ALL,
     PERMISSIONS.SYSTEM_CONFIG_READ,
     PERMISSIONS.SYSTEM_CONFIG_MANAGE,
+    PERMISSIONS.CRON_JOB_READ,
+    PERMISSIONS.CRON_JOB_MANAGE,
   ],
   [SYSTEM_ROLE_SLUGS.CRAWLER_USER]: [
     PERMISSIONS.CRAWL_JOBS_CREATE,

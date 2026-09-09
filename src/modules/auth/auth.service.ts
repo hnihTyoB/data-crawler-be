@@ -512,6 +512,31 @@ export class AuthService {
       DEFAULT_TIMEZONE,
     );
 
+    const startOfMonth = createUtcDateFromZonedParts(
+      nowZoned.year,
+      nowZoned.month,
+      1,
+      0,
+      0,
+      DEFAULT_TIMEZONE,
+    );
+    const nextMonth = createUtcDateFromZonedParts(
+      nowZoned.month === 12 ? nowZoned.year + 1 : nowZoned.year,
+      nowZoned.month === 12 ? 1 : nowZoned.month + 1,
+      1,
+      0,
+      0,
+      DEFAULT_TIMEZONE,
+    );
+
+    const quotaResetAt = (user as any).quotaResetAt
+      ? new Date((user as any).quotaResetAt)
+      : null;
+    const effectiveDailySince =
+      quotaResetAt && quotaResetAt > startOfDay ? quotaResetAt : startOfDay;
+    const effectiveMonthlySince =
+      quotaResetAt && quotaResetAt > startOfMonth ? quotaResetAt : startOfMonth;
+
     const twoHoursAgo = new Date();
     twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
     const activeStatuses = [
@@ -521,19 +546,41 @@ export class AuthService {
       JOB_STATUS.PROCESSING_EXPORT,
     ];
 
-    const [jobsTodayCount, concurrentJobsCount, totalPages] = await Promise.all(
-      [
-        crawlJobRepo.countJobsSince(userId, startOfDay),
-        crawlJobRepo.countConcurrentJobs(userId, activeStatuses, twoHoursAgo),
-        crawlJobRepo.sumPagesCrawledByUser(userId),
-      ],
-    );
+    const [
+      jobsTodayCount,
+      concurrentJobsCount,
+      totalPages,
+      pagesToday,
+      jobsMonthCount,
+      pagesMonth,
+    ] = await Promise.all([
+      crawlJobRepo.countJobsSince(userId, effectiveDailySince),
+      crawlJobRepo.countConcurrentJobs(userId, activeStatuses, twoHoursAgo),
+      crawlJobRepo.sumPagesCrawledByUser(userId),
+      crawlJobRepo.sumPagesCrawledByUser(userId, effectiveDailySince),
+      crawlJobRepo.countJobsSince(userId, effectiveMonthlySince),
+      crawlJobRepo.sumPagesCrawledByUser(userId, effectiveMonthlySince),
+    ]);
+
+    const maxPagesPerMonthLimit = (user as any).maxPagesPerMonthLimit ?? null;
+    const maxJobsPerMonthLimit = (user as any).maxJobsPerMonthLimit ?? null;
+
+    const jobsRemainingThisMonth =
+      maxJobsPerMonthLimit !== null
+        ? Math.max(0, maxJobsPerMonthLimit - jobsMonthCount)
+        : null;
+    const pagesRemainingThisMonth =
+      maxPagesPerMonthLimit !== null
+        ? Math.max(0, maxPagesPerMonthLimit - pagesMonth)
+        : null;
 
     return {
       quota: {
         maxPagesLimit: user.maxPagesLimit,
         maxJobsPerDayLimit: user.maxJobsPerDayLimit,
         maxConcurrentJobsLimit: user.maxConcurrentJobsLimit,
+        maxPagesPerMonthLimit,
+        maxJobsPerMonthLimit,
       },
       usage: {
         jobsUsedToday: jobsTodayCount,
@@ -547,8 +594,16 @@ export class AuthService {
           user.maxConcurrentJobsLimit - concurrentJobsCount,
         ),
         totalPagesCrawled: totalPages,
+        pagesCrawledToday: pagesToday,
+        pagesRemainingToday: Math.max(0, user.maxPagesLimit - pagesToday),
+        jobsUsedThisMonth: jobsMonthCount,
+        jobsRemainingThisMonth,
+        pagesCrawledThisMonth: pagesMonth,
+        pagesRemainingThisMonth,
       },
       resetAt: nextDay.toISOString(),
+      monthlyResetAt: nextMonth.toISOString(),
+      quotaResetAt: quotaResetAt ? quotaResetAt.toISOString() : null,
     };
   }
 

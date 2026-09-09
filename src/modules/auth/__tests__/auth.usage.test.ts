@@ -14,6 +14,9 @@ describe("AuthService getUsage and avatarUrl", () => {
     maxPagesLimit: 100,
     maxJobsPerDayLimit: 10,
     maxConcurrentJobsLimit: 3,
+    maxPagesPerMonthLimit: 1000,
+    maxJobsPerMonthLimit: 100,
+    quotaResetAt: null,
     createdAt: new Date(),
   };
 
@@ -24,15 +27,16 @@ describe("AuthService getUsage and avatarUrl", () => {
     };
     (service as any).repository = repository;
 
-    (
-      CrawlJobRepository.prototype.countJobsSince as jest.Mock
-    ).mockResolvedValue(4);
+    (CrawlJobRepository.prototype.countJobsSince as jest.Mock)
+      .mockResolvedValueOnce(4)
+      .mockResolvedValueOnce(15);
     (
       CrawlJobRepository.prototype.countConcurrentJobs as jest.Mock
     ).mockResolvedValue(1);
-    (
-      CrawlJobRepository.prototype.sumPagesCrawledByUser as jest.Mock
-    ).mockResolvedValue(125);
+    (CrawlJobRepository.prototype.sumPagesCrawledByUser as jest.Mock)
+      .mockResolvedValueOnce(125)
+      .mockResolvedValueOnce(25)
+      .mockResolvedValueOnce(75);
 
     const usage = await service.getUsage("user-123");
 
@@ -40,6 +44,8 @@ describe("AuthService getUsage and avatarUrl", () => {
       maxPagesLimit: 100,
       maxJobsPerDayLimit: 10,
       maxConcurrentJobsLimit: 3,
+      maxPagesPerMonthLimit: 1000,
+      maxJobsPerMonthLimit: 100,
     });
     expect(usage.usage).toEqual({
       jobsUsedToday: 4,
@@ -47,8 +53,16 @@ describe("AuthService getUsage and avatarUrl", () => {
       concurrentJobsRunning: 1,
       concurrentJobsAvailable: 2,
       totalPagesCrawled: 125,
+      pagesCrawledToday: 25,
+      pagesRemainingToday: 75,
+      jobsUsedThisMonth: 15,
+      jobsRemainingThisMonth: 85,
+      pagesCrawledThisMonth: 75,
+      pagesRemainingThisMonth: 925,
     });
     expect(usage.resetAt).toBeDefined();
+    expect(usage.monthlyResetAt).toBeDefined();
+    expect(usage.quotaResetAt).toBeNull();
   });
 
   it("updates fullName via updateMe", async () => {

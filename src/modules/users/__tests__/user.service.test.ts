@@ -28,4 +28,39 @@ describe("UserService admin role guard", () => {
     );
     expect(repository.update).not.toHaveBeenCalled();
   });
+
+  it("resets user quota successfully and logs audit event", async () => {
+    const service = new UserService();
+    const repository = {
+      findById: jest.fn().mockResolvedValue(admin),
+      resetQuota: jest.fn().mockResolvedValue({
+        ...admin,
+        quotaResetAt: new Date(),
+      }),
+    };
+    const auditLogService = {
+      log: jest.fn().mockResolvedValue(undefined),
+    };
+    (service as any).repository = repository;
+    (service as any).auditLogService = auditLogService;
+
+    const result = await service.resetQuota(admin.id, true, {
+      actorId: "superadmin-1",
+      ipAddress: "127.0.0.1",
+      userAgent: "jest",
+    });
+
+    expect(repository.resetQuota).toHaveBeenCalledWith(admin.id, true);
+    expect(auditLogService.log).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: "superadmin-1",
+        action: "USER_QUOTA_RESET",
+        details: expect.objectContaining({
+          targetUserId: admin.id,
+          resetLimitsToRole: true,
+        }),
+      }),
+    );
+    expect(result.id).toBe(admin.id);
+  });
 });

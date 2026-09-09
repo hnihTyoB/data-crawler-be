@@ -110,4 +110,16 @@ describe("PermissionService", () => {
       expect(repository.findUserRoleSlugs).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe("ensureSystemPermissions", () => {
+    it("should call repository.ensureSystemPermissions and invalidate cache", async () => {
+      repository.ensureSystemPermissions = jest.fn().mockResolvedValue(undefined);
+      const invalidateSpy = jest.spyOn(authorizationCache, "invalidateAll");
+
+      await service.ensureSystemPermissions();
+
+      expect(repository.ensureSystemPermissions).toHaveBeenCalledTimes(1);
+      expect(invalidateSpy).toHaveBeenCalledTimes(1);
+    });
+  });
 });
