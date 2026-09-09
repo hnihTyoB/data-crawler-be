@@ -18,6 +18,13 @@ interface ParsedTable {
   caption: string;
 }
 
+function sanitizeExcelValue<T>(value: T): T {
+  if (typeof value === "string" && /^[=+\-@\t\r]/.test(value)) {
+    return `'${value}` as unknown as T;
+  }
+  return value;
+}
+
 export class XlsxExportService extends BaseExportService {
   readonly mimeType = EXPORT_MIME_TYPES.XLSX;
 
@@ -75,15 +82,15 @@ export class XlsxExportService extends BaseExportService {
       const cleanText = mainContent ? stripMarkdown(mainContent) : "";
 
       const row = sheet.addRow({
-        url: page.url,
-        title: page.title ?? "",
-        description: page.description ?? "",
+        url: sanitizeExcelValue(page.url),
+        title: sanitizeExcelValue(page.title ?? ""),
+        description: sanitizeExcelValue(page.description ?? ""),
         status: page.status,
         statusCode: page.statusCode ?? "",
-        rawMarkdown: rawMarkdown.slice(0, 500),
-        cleanText: cleanText.slice(0, 500),
-        mainContent: mainContent.slice(0, 500),
-        errorMessage: page.errorMessage ?? "",
+        rawMarkdown: sanitizeExcelValue(rawMarkdown.slice(0, 500)),
+        cleanText: sanitizeExcelValue(cleanText.slice(0, 500)),
+        mainContent: sanitizeExcelValue(mainContent.slice(0, 500)),
+        errorMessage: sanitizeExcelValue(page.errorMessage ?? ""),
         crawledAt: page.crawledAt?.toISOString() ?? "",
       });
 
@@ -159,7 +166,9 @@ export class XlsxExportService extends BaseExportService {
         // Caption row (nếu có)
         let headerRowIndex = 3;
         if (table.caption) {
-          tableSheet.getCell("A3").value = `Caption: ${table.caption}`;
+          tableSheet.getCell("A3").value = sanitizeExcelValue(
+            `Caption: ${table.caption}`,
+          );
           tableSheet.getCell("A3").font = { bold: true };
           tableSheet.mergeCells(3, 1, 3, Math.max(table.headers.length, 1));
           headerRowIndex = 4;
@@ -169,7 +178,7 @@ export class XlsxExportService extends BaseExportService {
         if (table.headers.length > 0) {
           const tableHeaderRow = tableSheet.getRow(headerRowIndex);
           table.headers.forEach((h, i) => {
-            tableHeaderRow.getCell(i + 1).value = h;
+            tableHeaderRow.getCell(i + 1).value = sanitizeExcelValue(h);
           });
           tableHeaderRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
           tableHeaderRow.fill = {
@@ -185,7 +194,7 @@ export class XlsxExportService extends BaseExportService {
         for (const dataRow of table.rows) {
           const row = tableSheet.getRow(headerRowIndex);
           dataRow.forEach((cell, i) => {
-            row.getCell(i + 1).value = cell;
+            row.getCell(i + 1).value = sanitizeExcelValue(cell);
           });
           headerRowIndex++;
         }

@@ -10,7 +10,7 @@ if (!process.env.DATABASE_URL) {
   const isSupabase =
     host.includes("supabase.co") || host.includes("pooler.supabase.com");
   const ssl =
-    process.env.DB_SSL === "true" || isSupabase ? "&sslmode=require" : "";
+    (process.env.DB_SSL === "true" || isSupabase) ? "&sslmode=require" : "";
   process.env.DATABASE_URL = `postgresql://${user}:${password}@${host}:${port}/${name}?schema=public${ssl}`;
 }
 

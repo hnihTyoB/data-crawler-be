@@ -15,6 +15,8 @@ import {
   UserResponseDto,
   UserQueryDto,
 } from "./user.dto";
+import { systemConfigService } from "../system-config/system-config.service";
+import { envConfig } from "../../config/env.config";
 
 interface AuditContext {
   actorId?: string;
@@ -22,16 +24,31 @@ interface AuditContext {
   userAgent?: string;
 }
 
+interface UserRoleItem {
+  role?: {
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    isSystem: boolean;
+    isActive: boolean;
+  };
+}
+
+interface UserWithRoles extends User {
+  userRoles?: UserRoleItem[];
+}
+
 export class UserService {
   private readonly repository = new UserRepository();
   private readonly roleRepository = new RoleRepository();
   private readonly auditLogService = new AuditLogService();
 
-  private formatUser(user: any): UserResponseDto {
+  private formatUser(user: UserWithRoles): UserResponseDto {
     const roles = Array.isArray(user.userRoles)
       ? user.userRoles
-          .filter((ur: any) => ur.role)
-          .map((ur: any) => ({
+          .filter((ur): ur is { role: NonNullable<UserRoleItem["role"]> } => Boolean(ur.role))
+          .map((ur) => ({
             id: ur.role.id,
             name: ur.role.name,
             slug: ur.role.slug,
@@ -96,16 +113,40 @@ export class UserService {
 
     const passwordHash = await bcrypt.hash(data.password, 10);
 
+    const defaultMaxPages = await systemConfigService.get<number>(
+      "quota.user_max_pages",
+      envConfig.quota.defaultMaxPages,
+    );
+    const defaultMaxJobsPerDay = await systemConfigService.get<number>(
+      "quota.user_max_jobs_per_day",
+      envConfig.quota.defaultMaxJobsPerDay,
+    );
+    const defaultMaxConcurrentJobs = await systemConfigService.get<number>(
+      "quota.user_max_concurrent_jobs",
+      envConfig.quota.defaultMaxConcurrentJobs,
+    );
+    const defaultMaxPagesPerMonth = await systemConfigService.get<number>(
+      "quota.user_max_pages_per_month",
+      envConfig.quota.defaultMaxPagesPerMonth,
+    );
+    const defaultMaxJobsPerMonth = await systemConfigService.get<number>(
+      "quota.user_max_jobs_per_month",
+      envConfig.quota.defaultMaxJobsPerMonth,
+    );
+
     const user = await this.repository.create({
       email: data.email,
       passwordHash,
       fullName: data.fullName,
       role: data.role,
-      maxPagesLimit: data.maxPagesLimit,
-      maxJobsPerDayLimit: data.maxJobsPerDayLimit,
-      maxConcurrentJobsLimit: data.maxConcurrentJobsLimit,
-      maxPagesPerMonthLimit: data.maxPagesPerMonthLimit,
-      maxJobsPerMonthLimit: data.maxJobsPerMonthLimit,
+      maxPagesLimit: data.maxPagesLimit ?? defaultMaxPages,
+      maxJobsPerDayLimit: data.maxJobsPerDayLimit ?? defaultMaxJobsPerDay,
+      maxConcurrentJobsLimit:
+        data.maxConcurrentJobsLimit ?? defaultMaxConcurrentJobs,
+      maxPagesPerMonthLimit:
+        data.maxPagesPerMonthLimit ?? defaultMaxPagesPerMonth,
+      maxJobsPerMonthLimit:
+        data.maxJobsPerMonthLimit ?? defaultMaxJobsPerMonth,
     });
 
     // Auto assign matching default system role

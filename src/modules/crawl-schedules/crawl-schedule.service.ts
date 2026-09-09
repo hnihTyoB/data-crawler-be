@@ -5,7 +5,11 @@ import {
   UpdateCrawlScheduleDto,
   CrawlScheduleQueryDto,
 } from "./crawl-schedule.dto";
-import { calculateNextRun } from "../../common/helpers/schedule-calculator.helper";
+import {
+  calculateNextRun,
+  getZonedDateParts,
+  createUtcDateFromZonedParts,
+} from "../../common/helpers/schedule-calculator.helper";
 import {
   validateUrl,
   extractDomain,
@@ -17,18 +21,51 @@ import { ROLES } from "../../common/constants/role.constant";
 import { DEFAULT_TIMEZONE } from "../../common/constants/timezone.constant";
 import { CRAWL_MODE } from "../../common/constants/crawl-mode.constant";
 import { SCHEDULE_FREQUENCY } from "../../common/constants/schedule-frequency.constant";
+import { JOB_STATUS } from "../../common/constants/job-status.constant";
 import { crawlQueue } from "../../queues/crawl.queue";
 import { getErrorMessage } from "../../common/helpers/error-mapping.helper";
+import { UserRepository } from "../users/user.repository";
+import { hasAdminPrivilege } from "../../common/helpers/rbac.helper";
+import {
+  acquireDistributedLock,
+  releaseDistributedLock,
+} from "../../common/redis/redis-client";
 
 export class CrawlScheduleService {
   private readonly repository = new CrawlScheduleRepository();
   private readonly jobRepository = new CrawlJobRepository();
+  private readonly userRepository = new UserRepository();
 
-  async create(userId: string, role: string, payload: CreateCrawlScheduleDto) {
+  async create(
+    userId: string,
+    role: string,
+    payload: CreateCrawlScheduleDto,
+    roles?: string[],
+  ) {
     const isUrlList = payload.mode === CRAWL_MODE.URL_LIST;
     const deduplicatedUrls = isUrlList
       ? [...new Set(payload.urls!.map((u) => u.trim()))]
       : [];
+
+    const requestedPages = isUrlList
+      ? deduplicatedUrls.length
+      : (payload.maxPages ?? 20);
+
+    if (!hasAdminPrivilege(role, roles)) {
+      let user: any = null;
+      try {
+        user = await this.userRepository?.findById(userId);
+      } catch {
+        user = null;
+      }
+      if (user && user.maxPagesLimit && requestedPages > user.maxPagesLimit) {
+        throw new AppError(
+          `Requested pages (${requestedPages}) exceeds quota limit of ${user.maxPagesLimit}`,
+          400,
+          ERROR_CODE.QUOTA_MAX_PAGES_EXCEEDED,
+        );
+      }
+    }
 
     const parsed = isUrlList ? null : validateUrl(payload.startUrl);
     const domain = isUrlList
@@ -110,14 +147,20 @@ export class CrawlScheduleService {
     userId: string,
     role: string,
     query: CrawlScheduleQueryDto,
+    roles?: string[],
   ) {
-    if (role === ROLES.ADMIN) {
+    if (hasAdminPrivilege(role, roles)) {
       return this.repository.findAll(query);
     }
     return this.repository.findAllByUser(userId, query);
   }
 
-  async findById(userId: string, role: string, scheduleId: string) {
+  async findById(
+    userId: string,
+    role: string,
+    scheduleId: string,
+    roles?: string[],
+  ) {
     const schedule = await this.repository.findById(scheduleId);
     if (!schedule) {
       throw new AppError(
@@ -127,7 +170,7 @@ export class CrawlScheduleService {
       );
     }
 
-    if (role !== ROLES.ADMIN && schedule.userId !== userId) {
+    if (!hasAdminPrivilege(role, roles) && schedule.userId !== userId) {
       throw new AppError(
         "Crawl schedule not found",
         404,
@@ -143,8 +186,9 @@ export class CrawlScheduleService {
     role: string,
     scheduleId: string,
     payload: UpdateCrawlScheduleDto,
+    roles?: string[],
   ) {
-    const schedule = await this.findById(userId, role, scheduleId);
+    const schedule = await this.findById(userId, role, scheduleId, roles);
 
     const isUrlList = (payload.mode ?? schedule.mode) === CRAWL_MODE.URL_LIST;
     let deduplicatedUrls: string[] | undefined;
@@ -177,6 +221,28 @@ export class CrawlScheduleService {
     const isActive =
       payload.isActive !== undefined ? payload.isActive : schedule.isActive;
     const timezone = payload.timezone ?? schedule.timezone ?? DEFAULT_TIMEZONE;
+    const requestedPages = isUrlList
+      ? (deduplicatedUrls?.length ?? schedule.urls?.length ?? schedule.maxPages)
+      : (payload.maxPages ?? schedule.maxPages);
+
+    if (
+      !hasAdminPrivilege(role, roles) &&
+      (payload.maxPages !== undefined || payload.urls !== undefined)
+    ) {
+      let user: any = null;
+      try {
+        user = await this.userRepository?.findById(userId);
+      } catch {
+        user = null;
+      }
+      if (user && user.maxPagesLimit && requestedPages > user.maxPagesLimit) {
+        throw new AppError(
+          `Requested pages (${requestedPages}) exceeds quota limit of ${user.maxPagesLimit}`,
+          400,
+          ERROR_CODE.QUOTA_MAX_PAGES_EXCEEDED,
+        );
+      }
+    }
 
     let nextRunAt = schedule.nextRunAt;
     if (isActive) {
@@ -205,25 +271,32 @@ export class CrawlScheduleService {
       dayOfWeek: dayOfWeek ?? undefined,
       dayOfMonth: dayOfMonth ?? undefined,
       timezone,
-      maxPages:
-        isUrlList && deduplicatedUrls
-          ? deduplicatedUrls.length
-          : payload.maxPages,
+      maxPages: requestedPages,
       maxDepth: payload.maxDepth,
       urls: deduplicatedUrls,
       isActive,
       autoDiff: payload.autoDiff,
-      nextRunAt: nextRunAt ?? undefined,
+      nextRunAt,
     });
   }
 
-  async delete(userId: string, role: string, scheduleId: string) {
-    await this.findById(userId, role, scheduleId);
+  async delete(
+    userId: string,
+    role: string,
+    scheduleId: string,
+    roles?: string[],
+  ) {
+    await this.findById(userId, role, scheduleId, roles);
     return this.repository.delete(scheduleId);
   }
 
-  async triggerRun(userId: string, role: string, scheduleId: string) {
-    const schedule = await this.findById(userId, role, scheduleId);
+  async triggerRun(
+    userId: string,
+    role: string,
+    scheduleId: string,
+    roles?: string[],
+  ) {
+    const schedule = await this.findById(userId, role, scheduleId, roles);
 
     if (!crawlQueue) {
       throw new AppError(
@@ -233,35 +306,122 @@ export class CrawlScheduleService {
       );
     }
 
-    const job = await this.jobRepository.create({
-      userId: schedule.userId,
-      startUrl: schedule.startUrl,
-      domain: schedule.domain ?? undefined,
-      mode: schedule.mode,
-      maxPages: schedule.maxPages,
-      maxDepth: schedule.maxDepth,
-      urls: schedule.urls,
-      scheduleId: schedule.id,
-    });
+    const quotaLockKey = `lock:quota:${schedule.userId}`;
+    const acquiredQuotaLock = await acquireDistributedLock(quotaLockKey, 7000);
+    if (!acquiredQuotaLock) {
+      throw new AppError(
+        "Hệ thống đang xử lý yêu cầu cào trước đó của bạn. Vui lòng thử lại sau giây lát.",
+        429,
+        ERROR_CODE.RATE_LIMIT_EXCEEDED,
+      );
+    }
 
-    await crawlQueue.add("crawl-job", { jobId: job.id });
+    try {
+      // Enforce quota limits on manual schedule trigger for non-admin users
+      if (!hasAdminPrivilege(role, roles)) {
+        let user = (schedule as any).user;
+        if (!user && this.userRepository?.findById) {
+          try {
+            user = await this.userRepository.findById(schedule.userId);
+          } catch {
+            user = null;
+          }
+        }
 
-    // Update schedule lastRunAt and compute nextRunAt
-    const now = new Date();
-    const nextRunAt = calculateNextRun({
-      frequency: schedule.frequency,
-      hour: schedule.hour,
-      minute: schedule.minute,
-      dayOfWeek: schedule.dayOfWeek ?? undefined,
-      dayOfMonth: schedule.dayOfMonth ?? undefined,
-      cronExpression: schedule.cronExpression ?? undefined,
-      timezone: schedule.timezone ?? DEFAULT_TIMEZONE,
-      fromDate: now,
-    });
+        if (user) {
+          if (user.maxPagesLimit && schedule.maxPages > user.maxPagesLimit) {
+            throw new AppError(
+              `Requested pages (${schedule.maxPages}) exceeds quota limit of ${user.maxPagesLimit}`,
+              400,
+              ERROR_CODE.QUOTA_MAX_PAGES_EXCEEDED,
+            );
+          }
 
-    await this.repository.updateNextRun(schedule.id, now, nextRunAt);
+          const timezone = schedule.timezone || DEFAULT_TIMEZONE;
+          const nowZoned = getZonedDateParts(new Date(), timezone);
+          const startOfDay = createUtcDateFromZonedParts(
+            nowZoned.year,
+            nowZoned.month,
+            nowZoned.day,
+            0,
+            0,
+            timezone,
+          );
+          const quotaResetAt = user.quotaResetAt ? new Date(user.quotaResetAt) : null;
+          const effectiveSince = quotaResetAt && quotaResetAt > startOfDay ? quotaResetAt : startOfDay;
+          const jobsTodayCount = (this.jobRepository as any).countJobsSince
+            ? await this.jobRepository.countJobsSince(schedule.userId, effectiveSince)
+            : 0;
 
-    return job;
+          if (user.maxJobsPerDayLimit && jobsTodayCount >= user.maxJobsPerDayLimit) {
+            throw new AppError(
+              `Daily job quota of ${user.maxJobsPerDayLimit} exceeded`,
+              400,
+              ERROR_CODE.QUOTA_JOBS_PER_DAY_EXCEEDED,
+            );
+          }
+
+          const twoHoursAgo = new Date();
+          twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
+          const activeStatuses = [
+            JOB_STATUS.PENDING,
+            JOB_STATUS.QUEUED,
+            JOB_STATUS.RUNNING,
+            JOB_STATUS.PROCESSING_EXPORT,
+          ];
+          const concurrentJobsCount = (this.jobRepository as any).countConcurrentJobs
+            ? await this.jobRepository.countConcurrentJobs(
+                schedule.userId,
+                activeStatuses,
+                twoHoursAgo,
+              )
+            : 0;
+          const maxConcurrent = user.maxConcurrentJobsLimit ?? 3;
+          if (concurrentJobsCount >= maxConcurrent) {
+            throw new AppError(
+              `Concurrent jobs limit of ${maxConcurrent} reached`,
+              429,
+              ERROR_CODE.QUOTA_CONCURRENT_JOBS_EXCEEDED,
+            );
+          }
+        }
+      }
+
+      const job = await this.jobRepository.create({
+        userId: schedule.userId,
+        startUrl: schedule.startUrl,
+        domain: schedule.domain ?? undefined,
+        mode: schedule.mode,
+        maxPages: schedule.maxPages,
+        maxDepth: schedule.maxDepth,
+        urls: schedule.urls,
+        scheduleId: schedule.id,
+      });
+
+      await crawlQueue.add("crawl-job", { jobId: job.id });
+
+      // Update schedule lastRunAt and compute nextRunAt
+      const now = new Date();
+      const nextRunAt = calculateNextRun({
+        frequency: schedule.frequency,
+        hour: schedule.hour,
+        minute: schedule.minute,
+        dayOfWeek: schedule.dayOfWeek ?? undefined,
+        dayOfMonth: schedule.dayOfMonth ?? undefined,
+        cronExpression: schedule.cronExpression ?? undefined,
+        timezone: schedule.timezone ?? DEFAULT_TIMEZONE,
+        fromDate: now,
+      });
+
+      await this.repository.updateNextRun(schedule.id, now, nextRunAt);
+
+      return job;
+    } finally {
+      await releaseDistributedLock(
+        quotaLockKey,
+        typeof acquiredQuotaLock === "string" ? acquiredQuotaLock : undefined,
+      );
+    }
   }
 
   async getScheduleHistory(
@@ -270,8 +430,9 @@ export class CrawlScheduleService {
     scheduleId: string,
     page = 1,
     limit = 20,
+    roles?: string[],
   ) {
-    await this.findById(userId, role, scheduleId);
+    await this.findById(userId, role, scheduleId, roles);
     const [items, total] = await this.jobRepository.findByScheduleId(
       scheduleId,
       page,
@@ -305,6 +466,61 @@ export class CrawlScheduleService {
             `[Schedule Service] Skipping schedule ${schedule.id}: user is inactive or deleted`,
           );
           continue;
+        }
+
+        // Quota check: Skip if user has reached concurrent jobs quota or daily limits
+        if (user && !hasAdminPrivilege(user)) {
+          if (user.maxPagesLimit && schedule.maxPages > user.maxPagesLimit) {
+            console.warn(
+              `[Schedule Service] Skipping schedule ${schedule.id}: requested pages (${schedule.maxPages}) exceeds user limit (${user.maxPagesLimit})`,
+            );
+            continue;
+          }
+
+          const timezone = schedule.timezone || DEFAULT_TIMEZONE;
+          const nowZoned = getZonedDateParts(now, timezone);
+          const startOfDay = createUtcDateFromZonedParts(
+            nowZoned.year,
+            nowZoned.month,
+            nowZoned.day,
+            0,
+            0,
+            timezone,
+          );
+          const quotaResetAt = user.quotaResetAt ? new Date(user.quotaResetAt) : null;
+          const effectiveSince = quotaResetAt && quotaResetAt > startOfDay ? quotaResetAt : startOfDay;
+          const jobsTodayCount = (this.jobRepository as any).countJobsSince
+            ? await this.jobRepository.countJobsSince(schedule.userId, effectiveSince)
+            : 0;
+          if (user.maxJobsPerDayLimit && jobsTodayCount >= user.maxJobsPerDayLimit) {
+            console.warn(
+              `[Schedule Service] Skipping schedule ${schedule.id}: daily job limit (${user.maxJobsPerDayLimit}) reached`,
+            );
+            continue;
+          }
+
+          const twoHoursAgo = new Date();
+          twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
+          const activeStatuses = [
+            JOB_STATUS.PENDING,
+            JOB_STATUS.QUEUED,
+            JOB_STATUS.RUNNING,
+            JOB_STATUS.PROCESSING_EXPORT,
+          ];
+          const concurrentJobsCount = (this.jobRepository as any).countConcurrentJobs
+            ? await this.jobRepository.countConcurrentJobs(
+                schedule.userId,
+                activeStatuses,
+                twoHoursAgo,
+              )
+            : 0;
+          const maxConcurrent = user.maxConcurrentJobsLimit ?? 3;
+          if (concurrentJobsCount >= maxConcurrent) {
+            console.warn(
+              `[Schedule Service] Skipping schedule ${schedule.id}: user concurrent jobs limit (${maxConcurrent}) reached`,
+            );
+            continue;
+          }
         }
 
         const nextRunAt = calculateNextRun({

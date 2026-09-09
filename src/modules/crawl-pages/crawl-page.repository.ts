@@ -39,8 +39,6 @@ export class CrawlPageRepository {
         { url: { contains: query.search, mode: "insensitive" } },
         { title: { contains: query.search, mode: "insensitive" } },
         { description: { contains: query.search, mode: "insensitive" } },
-        { markdownContent: { contains: query.search, mode: "insensitive" } },
-        { content: { contains: query.search, mode: "insensitive" } },
       ];
     }
 
@@ -96,7 +94,9 @@ export class CrawlPageRepository {
       const tableConditions: Prisma.CrawlPageWhereInput[] = [
         { markdownContent: { contains: "<table", mode: insensitiveMode } },
         { content: { contains: "<table", mode: insensitiveMode } },
-        { markdownContent: { contains: "|", mode: insensitiveMode } },
+        { markdownContent: { contains: "|---", mode: insensitiveMode } },
+        { markdownContent: { contains: "| ---", mode: insensitiveMode } },
+        { markdownContent: { contains: "|:---", mode: insensitiveMode } },
       ];
       if (isTrue) {
         andConditions.push({ OR: tableConditions });
@@ -105,7 +105,9 @@ export class CrawlPageRepository {
           AND: [
             { markdownContent: { not: { contains: "<table" } } },
             { content: { not: { contains: "<table" } } },
-            { markdownContent: { not: { contains: "|" } } },
+            { markdownContent: { not: { contains: "|---" } } },
+            { markdownContent: { not: { contains: "| ---" } } },
+            { markdownContent: { not: { contains: "|:---" } } },
           ],
         });
       }
@@ -233,12 +235,17 @@ export class CrawlPageRepository {
       contentHash?: string | null;
       dataQualityScore?: number | null;
       warnings?: string[];
+      structuredData?: Prisma.InputJsonValue;
       extractedData?: Prisma.InputJsonValue;
     },
   ) {
+    const { extractedData, ...rest } = data;
     return prisma.crawlPage.update({
       where: { id },
-      data,
+      data: {
+        ...rest,
+        ...(extractedData !== undefined ? { structuredData: extractedData } : {}),
+      },
     });
   }
 
@@ -273,10 +280,17 @@ export class CrawlPageRepository {
     dataQualityScore?: number | null;
     warnings?: string[];
     hasSensitiveData?: boolean;
+    structuredData?: Prisma.InputJsonValue;
+    extractedData?: Prisma.InputJsonValue;
   }) {
+    const structuredData = data.structuredData ?? data.extractedData;
+    const { extractedData: _unused, ...rest } = data;
     return prisma.crawlPage.upsert({
       where: { jobId_url: { jobId: data.jobId, url: data.url } },
-      create: data,
+      create: {
+        ...rest,
+        structuredData: structuredData ?? undefined,
+      },
       update: {
         normalizedUrl: data.normalizedUrl,
         title: data.title,
@@ -293,6 +307,7 @@ export class CrawlPageRepository {
         dataQualityScore: data.dataQualityScore,
         warnings: data.warnings,
         hasSensitiveData: data.hasSensitiveData,
+        structuredData: structuredData ?? undefined,
       },
     });
   }

@@ -21,6 +21,11 @@ import { CRAWL_MODE } from "../../common/constants/crawl-mode.constant";
 import { CreateCrawlJobDto, CrawlJobQueryDto } from "./crawl-job.dto";
 import { StorageFactory } from "../../common/storage/storage.factory";
 import { getErrorMessage } from "../../common/helpers/error-mapping.helper";
+import {
+  acquireDistributedLock,
+  releaseDistributedLock,
+} from "../../common/redis/redis-client";
+import { hasAdminPrivilege } from "../../common/helpers/rbac.helper";
 
 export class CrawlJobService {
   private readonly repository = new CrawlJobRepository();
@@ -53,7 +58,7 @@ export class CrawlJobService {
       );
       if (
         !schedule ||
-        (user.role !== ROLES.ADMIN && schedule.userId !== userId)
+        (!hasAdminPrivilege(user) && schedule.userId !== userId)
       ) {
         throw new AppError(
           "Crawl schedule not found",
@@ -86,111 +91,149 @@ export class CrawlJobService {
       }
     }
 
-    if (user.role !== ROLES.ADMIN) {
-      const requestedPages = isUrlList
-        ? deduplicatedUrls.length
-        : (payload.maxPages ?? 20);
-
-      if (requestedPages > user.maxPagesLimit) {
-        throw new AppError(
-          `Requested pages (${requestedPages}) exceeds quota limit of ${user.maxPagesLimit}`,
-          400,
-          ERROR_CODE.QUOTA_MAX_PAGES_EXCEEDED,
-        );
-      }
-
-      // Timezone UTC+7 start of day calculation
-      const nowZoned = getZonedDateParts(new Date(), DEFAULT_TIMEZONE);
-      const startOfDay = createUtcDateFromZonedParts(
-        nowZoned.year,
-        nowZoned.month,
-        nowZoned.day,
-        0,
-        0,
-        DEFAULT_TIMEZONE,
-      );
-
-      const jobsTodayCount = await this.repository.countJobsSince(
-        userId,
-        startOfDay,
-      );
-
-      if (jobsTodayCount >= user.maxJobsPerDayLimit) {
-        throw new AppError(
-          `Daily job quota of ${user.maxJobsPerDayLimit} exceeded`,
-          400,
-          ERROR_CODE.QUOTA_JOBS_PER_DAY_EXCEEDED,
-        );
-      }
-
-      const twoHoursAgo = new Date();
-      twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
-      const activeStatuses = [
-        JOB_STATUS.PENDING,
-        JOB_STATUS.QUEUED,
-        JOB_STATUS.RUNNING,
-        JOB_STATUS.PROCESSING_EXPORT,
-      ];
-      const concurrentJobsCount = await this.repository.countConcurrentJobs(
-        userId,
-        activeStatuses,
-        twoHoursAgo,
-      );
-
-      if (concurrentJobsCount >= user.maxConcurrentJobsLimit) {
-        throw new AppError(
-          `Concurrent jobs quota of ${user.maxConcurrentJobsLimit} exceeded`,
-          400,
-          ERROR_CODE.QUOTA_CONCURRENT_JOBS_EXCEEDED,
-        );
-      }
-    }
-
-    const job = await this.repository.create({
-      userId,
-      startUrl: isUrlList ? (deduplicatedUrls[0] ?? "") : parsed!.href,
-      domain,
-      mode: payload.mode ?? CRAWL_MODE.SCRAPE,
-      maxPages: isUrlList ? deduplicatedUrls.length : payload.maxPages,
-      maxDepth: payload.maxDepth,
-      urls: deduplicatedUrls,
-      scheduleId: payload.scheduleId,
-    });
-
-    if (!crawlQueue) {
+    const quotaLockKey = `lock:quota:${userId}`;
+    const acquiredQuotaLock = await acquireDistributedLock(quotaLockKey, 7000);
+    if (!acquiredQuotaLock) {
       throw new AppError(
-        "Redis is not enabled. Start Docker and set REDIS_ENABLED=true in .env",
-        503,
-        ERROR_CODE.INTERNAL_SERVER_ERROR,
+        "Hệ thống đang xử lý yêu cầu tạo job trước đó của bạn. Vui lòng thử lại sau giây lát.",
+        429,
+        ERROR_CODE.RATE_LIMIT_EXCEEDED,
       );
     }
 
-    await crawlQueue.add("crawl-job", { jobId: job.id }, { jobId: job.id });
+    try {
+      if (!hasAdminPrivilege(user)) {
+        const requestedPages = isUrlList
+          ? deduplicatedUrls.length
+          : (payload.maxPages ?? 20);
 
-    return job;
+        if (requestedPages > user.maxPagesLimit) {
+          throw new AppError(
+            `Requested pages (${requestedPages}) exceeds quota limit of ${user.maxPagesLimit}`,
+            400,
+            ERROR_CODE.QUOTA_MAX_PAGES_EXCEEDED,
+          );
+        }
+
+        // Timezone UTC+7 start of day calculation
+        const nowZoned = getZonedDateParts(new Date(), DEFAULT_TIMEZONE);
+        const startOfDay = createUtcDateFromZonedParts(
+          nowZoned.year,
+          nowZoned.month,
+          nowZoned.day,
+          0,
+          0,
+          DEFAULT_TIMEZONE,
+        );
+
+        // Áp dụng quotaResetAt nếu được reset sau startOfDay (BUG-014)
+        const quotaResetAt = user.quotaResetAt ? new Date(user.quotaResetAt) : null;
+        const effectiveSince = quotaResetAt && quotaResetAt > startOfDay ? quotaResetAt : startOfDay;
+
+        const jobsTodayCount = await this.repository.countJobsSince(
+          userId,
+          effectiveSince,
+        );
+
+        if (jobsTodayCount >= user.maxJobsPerDayLimit) {
+          throw new AppError(
+            `Daily job quota of ${user.maxJobsPerDayLimit} exceeded`,
+            400,
+            ERROR_CODE.QUOTA_JOBS_PER_DAY_EXCEEDED,
+          );
+        }
+
+        const twoHoursAgo = new Date();
+        twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
+        const activeStatuses = [
+          JOB_STATUS.PENDING,
+          JOB_STATUS.QUEUED,
+          JOB_STATUS.RUNNING,
+          JOB_STATUS.PROCESSING_EXPORT,
+        ];
+        const concurrentJobsCount = await this.repository.countConcurrentJobs(
+          userId,
+          activeStatuses,
+          twoHoursAgo,
+        );
+
+        if (concurrentJobsCount >= user.maxConcurrentJobsLimit) {
+          throw new AppError(
+            `Concurrent jobs quota of ${user.maxConcurrentJobsLimit} exceeded`,
+            400,
+            ERROR_CODE.QUOTA_CONCURRENT_JOBS_EXCEEDED,
+          );
+        }
+      }
+
+      const job = await this.repository.create({
+        userId,
+        startUrl: isUrlList ? (deduplicatedUrls[0] ?? "") : parsed!.href,
+        domain,
+        mode: payload.mode ?? CRAWL_MODE.SCRAPE,
+        maxPages: isUrlList ? deduplicatedUrls.length : payload.maxPages,
+        maxDepth: payload.maxDepth,
+        urls: deduplicatedUrls,
+        scheduleId: payload.scheduleId,
+      });
+
+      if (!crawlQueue) {
+        throw new AppError(
+          "Redis is not enabled. Start Docker and set REDIS_ENABLED=true in .env",
+          503,
+          ERROR_CODE.INTERNAL_SERVER_ERROR,
+        );
+      }
+
+      await crawlQueue.add("crawl-job", { jobId: job.id }, { jobId: job.id });
+
+      return job;
+    } finally {
+      await releaseDistributedLock(
+        quotaLockKey,
+        typeof acquiredQuotaLock === "string" ? acquiredQuotaLock : undefined,
+      );
+    }
   }
 
-  async findAllByUser(userId: string, role: string, query: CrawlJobQueryDto) {
-    const result = role === ROLES.ADMIN
+  async findAllByUser(
+    userId: string,
+    role: string,
+    query: CrawlJobQueryDto,
+    roles?: string[],
+  ) {
+    const result = hasAdminPrivilege(role, roles)
       ? await this.repository.findAll(query)
       : await this.repository.findAllByUser(userId, query);
 
-    // Auto-complete any jobs that reached all target pages but were left in RUNNING
+    // Auto-complete any jobs that reached all target pages but were left in RUNNING (Batch query: BUG-006)
+    const stalledIds: string[] = [];
     for (const job of result.items) {
       const processed = (job.successPages ?? 0) + (job.failedPages ?? 0);
       const target = job.totalPages > 0 ? Math.min(job.maxPages, job.totalPages) : job.maxPages;
       if (job.status === JOB_STATUS.RUNNING && job.totalPages > 0 && processed >= target) {
         job.status = JOB_STATUS.COMPLETED;
-        void this.repository.updateStatus(job.id, JOB_STATUS.COMPLETED, {
-          finishedAt: job.finishedAt || new Date(),
-        });
+        stalledIds.push(job.id);
       }
+    }
+
+    if (stalledIds.length > 0) {
+      void this.repository.batchUpdateStatus(
+        stalledIds,
+        JOB_STATUS.COMPLETED,
+        new Date(),
+      );
     }
 
     return result;
   }
 
-  async findById(userId: string, role: string, jobId: string) {
+  async findById(
+    userId: string,
+    role: string,
+    jobId: string,
+    roles?: string[],
+  ) {
     const job = await this.repository.findById(jobId);
 
     if (!job) {
@@ -201,7 +244,7 @@ export class CrawlJobService {
       );
     }
 
-    if (role !== ROLES.ADMIN && job.userId !== userId) {
+    if (!hasAdminPrivilege(role, roles) && job.userId !== userId) {
       throw new AppError(
         "Crawl job not found",
         404,
@@ -230,8 +273,13 @@ export class CrawlJobService {
     return job;
   }
 
-  async cancel(userId: string, role: string, jobId: string) {
-    const job = await this.findById(userId, role, jobId);
+  async cancel(
+    userId: string,
+    role: string,
+    jobId: string,
+    roles?: string[],
+  ) {
+    const job = await this.findById(userId, role, jobId, roles);
 
     if (job.status === JOB_STATUS.COMPLETED) {
       throw new AppError(
@@ -247,24 +295,8 @@ export class CrawlJobService {
       JOB_STATUS.CANCELED,
     );
 
-    // Remove from BullMQ queue if still waiting/delayed
-    if (crawlQueue) {
-      try {
-        const bullJob = await crawlQueue.getJob(jobId);
-        if (bullJob) {
-          await bullJob.remove();
-        } else {
-          const waitingJobs = await crawlQueue.getJobs(["waiting", "delayed", "prioritized"]);
-          for (const wj of waitingJobs) {
-            if (wj.data?.jobId === jobId) {
-              await wj.remove();
-            }
-          }
-        }
-      } catch {
-        // Ignored
-      }
-    }
+    // Remove from BullMQ queue if still waiting/delayed (BUG-030)
+    await this.removeBullMQJob(jobId);
 
     // For CRAWL mode: also cancel at the Firecrawl provider level to stop
     // quota consumption. firecrawlJobId is saved by the worker as soon as
@@ -282,8 +314,13 @@ export class CrawlJobService {
     return updated;
   }
 
-  async getDownloadFile(userId: string, role: string, jobId: string) {
-    const job = await this.findById(userId, role, jobId);
+  async getDownloadFile(
+    userId: string,
+    role: string,
+    jobId: string,
+    roles?: string[],
+  ) {
+    const job = await this.findById(userId, role, jobId, roles);
 
     if (job.status !== JOB_STATUS.COMPLETED) {
       throw new AppError(
@@ -311,8 +348,8 @@ export class CrawlJobService {
     return exportService.generate(job, EXPORT_TYPE.ZIP);
   }
 
-  async delete(userId: string, role: string, jobId: string) {
-    const job = await this.findById(userId, role, jobId);
+  async delete(userId: string, role: string, jobId: string, roles?: string[]) {
+    const job = await this.findById(userId, role, jobId, roles);
 
     if (
       job.status === JOB_STATUS.RUNNING ||
@@ -338,35 +375,38 @@ export class CrawlJobService {
       await storage.deleteFile(job.diffReportPath).catch(() => {});
     }
 
-    if (crawlQueue) {
-      try {
-        const bullJob = await crawlQueue.getJob(jobId);
-        if (bullJob) {
-          await bullJob.remove();
-        } else {
-          const waitingJobs = await crawlQueue.getJobs(["waiting", "delayed", "prioritized"]);
-          for (const wj of waitingJobs) {
-            if (wj.data?.jobId === jobId) {
-              await wj.remove();
-            }
-          }
-        }
-      } catch {
-        // Ignored
-      }
-    }
+    // Remove from BullMQ queue if still waiting/delayed (BUG-030)
+    await this.removeBullMQJob(jobId);
 
     await this.repository.delete(jobId, userId);
     return { success: true, message: "Crawl job deleted successfully" };
   }
 
-  private static readonly rerunLocks = new Set<string>();
+  private async removeBullMQJob(jobId: string): Promise<void> {
+    if (!crawlQueue) return;
+    try {
+      const bullJob = await crawlQueue.getJob(jobId);
+      if (bullJob) {
+        await bullJob.remove();
+        return;
+      }
+      const waitingJobs = await crawlQueue.getJobs(["waiting", "delayed", "prioritized"]);
+      for (const wj of waitingJobs) {
+        if (wj.data?.jobId === jobId) {
+          await wj.remove();
+        }
+      }
+    } catch {
+      // Ignored
+    }
+  }
 
-  async rerun(userId: string, role: string, jobId: string) {
-    const existing = await this.findById(userId, role, jobId);
+  async rerun(userId: string, role: string, jobId: string, roles?: string[]) {
+    const existing = await this.findById(userId, role, jobId, roles);
 
-    const lockKey = `${userId}:${jobId}`;
-    if (CrawlJobService.rerunLocks.has(lockKey)) {
+    const lockKey = `lock:rerun:${userId}:${jobId}`;
+    const acquired = await acquireDistributedLock(lockKey, 5000);
+    if (!acquired) {
       if (this.repository.findRecentActiveJob) {
         const recent = await this.repository.findRecentActiveJob(
           userId,
@@ -375,6 +415,11 @@ export class CrawlJobService {
         );
         if (recent) return recent;
       }
+      throw new AppError(
+        "Yêu cầu chạy lại job này đang được xử lý",
+        429,
+        ERROR_CODE.RATE_LIMIT_EXCEEDED,
+      );
     }
 
     if (this.repository.findRecentActiveJob) {
@@ -384,11 +429,14 @@ export class CrawlJobService {
         5000,
       );
       if (recent) {
+        await releaseDistributedLock(
+          lockKey,
+          typeof acquired === "string" ? acquired : undefined,
+        );
         return recent;
       }
     }
 
-    CrawlJobService.rerunLocks.add(lockKey);
     try {
       return await this.create(userId, {
         startUrl: existing.startUrl,
@@ -398,7 +446,14 @@ export class CrawlJobService {
         urls: existing.urls,
       });
     } finally {
-      setTimeout(() => CrawlJobService.rerunLocks.delete(lockKey), 3000);
+      setTimeout(
+        () =>
+          releaseDistributedLock(
+            lockKey,
+            typeof acquired === "string" ? acquired : undefined,
+          ),
+        3000,
+      );
     }
   }
 
@@ -413,3 +468,5 @@ export class CrawlJobService {
     return this.repository.findLogsByJobId(jobId, page, limit);
   }
 }
+
+export const crawlJobService = new CrawlJobService();

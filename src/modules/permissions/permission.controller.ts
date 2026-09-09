@@ -18,6 +18,27 @@ export class PermissionController {
 
       const result = await this.service.findAll(query);
 
+      if (req.query.page || req.query.limit) {
+        const page = Math.max(1, Number(req.query.page) || 1);
+        const limit = Math.max(1, Number(req.query.limit) || 20);
+        const total = result.length;
+        const totalPages = Math.ceil(total / limit);
+        const paginatedItems = result.slice((page - 1) * limit, page * limit);
+        res.json({
+          success: true,
+          data: {
+            items: paginatedItems,
+            meta: {
+              total,
+              page,
+              limit,
+              totalPages,
+            },
+          },
+        });
+        return;
+      }
+
       res.json({
         success: true,
         data: result,

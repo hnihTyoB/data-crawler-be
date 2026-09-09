@@ -4,6 +4,16 @@ import { DEFAULT_TIMEZONE } from "../../common/constants/timezone.constant";
 import { CRAWL_MODE } from "../../common/constants/crawl-mode.constant";
 import { SCHEDULE_FREQUENCY } from "../../common/constants/schedule-frequency.constant";
 
+export function isValidTimezone(tz?: string): boolean {
+  if (!tz) return true;
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export const createCrawlScheduleSchema = z
   .object({
     name: z.string().trim().min(1, "Name is required").max(150),
@@ -18,7 +28,12 @@ export const createCrawlScheduleSchema = z
     minute: z.number().int().min(0).max(59).optional().default(0),
     dayOfWeek: z.number().int().min(0).max(6).optional(),
     dayOfMonth: z.number().int().min(1).max(31).optional(),
-    timezone: z.string().trim().optional().default(DEFAULT_TIMEZONE),
+    timezone: z
+      .string()
+      .trim()
+      .refine(isValidTimezone, { message: "Invalid IANA timezone identifier" })
+      .optional()
+      .default(DEFAULT_TIMEZONE),
     maxPages: z.number().int().min(1).max(1000).optional().default(20),
     maxDepth: z.number().int().min(1).max(10).optional().default(1),
     urls: z.array(z.string().trim().url()).optional().default([]),
@@ -59,7 +74,11 @@ export const updateCrawlScheduleSchema = z
     minute: z.number().int().min(0).max(59).optional(),
     dayOfWeek: z.number().int().min(0).max(6).optional(),
     dayOfMonth: z.number().int().min(1).max(31).optional(),
-    timezone: z.string().trim().optional(),
+    timezone: z
+      .string()
+      .trim()
+      .refine(isValidTimezone, { message: "Invalid IANA timezone identifier" })
+      .optional(),
     maxPages: z.number().int().min(1).max(1000).optional(),
     maxDepth: z.number().int().min(1).max(10).optional(),
     urls: z.array(z.string().trim().url()).optional(),

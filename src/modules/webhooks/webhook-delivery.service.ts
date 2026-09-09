@@ -7,7 +7,10 @@ import { getErrorMessage } from "../../common/helpers/error-mapping.helper";
 
 import { AppError } from "../../common/errors/app-error";
 import { ERROR_CODE } from "../../common/errors/error-code";
-import { WEBHOOK_DELIVERY_STATUS } from "../../common/constants/webhook.constant";
+import {
+  WEBHOOK_DELIVERY_STATUS,
+  WebhookDeliveryStatus,
+} from "../../common/constants/webhook.constant";
 
 export class WebhookDeliveryService {
   private readonly repository = new WebhookRepository();
@@ -187,7 +190,12 @@ export class WebhookDeliveryService {
 
   async listDeliveries(
     userId: string,
-    query: { jobId?: string; status?: string; page?: number; limit?: number },
+    query: {
+      jobId?: string;
+      status?: WebhookDeliveryStatus;
+      page?: number;
+      limit?: number;
+    },
   ) {
     return this.repository.listDeliveries(userId, query);
   }

@@ -24,7 +24,7 @@ import { CrawlPageStatus } from "../../common/constants/crawl-page-status.consta
 type DiffPage = {
   id: string;
   url: string;
-  normalizedUrl: string;
+  normalizedUrl: string | null;
   contentHash: string | null;
   wordCount: number;
   status: CrawlPageStatus;
@@ -45,14 +45,14 @@ export class ChangeDetectionService {
   ): DiffReportEnvelope {
     const currentPagesMap = new Map<string, DiffPage>();
     for (const page of currentJob.pages) {
-      const key = normalizeUrl(page.url || page.normalizedUrl).toLowerCase();
+      const key = normalizeUrl(page.url || page.normalizedUrl || "").toLowerCase();
       currentPagesMap.set(key, page);
     }
 
     const previousPagesMap = new Map<string, DiffPage>();
     if (previousJob) {
       for (const page of previousJob.pages) {
-        const key = normalizeUrl(page.url || page.normalizedUrl).toLowerCase();
+        const key = normalizeUrl(page.url || page.normalizedUrl || "").toLowerCase();
         previousPagesMap.set(key, page);
       }
     }

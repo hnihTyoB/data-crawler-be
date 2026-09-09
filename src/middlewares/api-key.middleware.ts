@@ -1,10 +1,12 @@
 import { Request, Response, NextFunction } from "express";
 import { ApiKeyService } from "../modules/api-keys/api-key.service";
+import { PermissionService } from "../modules/permissions/permission.service";
 import { authMiddleware } from "./auth.middleware";
 import { AppError } from "../common/errors/app-error";
 import { ERROR_CODE } from "../common/errors/error-code";
 
 const apiKeyService = new ApiKeyService();
+const permissionService = new PermissionService();
 
 export async function apiKeyOrAuthMiddleware(
   req: Request,
@@ -36,10 +38,17 @@ export async function apiKeyOrAuthMiddleware(
         return;
       }
 
+      const [roles, permissions] = await Promise.all([
+        permissionService.getUserRoles(user.id),
+        permissionService.getUserPermissions(user.id),
+      ]);
+
       req.user = {
         id: user.id,
         email: user.email,
         role: user.role,
+        roles,
+        permissions,
       };
 
       next();

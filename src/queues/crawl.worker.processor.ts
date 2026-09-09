@@ -16,7 +16,11 @@ import {
   FirecrawlPageResult,
   CrawlStatusResult,
 } from "../modules/firecrawl/firecrawl.dto";
-import { runExtractionIfTemplate } from "../modules/extraction-templates/extraction-runner";
+import {
+  runExtractionIfTemplate,
+  extractStructuredDataIfTemplate,
+  clearTemplateCache,
+} from "../modules/extraction-templates/extraction-runner";
 import { JOB_STATUS } from "../common/constants/job-status.constant";
 import { CRAWL_MODE } from "../common/constants/crawl-mode.constant";
 import { ASSET_TYPE } from "../common/constants/asset-type.constant";
@@ -138,15 +142,34 @@ export async function persistSinglePage(
 ): Promise<{ success: boolean; saved: boolean }> {
   try {
     const normalized = getPageProcessor().normalize(item, jobId);
-    const page = await getPageRepository().upsert(normalized);
-    await savePageAssets(jobId, page.id, item);
-    await scanAndFlagPage(
-      page.id,
+
+    // Quét nhạy cảm in-memory trước khi ghi DB (loại bỏ 1 lệnh update riêng)
+    const combinedTexts = [
       normalized.markdownContent,
       normalized.title,
       normalized.description,
+    ]
+      .filter(Boolean)
+      .join(" ");
+    const hasSensitiveData = combinedTexts
+      ? getSensitiveScanner().hasSensitiveData(combinedTexts)
+      : false;
+
+    // Trích xuất cấu trúc in-memory theo template cache (loại bỏ 1 lệnh update và N+1 query)
+    const extractedData = await extractStructuredDataIfTemplate(
+      item.url,
+      item,
+      userId,
     );
-    await runExtractionIfTemplate(jobId, page.id, item.url, item, userId);
+
+    // Gom cụm 1 lần Upsert duy nhất cho mỗi trang cào
+    const page = await getPageRepository().upsert({
+      ...normalized,
+      hasSensitiveData,
+      extractedData: extractedData ?? undefined,
+    });
+
+    await savePageAssets(jobId, page.id, item);
     return { success: item.success, saved: true };
   } catch (err: unknown) {
     console.error(
@@ -798,6 +821,8 @@ export async function processCrawlJob(job: Job): Promise<void> {
         `[Worker] Failed to dispatch webhook for job ${jobId}:`,
         webhookErr,
       );
+    } finally {
+      clearTemplateCache();
     }
   }
 }

@@ -14,6 +14,7 @@ export class CrawlExportController {
         req.user.id,
         req.user.role,
         req.params.exportId,
+        req.user?.roles,
       );
 
       await this.auditLogService.log({
@@ -62,6 +63,7 @@ export class CrawlExportController {
         req.user.id,
         req.user.role,
         req.params.exportId,
+        req.user?.roles,
       );
       res.json(result);
     } catch (error) {

@@ -6,7 +6,11 @@ export class DashboardController {
 
   getStats = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const result = await this.service.getStats(req.user.id, req.user.role);
+      const result = await this.service.getStats(
+        req.user.id,
+        req.user.role,
+        req.user.roles,
+      );
       res.json({
         success: true,
         data: result,

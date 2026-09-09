@@ -13,6 +13,12 @@ jest.mock("../../modules/firecrawl/firecrawl.service");
 jest.mock("../../modules/crawl-pages/crawl-page-processor.service");
 jest.mock("../../modules/crawl-pages/sensitive-scan.service");
 jest.mock("../../common/helpers/url.helper");
+jest.mock("../../modules/system-config/system-config.service", () => ({
+  systemConfigService: {
+    isFeatureEnabled: jest.fn().mockResolvedValue(false),
+    get: jest.fn().mockResolvedValue(null),
+  },
+}));
 
 import { processCrawlJob } from "../crawl.worker.processor";
 

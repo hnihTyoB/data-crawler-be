@@ -8,12 +8,12 @@ import apiKeyRoute from "../modules/api-keys/api-key.route";
 import webhookRoute from "../modules/webhooks/webhook.route";
 import extractionTemplateRoute from "../modules/extraction-templates/extraction-template.route";
 import crawlScheduleRoute from "../modules/crawl-schedules/crawl-schedule.route";
-import healthRoute from "../modules/health/health.route";
 import dashboardRoute from "../modules/dashboard/dashboard.route";
 import roleRoute from "../modules/roles/role.route";
 import permissionRoute from "../modules/permissions/permission.route";
 import systemConfigRoute from "../modules/system-config/system-config.route";
 import cronRoute from "../modules/cron/cron.route";
+import healthRoute from "../modules/health/health.route";
 
 const router = Router();
 

@@ -48,6 +48,7 @@
     "multer": "^2.3.0",
     "node-html-parser": "^8.0.4",
     "nodemailer": "^9.0.3",
+    "rate-limit-redis": "^6.0.1",
     "swagger-ui-express": "^5.0.1",
     "turndown": "^7.2.0",
     "zod": "^3.24.1"

@@ -1,5 +1,6 @@
 import { prisma } from "../../database/prisma.client";
 import { WebhookConfig, WebhookDelivery, Prisma } from "@prisma/client";
+import { WebhookDeliveryStatus } from "../../common/constants/webhook.constant";
 
 export class WebhookRepository {
   createConfig(data: {
@@ -72,7 +73,7 @@ export class WebhookRepository {
     crawlJobId: string;
     event: string;
     payload: Prisma.InputJsonValue;
-    status: string;
+    status: WebhookDeliveryStatus;
     attempt: number;
   }): Promise<WebhookDelivery> {
     return prisma.webhookDelivery.create({
@@ -106,7 +107,7 @@ export class WebhookRepository {
 
   async listDeliveries(
     userId: string,
-    query: { jobId?: string; status?: string; page?: number; limit?: number },
+    query: { jobId?: string; status?: WebhookDeliveryStatus; page?: number; limit?: number },
   ) {
     const where: Prisma.WebhookDeliveryWhereInput = {
       webhookConfig: {

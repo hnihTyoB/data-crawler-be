@@ -1,5 +1,11 @@
 import { AuthService } from "../auth.service";
 
+jest.mock("../../system-config/system-config.service", () => ({
+  systemConfigService: {
+    isFeatureEnabled: jest.fn().mockResolvedValue(true),
+  },
+}));
+
 describe("AuthService email verification", () => {
   const originalNodeEnv = process.env.NODE_ENV;
 
@@ -171,6 +177,38 @@ describe("AuthService registration mail failures", () => {
     expect(repository.createUser).not.toHaveBeenCalled();
   });
 
+  it("rejects registration when email belongs to a soft-deleted user (deletedAt !== null)", async () => {
+    const service = new AuthService();
+    const deletedUser = {
+      id: "user-deleted",
+      email: "test@gmail.com",
+      fullName: "Deleted User",
+      role: "CRAWLER_USER",
+      isActive: false,
+      deletedAt: new Date(),
+    };
+    const repository = {
+      findByEmailWithDeleted: jest.fn().mockResolvedValue(deletedUser),
+      createUser: jest.fn(),
+    };
+    const mutableService = service as unknown as {
+      repository: typeof repository;
+    };
+    mutableService.repository = repository;
+
+    await expect(
+      service.register({
+        email: "test@gmail.com",
+        password: "Valid@123",
+        fullName: "Test User",
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 409,
+      code: "DUPLICATE_ENTRY",
+    });
+    expect(repository.createUser).not.toHaveBeenCalled();
+  });
+
   describe("AuthService forgotPassword security", () => {
     const activeUser = {
       id: "user-active",
@@ -209,7 +247,7 @@ describe("AuthService registration mail failures", () => {
       );
     });
 
-    it("throws 404 NOT_FOUND and does not call mail service if user is not found", async () => {
+    it("returns { success: true } without calling mail service when user is not found (anti-enumeration)", async () => {
       const service = new AuthService();
       const repository = {
         findByEmail: jest.fn().mockResolvedValue(null),
@@ -224,15 +262,15 @@ describe("AuthService registration mail failures", () => {
       mutableService.repository = repository;
       mutableService.mailService = mailService;
 
-      await expect(
-        service.forgotPassword({
-          email: "nonexistent@example.com",
-        })
-      ).rejects.toThrow("Email không tồn tại trong hệ thống.");
+      const result = await service.forgotPassword({
+        email: "nonexistent@example.com",
+      });
+
+      expect(result).toEqual({ success: true });
       expect(mailService.sendPasswordResetEmail).not.toHaveBeenCalled();
     });
 
-    it("throws 403 USER_INACTIVE and does not call mail service if user is inactive", async () => {
+    it("returns { success: true } without calling mail service when user is inactive (anti-enumeration)", async () => {
       const service = new AuthService();
       const repository = {
         findByEmail: jest
@@ -249,9 +287,9 @@ describe("AuthService registration mail failures", () => {
       mutableService.repository = repository;
       mutableService.mailService = mailService;
 
-      await expect(
-        service.forgotPassword({ email: activeUser.email })
-      ).rejects.toThrow("Tài khoản chưa được kích hoạt hoặc đã bị khóa.");
+      const result = await service.forgotPassword({ email: activeUser.email });
+
+      expect(result).toEqual({ success: true });
       expect(mailService.sendPasswordResetEmail).not.toHaveBeenCalled();
     });
   });
