@@ -1,14 +1,45 @@
 import rateLimit, { RateLimitRequestHandler } from "express-rate-limit";
+import { RedisStore } from "rate-limit-redis";
 import { envConfig } from "../config/env.config";
 import { ERROR_CODE } from "../common/errors/error-code";
 import { systemConfigService } from "../modules/system-config/system-config.service";
+import { getRedisClient, isRedisConnected } from "../common/redis/redis-client";
+
+function createRateLimitStore(prefix: string) {
+  // If Redis is disabled or not connected/ready, fallback to in-memory store
+  if (!isRedisConnected()) {
+    return undefined;
+  }
+
+  const client = getRedisClient();
+  if (!client || (client as any).status !== "ready") {
+    return undefined;
+  }
+
+  try {
+    return new RedisStore({
+      // @ts-expect-error - ioredis call signature compatibility
+      sendCommand: async (...args: string[]) => {
+        if (!isRedisConnected()) {
+          throw new Error("Redis connection is closed or not ready");
+        }
+        return client.call(args[0], ...args.slice(1));
+      },
+      prefix,
+    });
+  } catch {
+    return undefined;
+  }
+}
 
 /**
- * Global API rate limit per IP, configurable for each environment.
- * Dùng in-memory store (MemoryStore) phù hợp cho single-instance dev/staging.
- * Khi scale multi-instance, swap store sang RedisStore (rate-limit-redis).
+ * Global API rate limit per IP.
+ * Tự động sử dụng RedisStore khi REDIS_ENABLED=true và Redis ready,
+ * hoặc fallback an toàn sang MemoryStore khi Redis offline.
  */
 export const rateLimitMiddleware: RateLimitRequestHandler = rateLimit({
+  store: createRateLimitStore("rl:global:"),
+  passOnStoreError: true, // Fail-open: Never crash or block API when Redis drops
   windowMs: envConfig.rateLimit.windowMs,
   max: async () =>
     systemConfigService.get<number>(
@@ -25,6 +56,8 @@ export const rateLimitMiddleware: RateLimitRequestHandler = rateLimit({
 });
 
 export const authRateLimiter: RateLimitRequestHandler = rateLimit({
+  store: createRateLimitStore("rl:auth:"),
+  passOnStoreError: true, // Fail-open: Never block authentication when Redis drops
   windowMs: 60 * 1000, // 1 minute
   max: 10, // 10 requests per minute
   standardHeaders: true,
@@ -35,3 +68,4 @@ export const authRateLimiter: RateLimitRequestHandler = rateLimit({
     code: ERROR_CODE.RATE_LIMIT_EXCEEDED,
   },
 });
+

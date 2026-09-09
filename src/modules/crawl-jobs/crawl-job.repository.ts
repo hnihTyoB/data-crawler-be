@@ -51,30 +51,15 @@ export class CrawlJobRepository {
     }
     if (query.search) {
       const trimmedSearch = query.search.trim();
-      let matchingIds: string[] = [];
-
-      try {
-        const searchPattern = `%${trimmedSearch}%`;
-        const matched = await prisma.$queryRaw<{ id: string }[]>`
-          SELECT id FROM "crawl_jobs" 
-          WHERE id::text ILIKE ${searchPattern}
-          LIMIT 100
-        `;
-        matchingIds = matched.map((r) => r.id);
-      } catch {
-        const isFullUuid =
-          /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
-            trimmedSearch,
-          );
-        if (isFullUuid) {
-          matchingIds = [trimmedSearch];
-        }
-      }
+      const isFullUuid =
+        /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/.test(
+          trimmedSearch,
+        );
 
       where.OR = [
+        ...(isFullUuid ? [{ id: trimmedSearch }] : []),
         { startUrl: { contains: trimmedSearch, mode: "insensitive" } },
         { domain: { contains: trimmedSearch, mode: "insensitive" } },
-        ...(matchingIds.length > 0 ? [{ id: { in: matchingIds } }] : []),
       ];
     }
 
@@ -217,6 +202,28 @@ export class CrawlJobRepository {
       where: { id },
       include: {
         exports: true,
+      },
+    });
+  }
+
+  /**
+   * Cập nhật hàng loạt trạng thái cho nhiều job trong 1 query duy nhất.
+   * Giải quyết dứt điểm vấn đề N+1 query khi auto-complete các job bị stalled (BUG-006).
+   */
+  async batchUpdateStatus(
+    ids: string[],
+    status: CrawlJobStatus,
+    finishedAt: Date,
+  ) {
+    if (ids.length === 0) return { count: 0 };
+    return prisma.crawlJob.updateMany({
+      where: {
+        id: { in: ids },
+        status: { not: JOB_STATUS.CANCELED },
+      },
+      data: {
+        status,
+        finishedAt,
       },
     });
   }
@@ -418,6 +425,12 @@ export class CrawlJobRepository {
     }
   }
 
+  /**
+   * Xóa một CrawlJob:
+   * Thực hiện theo mô hình "Logical soft-delete parent CrawlJob with heavy data purge" (BUG-018).
+   * Các dữ liệu dung lượng lớn (assets, logs, exports, pages) được hard-delete để giải phóng dung lượng đĩa và DB.
+   * Bản ghi gốc CrawlJob được giữ lại với cờ deletedAt và deletedBy phục vụ kiểm toán (Audit Trail) và tính toán hạn mức quota.
+   */
   async delete(id: string, deletedBy?: string) {
     return prisma.$transaction(async (tx) => {
       await tx.crawlAsset.deleteMany({ where: { crawlJobId: id } });

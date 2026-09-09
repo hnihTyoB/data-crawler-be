@@ -11,6 +11,7 @@ export class CrawlScheduleController {
         req.user!.id,
         req.user!.role,
         req.body,
+        req.user?.roles,
       );
       res.status(201).json({
         success: true,
@@ -28,6 +29,7 @@ export class CrawlScheduleController {
         req.user!.id,
         req.user!.role,
         req.query as unknown as CrawlScheduleQueryDto,
+        req.user?.roles,
       );
       res.json({
         success: true,
@@ -44,6 +46,7 @@ export class CrawlScheduleController {
         req.user!.id,
         req.user!.role,
         req.params.id,
+        req.user?.roles,
       );
       res.json({
         success: true,
@@ -61,6 +64,7 @@ export class CrawlScheduleController {
         req.user!.role,
         req.params.id,
         req.body,
+        req.user?.roles,
       );
       res.json({
         success: true,
@@ -74,7 +78,12 @@ export class CrawlScheduleController {
 
   delete = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.service.delete(req.user!.id, req.user!.role, req.params.id);
+      await this.service.delete(
+        req.user!.id,
+        req.user!.role,
+        req.params.id,
+        req.user?.roles,
+      );
       res.json({
         success: true,
         message: "Crawl schedule deleted successfully",
@@ -90,6 +99,7 @@ export class CrawlScheduleController {
         req.user!.id,
         req.user!.role,
         req.params.id,
+        req.user?.roles,
       );
       res.status(201).json({
         success: true,
@@ -113,6 +123,7 @@ export class CrawlScheduleController {
         req.params.id,
         page,
         limit,
+        req.user?.roles,
       );
       res.json({
         success: true,

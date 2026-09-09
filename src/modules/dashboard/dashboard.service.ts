@@ -5,9 +5,9 @@ export class DashboardService {
   private readonly repository = new DashboardRepository();
   private readonly authService = new AuthService();
 
-  async getStats(userId: string, role: string) {
+  async getStats(userId: string, role: string, roles?: string[]) {
     const [counts, usageData] = await Promise.all([
-      this.repository.getStats(userId, role),
+      this.repository.getStats(userId, role, roles),
       this.authService.getUsage(userId),
     ]);
 

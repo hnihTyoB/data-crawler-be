@@ -80,6 +80,12 @@ enum ScheduleFrequency {
   CUSTOM
 }
 
+enum WebhookDeliveryStatus {
+  PENDING
+  SUCCESS
+  FAILED
+}
+
 model User {
   id           String   @id @default(uuid()) @db.Uuid
   email        String   @unique
@@ -159,7 +165,7 @@ model CrawlJob {
   @@index([createdAt])
   @@index([userId, status])
   @@index([userId, createdAt])
-  @@index([scheduleId])
+  @@index([scheduleId, deletedAt])
   @@index([deletedAt])
   @@index([userId, deletedAt])
   @@map("crawl_jobs")
@@ -184,7 +190,7 @@ model CrawlPage {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
-  normalizedUrl    String   @default("") @map("normalized_url")
+  normalizedUrl    String?  @map("normalized_url")
   contentHash      String?  @map("content_hash")
   wordCount        Int      @default(0) @map("word_count")
   dataQualityScore Int?     @map("data_quality_score")
@@ -194,7 +200,8 @@ model CrawlPage {
   assets CrawlAsset[]
 
   @@unique([jobId, url])
-  @@index([jobId])
+  @@index([jobId, status])
+  @@index([jobId, contentHash])
   @@index([status])
   @@map("crawl_pages")
 }
@@ -261,6 +268,7 @@ model CrawlJobLog {
   job CrawlJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@index([jobId, createdAt])
+  @@index([jobId, level])
   @@map("crawl_job_logs")
 }
 
@@ -276,6 +284,7 @@ model RefreshToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([expiresAt])
   @@map("refresh_tokens")
 }
 
@@ -329,7 +338,7 @@ model WebhookConfig {
   user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
   deliveries WebhookDelivery[]
 
-  @@index([userId])
+  @@index([userId, isActive])
   @@map("webhook_configs")
 }
 
@@ -339,8 +348,8 @@ model WebhookDelivery {
   crawlJobId      String    @map("crawl_job_id") @db.Uuid
   event           String
   payload         Json
-  status          String    @default("PENDING")
-  statusCode      Int?      @map("status_code")
+  status          WebhookDeliveryStatus @default(PENDING)
+  statusCode      Int?                  @map("status_code")
   attempt         Int       @default(1)
   responseBody    String?   @map("response_body")
   errorMessage    String?   @map("error_message")

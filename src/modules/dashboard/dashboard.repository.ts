@@ -2,10 +2,11 @@ import { prisma } from "../../database/prisma.client";
 import { ROLES } from "../../common/constants/role.constant";
 import { JOB_STATUS } from "../../common/constants/job-status.constant";
 import { CRAWL_PAGE_STATUS } from "../../common/constants/crawl-page-status.constant";
+import { hasAdminPrivilege } from "../../common/helpers/rbac.helper";
 
 export class DashboardRepository {
-  async getStats(userId: string, role: string) {
-    const isGlobal = role === ROLES.ADMIN;
+  async getStats(userId: string, role: string, roles?: string[]) {
+    const isGlobal = hasAdminPrivilege(role, roles);
     const jobWhere = {
       deletedAt: null,
       ...(isGlobal ? {} : { userId }),

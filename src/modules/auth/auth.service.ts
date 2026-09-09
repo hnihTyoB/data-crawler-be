@@ -1,4 +1,5 @@
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import jwt, { SignOptions } from "jsonwebtoken";
 import path from "path";
 import { Readable } from "stream";
@@ -47,6 +48,10 @@ export class AuthService {
   private readonly storageService = StorageFactory.getStorageService();
   private readonly crawlJobRepository = new CrawlJobRepository();
   private readonly permissionService = new PermissionService();
+
+  private hashToken(token: string): string {
+    return crypto.createHash("sha256").update(token).digest("hex");
+  }
 
   private async deliverVerificationEmail(
     user: { id: string; email: string },
@@ -143,7 +148,7 @@ export class AuthService {
     const expiresAt = new Date(decoded.exp * 1000);
     await this.repository.saveRefreshToken(
       user.id,
-      refreshToken,
+      this.hashToken(refreshToken),
       expiresAt,
       metadata?.userAgent,
       metadata?.ipAddress,
@@ -198,7 +203,7 @@ export class AuthService {
     try {
       payload = jwt.verify(token, jwtConfig.refreshSecret) as AuthJwtPayload;
     } catch {
-      await this.repository.deleteRefreshToken(token).catch(() => {});
+      await this.repository.deleteRefreshToken(this.hashToken(token)).catch(() => {});
       throw new AppError(
         "Invalid refresh token",
         401,
@@ -206,7 +211,7 @@ export class AuthService {
       );
     }
 
-    const savedToken = await this.repository.findRefreshToken(token);
+    const savedToken = await this.repository.findRefreshToken(this.hashToken(token));
     if (!savedToken) {
       throw new AppError(
         "Invalid or expired refresh token",
@@ -216,7 +221,7 @@ export class AuthService {
     }
 
     if (savedToken.expiresAt < new Date()) {
-      await this.repository.deleteRefreshToken(token);
+      await this.repository.deleteRefreshToken(this.hashToken(token));
       throw new AppError(
         "Refresh token expired",
         401,
@@ -249,13 +254,13 @@ export class AuthService {
         jwtConfig.refreshExpiresIn as unknown as SignOptions["expiresIn"],
     });
 
-    await this.repository.deleteRefreshToken(token);
+    await this.repository.deleteRefreshToken(this.hashToken(token));
 
     const decoded = jwt.decode(newRefreshToken) as { exp: number };
     const expiresAt = new Date(decoded.exp * 1000);
     await this.repository.saveRefreshToken(
       user.id,
-      newRefreshToken,
+      this.hashToken(newRefreshToken),
       expiresAt,
       metadata?.userAgent,
       metadata?.ipAddress,
@@ -268,7 +273,7 @@ export class AuthService {
   }
 
   async logout(token: string) {
-    await this.repository.deleteRefreshToken(token);
+    await this.repository.deleteRefreshToken(this.hashToken(token));
   }
 
   private createEmailVerificationToken(email: string): string {
@@ -292,9 +297,19 @@ export class AuthService {
       );
     }
 
-    const existing = await this.repository.findByEmail(data.email);
+    const existing = this.repository.findByEmailWithDeleted
+      ? await this.repository.findByEmailWithDeleted(data.email)
+      : await this.repository.findByEmail(data.email);
 
     if (existing) {
+      if (existing.deletedAt) {
+        throw new AppError(
+          "Tài khoản với email này đã tồn tại trong hệ thống (đang ở trạng thái vô hiệu hóa/đã xóa). Vui lòng liên hệ quản trị viên để khôi phục.",
+          409,
+          ERROR_CODE.DUPLICATE_ENTRY,
+        );
+      }
+
       if (!existing.isActive) {
         await this.deliverVerificationEmail(existing);
         return {
@@ -671,7 +686,7 @@ export class AuthService {
     const expiresAt = new Date(decoded.exp * 1000);
     await this.repository.saveRefreshToken(
       user.id,
-      refreshToken,
+      this.hashToken(refreshToken),
       expiresAt,
       metadata?.userAgent,
       metadata?.ipAddress,
@@ -687,20 +702,11 @@ export class AuthService {
     const { email } = data;
     const user = await this.repository.findByEmail(email);
 
-    if (!user) {
-      throw new AppError(
-        "Email không tồn tại trong hệ thống.",
-        404,
-        ERROR_CODE.NOT_FOUND,
-      );
-    }
-
-    if (!user.isActive) {
-      throw new AppError(
-        "Tài khoản chưa được kích hoạt hoặc đã bị khóa.",
-        403,
-        ERROR_CODE.USER_INACTIVE,
-      );
+    // Uniform response: luôn trả về success, không tiết lộ tài khoản có tồn tại hay không
+    if (!user || !user.isActive) {
+      return {
+        success: true,
+      };
     }
 
     const secret = `${jwtConfig.accessSecret}-${user.passwordHash}`;
@@ -711,7 +717,7 @@ export class AuthService {
     try {
       await this.mailService.sendPasswordResetEmail(user.email, resetToken);
     } catch (error: unknown) {
-      console.error("[Mail] Password reset delivery failed:", error);
+      console.error("[ALERT][Mail] Password reset delivery failed:", error);
     }
 
     return {

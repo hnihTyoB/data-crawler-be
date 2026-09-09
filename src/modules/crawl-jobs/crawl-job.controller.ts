@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { CrawlJobService } from "./crawl-job.service";
+import { CrawlJobService, crawlJobService } from "./crawl-job.service";
 import { CrawlPageService } from "../crawl-pages/crawl-page.service";
 import { CrawlExportService } from "../crawl-exports/crawl-export.service";
 import { CreateCrawlJobDto, CrawlJobQueryDto } from "./crawl-job.dto";
@@ -11,11 +11,37 @@ import { CrawlAssetService } from "../crawl-assets/crawl-asset.service";
 import { AssetType } from "../../common/constants/asset-type.constant";
 import { streamStorageDownload } from "../../common/storage/storage-download.helper";
 export class CrawlJobController {
-  private readonly service = new CrawlJobService();
-  private readonly pageService = new CrawlPageService();
-  private readonly exportService = new CrawlExportService();
-  private readonly assetService = new CrawlAssetService();
-  private readonly auditLogService = new AuditLogService();
+  public static readonly MAX_CONCURRENT_STREAMS_PER_USER = 5;
+  public static readonly activeUserStreams = new Map<string, number>();
+
+  public static decrementActiveStream(userId: string): void {
+    const current = CrawlJobController.activeUserStreams.get(userId) ?? 0;
+    if (current <= 1) {
+      CrawlJobController.activeUserStreams.delete(userId);
+    } else {
+      CrawlJobController.activeUserStreams.set(userId, current - 1);
+    }
+  }
+
+  private readonly service: CrawlJobService;
+  private readonly pageService: CrawlPageService;
+  private readonly exportService: CrawlExportService;
+  private readonly assetService: CrawlAssetService;
+  private readonly auditLogService: AuditLogService;
+
+  constructor(
+    service?: CrawlJobService,
+    pageService?: CrawlPageService,
+    exportService?: CrawlExportService,
+    assetService?: CrawlAssetService,
+    auditLogService?: AuditLogService,
+  ) {
+    this.service = service ?? new CrawlJobService();
+    this.pageService = pageService ?? new CrawlPageService();
+    this.exportService = exportService ?? new CrawlExportService();
+    this.assetService = assetService ?? new CrawlAssetService();
+    this.auditLogService = auditLogService ?? new AuditLogService();
+  }
 
   create = async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -48,8 +74,14 @@ export class CrawlJobController {
     try {
       const userId = req.user.id;
       const role = req.user.role;
+      const roles = req.user.roles;
       const query: CrawlJobQueryDto = req.query;
-      const result = await this.service.findAllByUser(userId, role, query);
+      const result = await this.service.findAllByUser(
+        userId,
+        role,
+        query,
+        roles,
+      );
 
       res.json({
         success: true,
@@ -64,7 +96,13 @@ export class CrawlJobController {
     try {
       const userId = req.user.id;
       const role = req.user.role;
-      const result = await this.service.findById(userId, role, req.params.id);
+      const roles = req.user.roles;
+      const result = await this.service.findById(
+        userId,
+        role,
+        req.params.id,
+        roles,
+      );
 
       res.json({
         success: true,
@@ -79,7 +117,13 @@ export class CrawlJobController {
     try {
       const userId = req.user.id;
       const role = req.user.role;
-      const result = await this.service.cancel(userId, role, req.params.id);
+      const roles = req.user.roles;
+      const result = await this.service.cancel(
+        userId,
+        role,
+        req.params.id,
+        roles,
+      );
 
       await this.auditLogService.log({
         userId,
@@ -100,7 +144,12 @@ export class CrawlJobController {
 
   getPages = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.service.findById(req.user.id, req.user.role, req.params.id);
+      await this.service.findById(
+        req.user.id,
+        req.user.role,
+        req.params.id,
+        req.user.roles,
+      );
       const query: CrawlPageQueryDto = req.query;
       const result = await this.pageService.findByJobId(req.params.id, query);
 
@@ -115,7 +164,12 @@ export class CrawlJobController {
 
   getPagesPreview = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.service.findById(req.user.id, req.user.role, req.params.id);
+      await this.service.findById(
+        req.user.id,
+        req.user.role,
+        req.params.id,
+        req.user.roles,
+      );
       const query: CrawlPageQueryDto = req.query;
       const result = await this.pageService.findByJobId(req.params.id, {
         ...query,
@@ -132,7 +186,12 @@ export class CrawlJobController {
   };
   getAssets = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.service.findById(req.user.id, req.user.role, req.params.id);
+      await this.service.findById(
+        req.user.id,
+        req.user.role,
+        req.params.id,
+        req.user.roles,
+      );
 
       const assetType = req.query.assetType as AssetType | undefined;
       const page = Number(req.query.page) || 1;
@@ -164,7 +223,12 @@ export class CrawlJobController {
 
   getExports = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.service.findById(req.user.id, req.user.role, req.params.id);
+      await this.service.findById(
+        req.user.id,
+        req.user.role,
+        req.params.id,
+        req.user.roles,
+      );
       const result = await this.exportService.findByJobId(req.params.id);
 
       res.json({
@@ -183,6 +247,7 @@ export class CrawlJobController {
         req.user.role,
         req.params.id,
         req.body.exportType,
+        req.user?.roles,
       );
 
       res.status(201).json({
@@ -201,6 +266,7 @@ export class CrawlJobController {
         userId,
         req.user.role,
         req.params.id,
+        req.user.roles,
       );
 
       await this.auditLogService.log({
@@ -223,7 +289,12 @@ export class CrawlJobController {
 
   getDiff = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.service.findById(req.user.id, req.user.role, req.params.id);
+      await this.service.findById(
+        req.user.id,
+        req.user.role,
+        req.params.id,
+        req.user.roles,
+      );
       const { ChangeDetectionService } =
         await import("../change-detection/change-detection.service");
       const changeDetectionService = new ChangeDetectionService();
@@ -243,7 +314,12 @@ export class CrawlJobController {
 
   downloadDiff = async (req: Request, res: Response, next: NextFunction) => {
     try {
-      await this.service.findById(req.user.id, req.user.role, req.params.id);
+      await this.service.findById(
+        req.user.id,
+        req.user.role,
+        req.params.id,
+        req.user.roles,
+      );
       const { ChangeDetectionService } =
         await import("../change-detection/change-detection.service");
       const changeDetectionService = new ChangeDetectionService();
@@ -266,12 +342,27 @@ export class CrawlJobController {
   };
 
   streamEvents = async (req: Request, res: Response, next: NextFunction) => {
+    const userId = req.user.id;
+    const currentStreams = CrawlJobController.activeUserStreams.get(userId) ?? 0;
+    if (currentStreams >= CrawlJobController.MAX_CONCURRENT_STREAMS_PER_USER) {
+      return next(
+        new (await import("../../common/errors/app-error")).AppError(
+          "Too many active event streams. Please close existing streams before opening new ones.",
+          429,
+          (await import("../../common/errors/error-code")).ERROR_CODE.RATE_LIMIT_EXCEEDED,
+        ),
+      );
+    }
+
+    CrawlJobController.activeUserStreams.set(userId, currentStreams + 1);
+
     try {
       const jobId = req.params.id;
       const initialJob = await this.service.findById(
         req.user.id,
         req.user.role,
         jobId,
+        req.user.roles,
       );
 
       res.setHeader("Content-Type", "text/event-stream");
@@ -293,6 +384,7 @@ export class CrawlJobController {
           `event: done\ndata: ${JSON.stringify({ status: initialJob.status })}\n\n`,
         );
         res.end();
+        CrawlJobController.decrementActiveStream(userId);
         return;
       }
 
@@ -301,6 +393,10 @@ export class CrawlJobController {
       let maxDurationTimeout: NodeJS.Timeout | null = null;
 
       const cleanup = () => {
+        if (!isClosed) {
+          isClosed = true;
+          CrawlJobController.decrementActiveStream(userId);
+        }
         if (interval) {
           clearInterval(interval);
           interval = null;
@@ -311,16 +407,13 @@ export class CrawlJobController {
         }
       };
 
-      req.on("close", () => {
-        isClosed = true;
-        cleanup();
-      });
+      req.on("close", cleanup);
+      res.on("close", cleanup);
 
-      // Max stream duration guard (30 minutes)
-      const MAX_STREAM_DURATION_MS = 30 * 60 * 1000;
+      // Max stream duration guard (10 minutes)
+      const MAX_STREAM_DURATION_MS = 10 * 60 * 1000;
       maxDurationTimeout = setTimeout(() => {
         if (!isClosed) {
-          isClosed = true;
           cleanup();
           res.write(
             `event: done\ndata: ${JSON.stringify({ status: "TIMEOUT", message: "Stream reached max duration" })}\n\n`,
@@ -330,12 +423,16 @@ export class CrawlJobController {
       }, MAX_STREAM_DURATION_MS);
 
       interval = setInterval(async () => {
-        if (isClosed) return;
+        if (isClosed || req.destroyed || res.writableEnded) {
+          cleanup();
+          return;
+        }
         try {
           const currentJob = await this.service.findById(
             req.user.id,
             req.user.role,
             jobId,
+            req.user.roles,
           );
           res.write(`event: progress\ndata: ${JSON.stringify(currentJob)}\n\n`);
 
@@ -344,20 +441,15 @@ export class CrawlJobController {
               `event: done\ndata: ${JSON.stringify({ status: currentJob.status })}\n\n`,
             );
             cleanup();
-            if (!isClosed) {
-              isClosed = true;
-              res.end();
-            }
+            res.end();
           }
         } catch {
           cleanup();
-          if (!isClosed) {
-            isClosed = true;
-            res.end();
-          }
+          res.end();
         }
       }, 3000);
     } catch (error) {
+      CrawlJobController.decrementActiveStream(userId);
       next(error);
     }
   };
@@ -368,6 +460,7 @@ export class CrawlJobController {
         req.user.id,
         req.user.role,
         req.params.id,
+        req.user?.roles,
       );
       res.json(result);
     } catch (error) {
@@ -381,6 +474,7 @@ export class CrawlJobController {
         req.user.id,
         req.user.role,
         req.params.id,
+        req.user?.roles,
       );
       res.status(201).json({
         success: true,

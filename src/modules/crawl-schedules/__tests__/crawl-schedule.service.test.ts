@@ -1,5 +1,15 @@
 jest.mock("../../../database/prisma.client", () => ({
-  prisma: {},
+  prisma: {
+    user: {
+      findFirst: jest.fn().mockResolvedValue({
+        id: "user-1",
+        maxPagesLimit: 100,
+        maxJobsPerDayLimit: 10,
+        isActive: true,
+        deletedAt: null,
+      }),
+    },
+  },
 }));
 
 jest.mock("../crawl-schedule.repository");

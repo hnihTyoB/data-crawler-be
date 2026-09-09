@@ -9,6 +9,12 @@ export class AuthRepository {
     });
   }
 
+  findByEmailWithDeleted(email: string) {
+    return prisma.user.findFirst({
+      where: { email },
+    });
+  }
+
   findById(id: string) {
     return prisma.user.findFirst({
       where: { id, deletedAt: null },

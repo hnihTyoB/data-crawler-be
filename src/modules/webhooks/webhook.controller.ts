@@ -3,6 +3,7 @@ import { WebhookConfigService } from "./webhook-config.service";
 import { WebhookDeliveryService } from "./webhook-delivery.service";
 import { AuditLogService } from "../audit-logs/audit-log.service";
 import { AUDIT_ACTIONS } from "../../common/constants/audit-action.constant";
+import { WebhookDeliveryStatus } from "../../common/constants/webhook.constant";
 
 export class WebhookController {
   private readonly configService = new WebhookConfigService();
@@ -142,7 +143,7 @@ export class WebhookController {
     try {
       const userId = req.user.id;
       const jobId = req.query.jobId as string | undefined;
-      const status = req.query.status as string | undefined;
+      const status = req.query.status as WebhookDeliveryStatus | undefined;
       const page = req.query.page ? Number(req.query.page) : undefined;
       const limit = req.query.limit ? Number(req.query.limit) : undefined;
 

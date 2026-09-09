@@ -4,7 +4,6 @@ import { UserQueryDto } from "./user.dto";
 import { envConfig } from "../../config/env.config";
 import { ROLES } from "../../common/constants/role.constant";
 import { SYSTEM_ROLE_SLUGS } from "../../common/constants/system-role.constant";
-import { systemConfigService } from "../system-config/system-config.service";
 import { AppError } from "../../common/errors/app-error";
 import { ERROR_CODE } from "../../common/errors/error-code";
 
@@ -109,27 +108,6 @@ export class UserRepository {
     maxPagesPerMonthLimit?: number | null;
     maxJobsPerMonthLimit?: number | null;
   }): Promise<User> {
-    const defaultMaxPages = await systemConfigService.get<number>(
-      "quota.user_max_pages",
-      envConfig.quota.defaultMaxPages,
-    );
-    const defaultMaxJobsPerDay = await systemConfigService.get<number>(
-      "quota.user_max_jobs_per_day",
-      envConfig.quota.defaultMaxJobsPerDay,
-    );
-    const defaultMaxConcurrentJobs = await systemConfigService.get<number>(
-      "quota.user_max_concurrent_jobs",
-      envConfig.quota.defaultMaxConcurrentJobs,
-    );
-    const defaultMaxPagesPerMonth = await systemConfigService.get<number>(
-      "quota.user_max_pages_per_month",
-      envConfig.quota.defaultMaxPagesPerMonth,
-    );
-    const defaultMaxJobsPerMonth = await systemConfigService.get<number>(
-      "quota.user_max_jobs_per_month",
-      envConfig.quota.defaultMaxJobsPerMonth,
-    );
-
     return prisma.user.create({
       data: {
         email: data.email,
@@ -137,14 +115,18 @@ export class UserRepository {
         fullName: data.fullName,
         avatarUrl: data.avatarUrl,
         role: data.role ?? ROLES.CRAWLER_USER,
-        maxPagesLimit: data.maxPagesLimit ?? defaultMaxPages,
-        maxJobsPerDayLimit: data.maxJobsPerDayLimit ?? defaultMaxJobsPerDay,
+        maxPagesLimit: data.maxPagesLimit ?? envConfig.quota.defaultMaxPages,
+        maxJobsPerDayLimit:
+          data.maxJobsPerDayLimit ?? envConfig.quota.defaultMaxJobsPerDay,
         maxConcurrentJobsLimit:
-          data.maxConcurrentJobsLimit ?? defaultMaxConcurrentJobs,
+          data.maxConcurrentJobsLimit ??
+          envConfig.quota.defaultMaxConcurrentJobs,
         maxPagesPerMonthLimit:
-          data.maxPagesPerMonthLimit ?? defaultMaxPagesPerMonth,
+          data.maxPagesPerMonthLimit ??
+          envConfig.quota.defaultMaxPagesPerMonth,
         maxJobsPerMonthLimit:
-          data.maxJobsPerMonthLimit ?? defaultMaxJobsPerMonth,
+          data.maxJobsPerMonthLimit ??
+          envConfig.quota.defaultMaxJobsPerMonth,
       },
     });
   }
@@ -207,7 +189,7 @@ export class UserRepository {
         where: { slug: user.role.toLowerCase() },
       }));
 
-    const updateData: any = {
+    const updateData: Prisma.UserUpdateInput = {
       quotaResetAt: now,
     };
 

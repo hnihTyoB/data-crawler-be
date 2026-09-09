@@ -17,7 +17,7 @@ export const envConfig = {
     const isSupabase =
       this.database.host.includes("supabase.co") ||
       this.database.host.includes("pooler.supabase.com");
-    const sslParam = this.database.ssl || isSupabase ? "&sslmode=require" : "";
+    const sslParam = (this.database.ssl || isSupabase) ? "&sslmode=require" : "";
     return `postgresql://${encodeURIComponent(this.database.user)}:${encodeURIComponent(this.database.password)}@${this.database.host}:${this.database.port}/${this.database.name}?schema=public${sslParam}`;
   },
   jwt: {
@@ -41,7 +41,7 @@ export const envConfig = {
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
     emailVerificationSecret:
       process.env.JWT_EMAIL_VERIFICATION_SECRET ||
-      `${process.env.JWT_ACCESS_SECRET || "default_access_secret"}-email-verify`,
+      `${process.env.JWT_ACCESS_SECRET}-email-verify`,
   },
   firecrawl: {
     apiKey: process.env.FIRECRAWL_API_KEY || "",

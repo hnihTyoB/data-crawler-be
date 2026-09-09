@@ -5,6 +5,7 @@ import { ERROR_CODE } from "../../common/errors/error-code";
 import { ExportType } from "../../common/constants/export-type.constant";
 import { ROLES } from "../../common/constants/role.constant";
 import { JOB_STATUS } from "../../common/constants/job-status.constant";
+import { hasAdminPrivilege } from "../../common/helpers/rbac.helper";
 
 export class CrawlExportService {
   private readonly repository = new CrawlExportRepository();
@@ -14,7 +15,12 @@ export class CrawlExportService {
     return this.repository.findByJobId(jobId);
   }
 
-  async findById(userId: string, role: string, id: string) {
+  async findById(
+    userId: string,
+    role: string,
+    id: string,
+    roles?: string[],
+  ) {
     const exportRecord = await this.repository.findById(id);
 
     if (!exportRecord) {
@@ -30,7 +36,7 @@ export class CrawlExportService {
       );
     }
 
-    if (role !== ROLES.ADMIN && job.userId !== userId) {
+    if (!hasAdminPrivilege(role, roles) && job.userId !== userId) {
       throw new AppError("Export not found", 404, ERROR_CODE.NOT_FOUND);
     }
 
@@ -42,6 +48,7 @@ export class CrawlExportService {
     role: string,
     jobId: string,
     exportType: ExportType,
+    roles?: string[],
   ) {
     const job = await this.jobRepository.findById(jobId);
 
@@ -53,7 +60,7 @@ export class CrawlExportService {
       );
     }
 
-    if (role !== ROLES.ADMIN && job.userId !== userId) {
+    if (!hasAdminPrivilege(role, roles) && job.userId !== userId) {
       throw new AppError(
         "Crawl job not found",
         404,
@@ -113,8 +120,8 @@ export class CrawlExportService {
     return this.repository.findAllByUser(userId, page, limit);
   }
 
-  async delete(userId: string, role: string, id: string) {
-    const exportRecord = await this.findById(userId, role, id);
+  async delete(userId: string, role: string, id: string, roles?: string[]) {
+    const exportRecord = await this.findById(userId, role, id, roles);
 
     if (exportRecord.filePath) {
       const { StorageFactory } =

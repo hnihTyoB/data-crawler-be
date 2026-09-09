@@ -21,6 +21,11 @@ import {
   CronJobExecutionResultDto,
   CronJobItemDto,
 } from "./cron.dto";
+import { DEFAULT_TIMEZONE } from "../../common/constants/timezone.constant";
+import {
+  getZonedDateParts,
+  createUtcDateFromZonedParts,
+} from "../../common/helpers/schedule-calculator.helper";
 
 export class CronService {
   constructor(
@@ -348,8 +353,33 @@ export class CronService {
     stats: Record<string, number>;
   }> {
     const now = new Date();
-    const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0);
-    const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
+    const zonedParts = getZonedDateParts(now, DEFAULT_TIMEZONE);
+    // Tính ngày hôm trước theo múi giờ UTC+7 (Asia/Ho_Chi_Minh)
+    const prevDayLocal = new Date(
+      Date.UTC(zonedParts.year, zonedParts.month, zonedParts.day - 1),
+    );
+    const pYear = prevDayLocal.getUTCFullYear();
+    const pMonth = prevDayLocal.getUTCMonth();
+    const pDay = prevDayLocal.getUTCDate();
+
+    const startDate = createUtcDateFromZonedParts(
+      pYear,
+      pMonth,
+      pDay,
+      0,
+      0,
+      DEFAULT_TIMEZONE,
+    );
+    const endDate = new Date(
+      createUtcDateFromZonedParts(
+        pYear,
+        pMonth,
+        pDay,
+        23,
+        59,
+        DEFAULT_TIMEZONE,
+      ).getTime() + 59999,
+    );
 
     const [stats, adminEmails] = await Promise.all([
       this.repository.getDigestStats(startDate, endDate),

@@ -5,13 +5,16 @@ import {
 } from "./extraction-template.dto";
 import { AppError } from "../../common/errors/app-error";
 import { ERROR_CODE } from "../../common/errors/error-code";
+import { clearTemplateCache } from "./extraction-runner";
 
 export class ExtractionTemplateService {
   private readonly repository = new ExtractionTemplateRepository();
 
   async create(userId: string, payload: CreateExtractionTemplateDto) {
     try {
-      return await this.repository.create(userId, payload);
+      const result = await this.repository.create(userId, payload);
+      clearTemplateCache();
+      return result;
     } catch (err: unknown) {
       if (
         err &&
@@ -51,11 +54,15 @@ export class ExtractionTemplateService {
     payload: UpdateExtractionTemplateDto,
   ) {
     await this.findById(userId, id);
-    return this.repository.update(id, payload);
+    const result = await this.repository.update(id, payload);
+    clearTemplateCache();
+    return result;
   }
 
   async delete(userId: string, id: string) {
     await this.findById(userId, id);
-    return this.repository.delete(id);
+    const result = await this.repository.delete(id);
+    clearTemplateCache();
+    return result;
   }
 }
