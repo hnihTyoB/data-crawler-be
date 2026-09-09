@@ -91,6 +91,14 @@ export const envConfig = {
       process.env.USER_MAX_CONCURRENT_JOBS || "3",
       10,
     ),
+    defaultMaxPagesPerMonth: parseInt(
+      process.env.USER_MAX_PAGES_PER_MONTH || "1000",
+      10,
+    ),
+    defaultMaxJobsPerMonth: parseInt(
+      process.env.USER_MAX_JOBS_PER_MONTH || "100",
+      10,
+    ),
   },
   cors: {
     allowedOrigins: (

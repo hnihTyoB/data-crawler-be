@@ -279,4 +279,42 @@ describe("RoleService", () => {
       );
     });
   });
+
+  describe("resetRoleQuota", () => {
+    it("should reset role quota for all assigned users and log audit", async () => {
+      repository.findById.mockResolvedValue({
+        id: "r-cust",
+        slug: "custom_role",
+      } as any);
+
+      repository.resetRoleQuota.mockResolvedValue({ count: 5 } as any);
+
+      const result = await service.resetRoleQuota("r-cust", true, {
+        actorId: "actor-admin",
+      });
+
+      expect(result).toEqual({ affectedUsers: 5 });
+      expect(repository.resetRoleQuota).toHaveBeenCalledWith("r-cust", true);
+      expect(auditLogService.log).toHaveBeenCalledWith(
+        expect.objectContaining({
+          userId: "actor-admin",
+          action: AUDIT_ACTIONS.ROLE_QUOTA_RESET,
+          details: expect.objectContaining({
+            roleId: "r-cust",
+            roleSlug: "custom_role",
+            syncLimits: true,
+            affectedUsers: 5,
+          }),
+        }),
+      );
+    });
+
+    it("should throw 404 if role does not exist", async () => {
+      repository.findById.mockResolvedValue(null);
+
+      await expect(service.resetRoleQuota("non-existent")).rejects.toThrow(
+        AppError,
+      );
+    });
+  });
 });

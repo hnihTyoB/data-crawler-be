@@ -472,6 +472,14 @@
                             "totalPagesCrawled": {
                               "type": "integer",
                               "example": 45
+                            },
+                            "pagesCrawledToday": {
+                              "type": "integer",
+                              "example": 0
+                            },
+                            "pagesRemainingToday": {
+                              "type": "integer",
+                              "example": 100
                             }
                           }
                         },
@@ -1286,6 +1294,26 @@
         "summary": "Xóa người dùng"
       }
     },
+    "/users/{id}/reset-quota": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
+      }
+    },
     "/users/{id}/roles": {
       "get": {
         "description": "",
@@ -1654,6 +1682,26 @@
           "Roles"
         ],
         "summary": "Xóa Role"
+      }
+    },
+    "/roles/{id}/reset-quota": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
       }
     },
     "/roles/{id}/permissions": {
@@ -2181,6 +2229,93 @@
           "System Config"
         ],
         "summary": "Bật/tắt nhanh Feature Flag"
+      }
+    },
+    "/cron/jobs": {
+      "get": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/cron/jobs/{jobName}/trigger": {
+      "post": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "jobName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "params": {
+                    "example": "any"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/cron/jobs/{jobName}/toggle": {
+      "patch": {
+        "description": "",
+        "parameters": [
+          {
+            "name": "jobName",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        },
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "enabled": {
+                    "example": "any"
+                  }
+                }
+              }
+            }
+          }
+        }
       }
     },
     "/dashboard/stats": {

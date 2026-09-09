@@ -14,6 +14,8 @@ export const createUserSchema = z.object({
   maxPagesLimit: z.number().int().min(1).max(100000).optional(),
   maxJobsPerDayLimit: z.number().int().min(1).max(10000).optional(),
   maxConcurrentJobsLimit: z.number().int().min(1).max(100).optional(),
+  maxPagesPerMonthLimit: z.number().int().min(1).max(1000000).nullable().optional(),
+  maxJobsPerMonthLimit: z.number().int().min(1).max(100000).nullable().optional(),
 });
 
 export const updateUserSchema = z.object({
@@ -30,6 +32,12 @@ export const updateUserSchema = z.object({
   maxPagesLimit: z.number().int().min(1).max(100000).optional(),
   maxJobsPerDayLimit: z.number().int().min(1).max(10000).optional(),
   maxConcurrentJobsLimit: z.number().int().min(1).max(100).optional(),
+  maxPagesPerMonthLimit: z.number().int().min(1).max(1000000).nullable().optional(),
+  maxJobsPerMonthLimit: z.number().int().min(1).max(100000).nullable().optional(),
+});
+
+export const resetUserQuotaSchema = z.object({
+  resetLimitsToRole: z.boolean().optional().default(false),
 });
 
 export const listUsersQuerySchema = z.object({

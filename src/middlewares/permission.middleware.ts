@@ -1,29 +1,58 @@
 import { Request, Response, NextFunction } from "express";
 import {
+  PERMISSIONS,
   PermissionSlug,
   SYSTEM_ROLE_DEFAULT_PERMISSIONS,
 } from "../common/constants/permission.constant";
-import { SystemRoleSlug } from "../common/constants/system-role.constant";
+import {
+  SYSTEM_ROLE_SLUGS,
+  SystemRoleSlug,
+} from "../common/constants/system-role.constant";
 import { AppError } from "../common/errors/app-error";
 import { ERROR_CODE } from "../common/errors/error-code";
-import { PermissionService } from "../modules/permissions/permission.service";
-
-const permissionService = new PermissionService();
+import { permissionService } from "../modules/permissions/permission.service";
 
 async function resolveUserPermissions(req: Request): Promise<string[]> {
-  if (req.user.permissions && Array.isArray(req.user.permissions)) {
-    return req.user.permissions;
+  let permissions = req.user.permissions;
+  if (!permissions || !Array.isArray(permissions)) {
+    permissions = await permissionService.getUserPermissions(req.user.id);
   }
-
-  const permissions = await permissionService.getUserPermissions(req.user.id);
 
   if (!req.user.roles) {
     req.user.roles = await permissionService.getUserRoles(req.user.id);
   }
 
+  // Super Admin has all system permissions
+  const isSuperAdmin =
+    req.user.roles?.includes(SYSTEM_ROLE_SLUGS.SUPER_ADMIN) ||
+    String(req.user.role).toLowerCase() === "super_admin";
+
+  if (isSuperAdmin) {
+    const allPerms = Object.values(PERMISSIONS) as string[];
+    req.user.permissions = allPerms;
+    return allPerms;
+  }
+
+  // Admin automatically inherits all default admin permissions merged with any assigned permissions
+  const isAdmin =
+    req.user.role === "ADMIN" ||
+    String(req.user.role).toLowerCase() === "admin" ||
+    req.user.roles?.includes(SYSTEM_ROLE_SLUGS.ADMIN);
+
+  if (isAdmin) {
+    const adminDefaults =
+      SYSTEM_ROLE_DEFAULT_PERMISSIONS[SYSTEM_ROLE_SLUGS.ADMIN] || [];
+    const merged = Array.from(new Set([...permissions, ...adminDefaults]));
+    req.user.permissions = merged;
+    return merged;
+  }
+
   if (permissions.length === 0 && req.user.role) {
+    const normalizedRole = String(req.user.role).toLowerCase() as SystemRoleSlug;
     const defaultPerms =
-      SYSTEM_ROLE_DEFAULT_PERMISSIONS[req.user.role as SystemRoleSlug] || [];
+      SYSTEM_ROLE_DEFAULT_PERMISSIONS[normalizedRole] ||
+      SYSTEM_ROLE_DEFAULT_PERMISSIONS[req.user.role as SystemRoleSlug] ||
+      [];
     req.user.permissions = defaultPerms;
     return defaultPerms;
   }

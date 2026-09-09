@@ -5,6 +5,8 @@ import { envConfig } from "../../config/env.config";
 import { ROLES } from "../../common/constants/role.constant";
 import { SYSTEM_ROLE_SLUGS } from "../../common/constants/system-role.constant";
 import { systemConfigService } from "../system-config/system-config.service";
+import { AppError } from "../../common/errors/app-error";
+import { ERROR_CODE } from "../../common/errors/error-code";
 
 export class UserRepository {
   async findAll(query: UserQueryDto = {}) {
@@ -104,6 +106,8 @@ export class UserRepository {
     maxPagesLimit?: number;
     maxJobsPerDayLimit?: number;
     maxConcurrentJobsLimit?: number;
+    maxPagesPerMonthLimit?: number | null;
+    maxJobsPerMonthLimit?: number | null;
   }): Promise<User> {
     const defaultMaxPages = await systemConfigService.get<number>(
       "quota.user_max_pages",
@@ -117,6 +121,14 @@ export class UserRepository {
       "quota.user_max_concurrent_jobs",
       envConfig.quota.defaultMaxConcurrentJobs,
     );
+    const defaultMaxPagesPerMonth = await systemConfigService.get<number>(
+      "quota.user_max_pages_per_month",
+      envConfig.quota.defaultMaxPagesPerMonth,
+    );
+    const defaultMaxJobsPerMonth = await systemConfigService.get<number>(
+      "quota.user_max_jobs_per_month",
+      envConfig.quota.defaultMaxJobsPerMonth,
+    );
 
     return prisma.user.create({
       data: {
@@ -129,6 +141,10 @@ export class UserRepository {
         maxJobsPerDayLimit: data.maxJobsPerDayLimit ?? defaultMaxJobsPerDay,
         maxConcurrentJobsLimit:
           data.maxConcurrentJobsLimit ?? defaultMaxConcurrentJobs,
+        maxPagesPerMonthLimit:
+          data.maxPagesPerMonthLimit ?? defaultMaxPagesPerMonth,
+        maxJobsPerMonthLimit:
+          data.maxJobsPerMonthLimit ?? defaultMaxJobsPerMonth,
       },
     });
   }
@@ -144,11 +160,73 @@ export class UserRepository {
       maxPagesLimit?: number;
       maxJobsPerDayLimit?: number;
       maxConcurrentJobsLimit?: number;
+      maxPagesPerMonthLimit?: number | null;
+      maxJobsPerMonthLimit?: number | null;
+      quotaResetAt?: Date | null;
     },
   ): Promise<User> {
     return prisma.user.update({
       where: { id },
       data,
+    });
+  }
+
+  async resetQuota(
+    id: string,
+    resetLimitsToRole: boolean = false,
+  ): Promise<User> {
+    const now = new Date();
+    if (!resetLimitsToRole) {
+      return prisma.user.update({
+        where: { id },
+        data: { quotaResetAt: now },
+        include: {
+          userRoles: {
+            include: { role: true },
+          },
+        },
+      });
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { id },
+      include: {
+        userRoles: {
+          include: { role: true },
+        },
+      },
+    });
+
+    if (!user) {
+      throw new AppError("User not found", 404, ERROR_CODE.NOT_FOUND);
+    }
+
+    const primaryRole =
+      user.userRoles.find((ur) => ur.role.isActive)?.role ||
+      (await prisma.role.findFirst({
+        where: { slug: user.role.toLowerCase() },
+      }));
+
+    const updateData: any = {
+      quotaResetAt: now,
+    };
+
+    if (primaryRole) {
+      updateData.maxPagesLimit = primaryRole.maxPagesLimit;
+      updateData.maxJobsPerDayLimit = primaryRole.maxJobsPerDayLimit;
+      updateData.maxConcurrentJobsLimit = primaryRole.maxConcurrentJobsLimit;
+      updateData.maxPagesPerMonthLimit = primaryRole.maxPagesPerMonthLimit;
+      updateData.maxJobsPerMonthLimit = primaryRole.maxJobsPerMonthLimit;
+    }
+
+    return prisma.user.update({
+      where: { id },
+      data: updateData,
+      include: {
+        userRoles: {
+          include: { role: true },
+        },
+      },
     });
   }
 

@@ -19,6 +19,11 @@ export const createRoleSchema = z.object({
   permissionIds: z
     .array(z.string().uuid("Invalid permission ID format"))
     .optional(),
+  maxPagesLimit: z.number().int().min(1).max(100000).optional(),
+  maxJobsPerDayLimit: z.number().int().min(1).max(10000).optional(),
+  maxConcurrentJobsLimit: z.number().int().min(1).max(100).optional(),
+  maxPagesPerMonthLimit: z.number().int().min(1).max(1000000).nullable().optional(),
+  maxJobsPerMonthLimit: z.number().int().min(1).max(100000).nullable().optional(),
 });
 
 export const updateRoleSchema = z.object({
@@ -30,6 +35,16 @@ export const updateRoleSchema = z.object({
     .optional(),
   description: z.string().max(500).optional(),
   isActive: z.boolean().optional(),
+  maxPagesLimit: z.number().int().min(1).max(100000).optional(),
+  maxJobsPerDayLimit: z.number().int().min(1).max(10000).optional(),
+  maxConcurrentJobsLimit: z.number().int().min(1).max(100).optional(),
+  maxPagesPerMonthLimit: z.number().int().min(1).max(1000000).nullable().optional(),
+  maxJobsPerMonthLimit: z.number().int().min(1).max(100000).nullable().optional(),
+  syncUsersQuota: z.boolean().optional(),
+});
+
+export const resetRoleQuotaSchema = z.object({
+  syncLimits: z.boolean().optional().default(false),
 });
 
 export const assignRolePermissionsSchema = z.object({

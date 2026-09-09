@@ -51,6 +51,9 @@ export class UserService {
       maxPagesLimit: user.maxPagesLimit,
       maxJobsPerDayLimit: user.maxJobsPerDayLimit,
       maxConcurrentJobsLimit: user.maxConcurrentJobsLimit,
+      maxPagesPerMonthLimit: user.maxPagesPerMonthLimit ?? null,
+      maxJobsPerMonthLimit: user.maxJobsPerMonthLimit ?? null,
+      quotaResetAt: user.quotaResetAt ?? null,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
       ...(roles !== undefined ? { roles } : {}),
@@ -101,6 +104,8 @@ export class UserService {
       maxPagesLimit: data.maxPagesLimit,
       maxJobsPerDayLimit: data.maxJobsPerDayLimit,
       maxConcurrentJobsLimit: data.maxConcurrentJobsLimit,
+      maxPagesPerMonthLimit: data.maxPagesPerMonthLimit,
+      maxJobsPerMonthLimit: data.maxJobsPerMonthLimit,
     });
 
     // Auto assign matching default system role
@@ -190,10 +195,41 @@ export class UserService {
       maxPagesLimit: data.maxPagesLimit,
       maxJobsPerDayLimit: data.maxJobsPerDayLimit,
       maxConcurrentJobsLimit: data.maxConcurrentJobsLimit,
+      maxPagesPerMonthLimit: data.maxPagesPerMonthLimit,
+      maxJobsPerMonthLimit: data.maxJobsPerMonthLimit,
     });
 
     authorizationCache.invalidateUser(id);
     return this.formatUser(user);
+  }
+
+  async resetQuota(
+    id: string,
+    resetLimitsToRole?: boolean,
+    context?: { actorId?: string; ipAddress?: string; userAgent?: string },
+  ): Promise<UserResponseDto> {
+    const user = await this.repository.findById(id);
+    if (!user) {
+      throw new AppError("User not found", 404, ERROR_CODE.NOT_FOUND);
+    }
+
+    const updated = await this.repository.resetQuota(id, resetLimitsToRole);
+
+    if (context?.actorId) {
+      await this.auditLogService.log({
+        userId: context.actorId,
+        action: AUDIT_ACTIONS.USER_QUOTA_RESET,
+        details: {
+          targetUserId: id,
+          targetUserEmail: user.email,
+          resetLimitsToRole: !!resetLimitsToRole,
+        },
+        ipAddress: context.ipAddress,
+        userAgent: context.userAgent,
+      });
+    }
+
+    return this.formatUser(updated);
   }
 
   async delete(

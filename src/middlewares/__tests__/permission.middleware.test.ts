@@ -115,4 +115,36 @@ describe("Permission Middleware", () => {
       );
     });
   });
+
+  describe("Role-based permission inheritance and Super Admin bypass", () => {
+    it("should grant full access to SUPER_ADMIN even if permission array is empty", async () => {
+      mockReq.user = {
+        id: "super-1",
+        email: "super@example.com",
+        role: "SUPER_ADMIN",
+        roles: ["super_admin"],
+        permissions: [],
+      } as any;
+
+      const middleware = requirePermission(PERMISSIONS.CRON_JOB_READ);
+      await middleware(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith();
+    });
+
+    it("should grant CRON_JOB_READ to ADMIN role even if permissions array was missing it", async () => {
+      mockReq.user = {
+        id: "admin-1",
+        email: "admin@example.com",
+        role: "ADMIN",
+        roles: ["admin"],
+        permissions: [PERMISSIONS.USERS_READ], // Missing CRON_JOB_READ in DB array
+      } as any;
+
+      const middleware = requirePermission(PERMISSIONS.CRON_JOB_READ);
+      await middleware(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith();
+    });
+  });
 });

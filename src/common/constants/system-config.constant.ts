@@ -296,6 +296,20 @@ export const DEFAULT_SYSTEM_CONFIGS: readonly DefaultSystemConfigItem[] = [
     description: "Hạn ngạch số tác vụ cào được phép chạy song song cho mỗi tài khoản (USER_MAX_CONCURRENT_JOBS)",
   },
   {
+    key: "quota.user_max_pages_per_month",
+    value: 1000,
+    category: SYSTEM_CONFIG_CATEGORY.SECURITY,
+    isPublic: false,
+    description: "Hạn ngạch số trang cào tối đa trong một tháng cho mỗi tài khoản (USER_MAX_PAGES_PER_MONTH)",
+  },
+  {
+    key: "quota.user_max_jobs_per_month",
+    value: 100,
+    category: SYSTEM_CONFIG_CATEGORY.SECURITY,
+    isPublic: false,
+    description: "Hạn ngạch số tác vụ cào tối đa trong một tháng cho mỗi tài khoản (USER_MAX_JOBS_PER_MONTH)",
+  },
+  {
     key: "rate_limit.window_ms",
     value: 900000,
     category: SYSTEM_CONFIG_CATEGORY.SECURITY,

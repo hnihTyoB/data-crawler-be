@@ -3,12 +3,27 @@ export interface CreateRoleDto {
   slug: string;
   description?: string;
   permissionIds?: string[];
+  maxPagesLimit?: number;
+  maxJobsPerDayLimit?: number;
+  maxConcurrentJobsLimit?: number;
+  maxPagesPerMonthLimit?: number | null;
+  maxJobsPerMonthLimit?: number | null;
 }
 
 export interface UpdateRoleDto {
   name?: string;
   description?: string;
   isActive?: boolean;
+  maxPagesLimit?: number;
+  maxJobsPerDayLimit?: number;
+  maxConcurrentJobsLimit?: number;
+  maxPagesPerMonthLimit?: number | null;
+  maxJobsPerMonthLimit?: number | null;
+  syncUsersQuota?: boolean;
+}
+
+export interface ResetRoleQuotaDto {
+  syncLimits?: boolean;
 }
 
 export interface RoleQueryDto {
@@ -38,6 +53,11 @@ export interface RoleResponseDto {
   description: string | null;
   isSystem: boolean;
   isActive: boolean;
+  maxPagesLimit: number;
+  maxJobsPerDayLimit: number;
+  maxConcurrentJobsLimit: number;
+  maxPagesPerMonthLimit: number | null;
+  maxJobsPerMonthLimit: number | null;
   createdAt: Date;
   updatedAt: Date;
   permissions?: RolePermissionItemDto[];

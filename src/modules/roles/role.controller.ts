@@ -110,6 +110,33 @@ export class RoleController {
     }
   };
 
+  resetRoleQuota = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const syncLimits = !!req.body?.syncLimits;
+      const result = await this.service.resetRoleQuota(
+        req.params.id,
+        syncLimits,
+        {
+          actorId: req.user.id,
+          ipAddress: req.ip,
+          userAgent: req.headers["user-agent"] as string,
+        },
+      );
+
+      res.json({
+        success: true,
+        message: "Role quota reset successfully",
+        data: result,
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
+
   getRolePermissions = async (
     req: Request,
     res: Response,
