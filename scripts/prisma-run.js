@@ -14,12 +14,25 @@ if (!process.env.DATABASE_URL) {
   process.env.DATABASE_URL = `postgresql://${user}:${password}@${host}:${port}/${name}?schema=public${ssl}`;
 }
 
+const path = require("path");
+const fs = require("fs");
+
 const args = process.argv.slice(2);
-const cmd = process.platform === "win32" ? "npx.cmd" : "npx";
-const child = spawn(cmd, ["prisma", ...args], {
+const isWin = process.platform === "win32";
+const localBin = path.resolve(
+  __dirname,
+  `../node_modules/.bin/prisma${isWin ? ".cmd" : ""}`
+);
+
+const [cmd, cmdArgs] = fs.existsSync(localBin)
+  ? [localBin, args]
+  : [isWin ? "npx.cmd" : "npx", ["prisma", ...args]];
+
+const child = spawn(cmd, cmdArgs, {
   stdio: "inherit",
   env: process.env,
-  shell: true,
+  shell: isWin,
 });
 
 child.on("exit", (code) => process.exit(code ?? 1));
+
