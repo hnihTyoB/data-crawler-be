@@ -1,3 +1,25 @@
+function sanitizeRedisUrl(rawUrl: string | undefined): string {
+  if (!rawUrl) return "";
+  let url = rawUrl.trim();
+  if (
+    (url.startsWith('"') && url.endsWith('"')) ||
+    (url.startsWith("'") && url.endsWith("'"))
+  ) {
+    url = url.slice(1, -1).trim();
+  }
+  const match = url.match(/rediss?:\/\/[^\s'"]+/i);
+  if (match) {
+    url = match[0];
+  }
+  if (
+    url.startsWith("redis://") &&
+    (url.includes("upstash.io") || rawUrl.includes("--tls"))
+  ) {
+    url = url.replace(/^redis:\/\//i, "rediss://");
+  }
+  return url;
+}
+
 export const envConfig = {
   nodeEnv: process.env.NODE_ENV || "development",
   port: parseInt(process.env.PORT || "9898", 10),
@@ -52,12 +74,13 @@ export const envConfig = {
     ),
   },
   redis: {
-    url: process.env.REDIS_URL || "",
+    url: sanitizeRedisUrl(process.env.REDIS_URL),
     host: process.env.REDIS_HOST || "127.0.0.1",
     port: parseInt(process.env.REDIS_PORT || "6379", 10),
     password: process.env.REDIS_PASSWORD || undefined,
     enabled:
-      process.env.REDIS_ENABLED === "true" || Boolean(process.env.REDIS_URL),
+      process.env.REDIS_ENABLED === "true" ||
+      Boolean(sanitizeRedisUrl(process.env.REDIS_URL)),
   },
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000", 10),
