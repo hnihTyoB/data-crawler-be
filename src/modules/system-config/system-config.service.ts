@@ -388,12 +388,12 @@ export class SystemConfigService {
   }
 
   /**
-   * Khởi tạo cấu hình mặc định nếu chưa tồn tại trong Database
+   * Khởi tạo và đồng bộ cấu hình mặc định từ biến môi trường vào Database
    */
-  async ensureDefaultConfigs(): Promise<void> {
+  async ensureDefaultConfigs(syncValues = true): Promise<void> {
     for (const item of DEFAULT_SYSTEM_CONFIGS) {
       try {
-        await this.repository.ensureDefault(item);
+        await this.repository.ensureDefault(item, syncValues);
       } catch (err) {
         console.warn(
           `[SystemConfig] ensureDefault error for ${item.key}:`,
@@ -402,6 +402,24 @@ export class SystemConfigService {
       }
     }
     this.clearLocalCache();
+  }
+
+  /**
+   * Đồng bộ toàn bộ giá trị cấu hình từ biến môi trường (.env) vào Database
+   */
+  async syncFromEnv(): Promise<{ syncedCount: number; keys: string[] }> {
+    const keys: string[] = [];
+    for (const item of DEFAULT_SYSTEM_CONFIGS) {
+      try {
+        await this.repository.ensureDefault(item, true);
+        keys.push(item.key);
+      } catch (err) {
+        console.warn(`[SystemConfig] syncFromEnv error for ${item.key}:`, err);
+      }
+    }
+    this.clearLocalCache();
+    await this.publishInvalidation();
+    return { syncedCount: keys.length, keys };
   }
 }
 

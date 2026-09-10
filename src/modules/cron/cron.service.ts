@@ -10,6 +10,7 @@ import {
   CRON_JOB_STATUS,
   CronJobName,
   DEFAULT_AUDIT_LOG_RETENTION_DAYS,
+  DEFAULT_EXPORT_RETENTION_DAYS,
   DEFAULT_CRON_SCHEDULES,
   DEFAULT_UNCONFIRMED_UPLOAD_MAX_AGE_HOURS,
 } from "../../common/constants/cron.constant";
@@ -26,6 +27,10 @@ import {
   getZonedDateParts,
   createUtcDateFromZonedParts,
 } from "../../common/helpers/schedule-calculator.helper";
+import {
+  SystemConfigService,
+  systemConfigService,
+} from "../system-config/system-config.service";
 
 export class CronService {
   constructor(
@@ -33,6 +38,7 @@ export class CronService {
     private readonly storageService: IStorageService = StorageFactory.getStorageService(),
     private readonly mailService: MailService = new MailService(),
     private readonly queueService: CronQueueService = cronQueue,
+    private readonly configService: SystemConfigService = systemConfigService,
   ) {}
 
   /**
@@ -179,6 +185,13 @@ export class CronService {
           break;
         }
 
+        case CRON_JOB_NAMES.CLEANUP_EXPORTS: {
+          executionData = await this.executeCleanupExports(
+            params as { retentionDays?: number } | undefined,
+          );
+          break;
+        }
+
         case CRON_JOB_NAMES.CLEANUP_UNCONFIRMED_UPLOADS: {
           executionData = await this.executeCleanupUnconfirmedUploads(
             params as { maxAgeHours?: number } | undefined,
@@ -262,8 +275,23 @@ export class CronService {
     retentionDays: number;
     cutoffDate: string;
   }> {
-    const retentionDays =
-      params?.retentionDays ?? DEFAULT_AUDIT_LOG_RETENTION_DAYS;
+    const isFeatureEnabled = await this.configService.get<boolean>(
+      "feature.cron.cleanup_audit_logs.enabled",
+      true,
+    );
+    if (!isFeatureEnabled && params?.retentionDays === undefined) {
+      return {
+        deletedCount: 0,
+        retentionDays: 0,
+        cutoffDate: new Date().toISOString(),
+      };
+    }
+
+    const defaultRetention = await this.configService.get<number>(
+      "retention.audit_logs_days",
+      DEFAULT_AUDIT_LOG_RETENTION_DAYS,
+    );
+    const retentionDays = params?.retentionDays ?? defaultRetention;
     const cutoffDate = new Date(
       Date.now() - retentionDays * 24 * 60 * 60 * 1000,
     );
@@ -272,6 +300,56 @@ export class CronService {
 
     return {
       deletedCount,
+      retentionDays,
+      cutoffDate: cutoffDate.toISOString(),
+    };
+  }
+
+  /**
+   * Tác vụ: Xóa các bản ghi CrawlExport và tệp tin xuất dữ liệu cũ hơn số ngày quy định
+   */
+  async executeCleanupExports(params?: { retentionDays?: number }): Promise<{
+    cleanedExportsCount: number;
+    retentionDays: number;
+    cutoffDate: string;
+  }> {
+    const isFeatureEnabled = await this.configService.get<boolean>(
+      "feature.cron.cleanup_exports.enabled",
+      true,
+    );
+    if (!isFeatureEnabled && params?.retentionDays === undefined) {
+      return {
+        cleanedExportsCount: 0,
+        retentionDays: 0,
+        cutoffDate: new Date().toISOString(),
+      };
+    }
+
+    const defaultRetention = await this.configService.get<number>(
+      "retention.exports_days",
+      DEFAULT_EXPORT_RETENTION_DAYS,
+    );
+    const retentionDays = params?.retentionDays ?? defaultRetention;
+    const cutoffDate = new Date(
+      Date.now() - retentionDays * 24 * 60 * 60 * 1000,
+    );
+
+    const { deletedCount, filePaths } =
+      await this.repository.cleanupOldExports(cutoffDate, new Date());
+
+    for (const filePath of filePaths) {
+      try {
+        await this.storageService.deleteFile(filePath);
+      } catch (fileErr) {
+        console.warn(
+          `[Cron Cleanup] Could not delete export file ${filePath}:`,
+          fileErr,
+        );
+      }
+    }
+
+    return {
+      cleanedExportsCount: deletedCount,
       retentionDays,
       cutoffDate: cutoffDate.toISOString(),
     };

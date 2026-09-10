@@ -76,4 +76,12 @@ router.delete(
   controller.delete,
 );
 
+// 8. POST /api/v1/system/configs/sync-env (Sync configs from .env into DB)
+router.post(
+  "/configs/sync-env",
+  authMiddleware,
+  requirePermission(PERMISSIONS.SYSTEM_CONFIG_MANAGE),
+  controller.syncFromEnv,
+);
+
 export default router;

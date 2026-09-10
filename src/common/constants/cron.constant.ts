@@ -1,5 +1,6 @@
 export const CRON_JOB_NAMES = {
   CLEANUP_AUDIT_LOGS: "cleanup-audit-logs",
+  CLEANUP_EXPORTS: "cleanup-exports",
   CLEANUP_UNCONFIRMED_UPLOADS: "cleanup-unconfirmed-uploads",
   CLEANUP_EXPIRED_TOKENS: "cleanup-expired-tokens",
   DAILY_SUMMARY_DIGEST: "daily-summary-digest",
@@ -24,7 +25,9 @@ export const CRON_QUEUE_NAME = "cron-scheduler-queue" as const;
 
 export const CRON_SYSTEM_CONFIG_KEY = "CRON_JOB_STATUSES" as const;
 
-export const DEFAULT_AUDIT_LOG_RETENTION_DAYS = 30;
+export const DEFAULT_AUDIT_LOG_RETENTION_DAYS = 7;
+
+export const DEFAULT_EXPORT_RETENTION_DAYS = 7;
 
 export const DEFAULT_UNCONFIRMED_UPLOAD_MAX_AGE_HOURS = 24;
 
@@ -37,13 +40,20 @@ export interface CronScheduleConfig {
 export const DEFAULT_CRON_SCHEDULES: Record<CronJobName, CronScheduleConfig> = {
   [CRON_JOB_NAMES.CLEANUP_AUDIT_LOGS]: {
     cron: "0 2 * * *",
-    description: "Dọn dẹp các bản ghi nhật ký kiểm toán cũ hơn số ngày quy định",
+    description: "Dọn dẹp các bản ghi nhật ký kiểm toán (audit logs) cũ hơn 7 ngày",
     defaultParams: {
       retentionDays: DEFAULT_AUDIT_LOG_RETENTION_DAYS,
     },
   },
-  [CRON_JOB_NAMES.CLEANUP_UNCONFIRMED_UPLOADS]: {
+  [CRON_JOB_NAMES.CLEANUP_EXPORTS]: {
     cron: "0 3 * * *",
+    description: "Dọn dẹp các tệp xuất dữ liệu (exports) và bản ghi hết hạn hoặc cũ hơn 7 ngày",
+    defaultParams: {
+      retentionDays: DEFAULT_EXPORT_RETENTION_DAYS,
+    },
+  },
+  [CRON_JOB_NAMES.CLEANUP_UNCONFIRMED_UPLOADS]: {
+    cron: "0 4 * * *",
     description: "Quét và dọn dẹp các tệp tin tải lên mồ côi hoặc xuất file tạm quá hạn",
     defaultParams: {
       maxAgeHours: DEFAULT_UNCONFIRMED_UPLOAD_MAX_AGE_HOURS,

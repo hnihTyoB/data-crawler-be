@@ -12,6 +12,142 @@
     }
   ],
   "paths": {
+    "/health/liveness": {
+      "get": {
+        "description": "Endpoint kiểm tra xem ứng dụng còn phản hồi hay không (dành cho Kubernetes / Docker health check).",
+        "responses": {
+          "200": {
+            "description": "Ứng dụng hoạt động bình thường",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ok"
+                    },
+                    "uptimeSeconds": {
+                      "type": "integer",
+                      "example": 3600
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    },
+                    "nodeVersion": {
+                      "type": "string",
+                      "example": "v22.14.0"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Health"
+        ],
+        "summary": "Kiểm tra liveness của service"
+      }
+    },
+    "/health/readiness": {
+      "get": {
+        "description": "Endpoint kiểm tra kết nối tới cơ sở dữ liệu PostgreSQL và hàng đợi Redis.",
+        "responses": {
+          "200": {
+            "description": "Hệ thống sẵn sàng tiếp nhận request",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "status": {
+                      "type": "string",
+                      "example": "ready"
+                    },
+                    "checks": {
+                      "type": "object",
+                      "properties": {
+                        "database": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "example": "up"
+                            },
+                            "latencyMs": {
+                              "type": "integer",
+                              "example": 5
+                            }
+                          }
+                        },
+                        "redis": {
+                          "type": "object",
+                          "properties": {
+                            "status": {
+                              "type": "string",
+                              "example": "up"
+                            },
+                            "latencyMs": {
+                              "type": "integer",
+                              "example": 2
+                            }
+                          }
+                        }
+                      }
+                    },
+                    "timestamp": {
+                      "type": "string",
+                      "format": "date-time"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Hệ thống chưa sẵn sàng, dịch vụ phụ trợ gặp lỗi"
+          }
+        },
+        "tags": [
+          "Health"
+        ],
+        "summary": "Kiểm tra readiness của service (PostgreSQL & Redis)"
+      }
+    },
+    "/health/metrics": {
+      "get": {
+        "description": "Trả về thông tin chi tiết về bộ nhớ RAM tiến trình, thời gian uptime và trạng thái các hàng đợi BullMQ.",
+        "responses": {
+          "200": {
+            "description": "Lấy metrics thành công",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "memory": {
+                      "type": "object"
+                    },
+                    "uptime": {
+                      "type": "number"
+                    },
+                    "queues": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "tags": [
+          "Health"
+        ],
+        "summary": "Xem thông số metrics hệ thống và hàng đợi"
+      }
+    },
     "/auth/login": {
       "post": {
         "description": "Xác thực email và mật khẩu để nhận Access Token và Refresh Token.",
@@ -2093,6 +2229,16 @@
           "System Config"
         ],
         "summary": "Bật/tắt nhanh Feature Flag"
+      }
+    },
+    "/system/configs/sync-env": {
+      "post": {
+        "description": "",
+        "responses": {
+          "default": {
+            "description": ""
+          }
+        }
       }
     },
     "/cron/jobs": {
@@ -5149,142 +5295,6 @@
           "Extraction Templates"
         ],
         "summary": "Xóa template trích xuất"
-      }
-    },
-    "/health/liveness": {
-      "get": {
-        "tags": [
-          "Health"
-        ],
-        "summary": "Kiểm tra liveness của service",
-        "description": "Endpoint kiểm tra xem ứng dụng còn phản hồi hay không (dành cho Kubernetes / Docker health check).",
-        "responses": {
-          "200": {
-            "description": "Ứng dụng hoạt động bình thường",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "ok"
-                    },
-                    "uptimeSeconds": {
-                      "type": "integer",
-                      "example": 3600
-                    },
-                    "timestamp": {
-                      "type": "string",
-                      "format": "date-time"
-                    },
-                    "nodeVersion": {
-                      "type": "string",
-                      "example": "v22.14.0"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/health/readiness": {
-      "get": {
-        "tags": [
-          "Health"
-        ],
-        "summary": "Kiểm tra readiness của service (PostgreSQL & Redis)",
-        "description": "Endpoint kiểm tra kết nối tới cơ sở dữ liệu PostgreSQL và hàng đợi Redis.",
-        "responses": {
-          "200": {
-            "description": "Hệ thống sẵn sàng tiếp nhận request",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "status": {
-                      "type": "string",
-                      "example": "ready"
-                    },
-                    "checks": {
-                      "type": "object",
-                      "properties": {
-                        "database": {
-                          "type": "object",
-                          "properties": {
-                            "status": {
-                              "type": "string",
-                              "example": "up"
-                            },
-                            "latencyMs": {
-                              "type": "integer",
-                              "example": 5
-                            }
-                          }
-                        },
-                        "redis": {
-                          "type": "object",
-                          "properties": {
-                            "status": {
-                              "type": "string",
-                              "example": "up"
-                            },
-                            "latencyMs": {
-                              "type": "integer",
-                              "example": 2
-                            }
-                          }
-                        }
-                      }
-                    },
-                    "timestamp": {
-                      "type": "string",
-                      "format": "date-time"
-                    }
-                  }
-                }
-              }
-            }
-          },
-          "503": {
-            "description": "Hệ thống chưa sẵn sàng, dịch vụ phụ trợ gặp lỗi"
-          }
-        }
-      }
-    },
-    "/health/metrics": {
-      "get": {
-        "tags": [
-          "Health"
-        ],
-        "summary": "Xem thông số metrics hệ thống và hàng đợi",
-        "description": "Trả về thông tin chi tiết về bộ nhớ RAM tiến trình, thời gian uptime và trạng thái các hàng đợi BullMQ.",
-        "responses": {
-          "200": {
-            "description": "Lấy metrics thành công",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "memory": {
-                      "type": "object"
-                    },
-                    "uptime": {
-                      "type": "number"
-                    },
-                    "queues": {
-                      "type": "object"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        }
       }
     }
   },

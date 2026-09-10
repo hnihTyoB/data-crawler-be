@@ -1,8 +1,13 @@
 import { CrawlJob, CrawlPage } from "@prisma/client";
 import { ExportService } from "../export.service";
 import { JsonExportService } from "../json-export.service";
+import { systemConfigService } from "../../system-config/system-config.service";
 
 describe("ExportService", () => {
+  beforeEach(() => {
+    jest.spyOn(systemConfigService, "get").mockResolvedValue(7);
+  });
+
   afterEach(() => {
     jest.restoreAllMocks();
   });
