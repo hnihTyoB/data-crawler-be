@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { Worker } from "bullmq";
 import { envConfig } from "../config/env.config";
+import { getBullMQConnection } from "../common/redis/redis-connection";
 import { WebhookDeliveryService } from "../modules/webhooks/webhook-delivery.service";
 
 import { getErrorMessage } from "../common/helpers/error-mapping.helper";
@@ -49,11 +50,9 @@ export const webhookWorker = new Worker(
     }
   },
   {
-    connection: {
-      host: envConfig.redis.host,
-      port: envConfig.redis.port,
+    connection: getBullMQConnection({
       maxRetriesPerRequest: null,
-    },
+    }),
     concurrency: 5,
   },
 );

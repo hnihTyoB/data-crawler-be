@@ -1,5 +1,6 @@
 import { Queue } from "bullmq";
 import { envConfig } from "../config/env.config";
+import { getBullMQConnection } from "../common/redis/redis-connection";
 import {
   CRON_QUEUE_NAME,
   CronJobName,
@@ -13,12 +14,10 @@ export class CronQueueService {
   constructor() {
     if (envConfig.redis.enabled) {
       this.queue = new Queue(CRON_QUEUE_NAME, {
-        connection: {
-          host: envConfig.redis.host,
-          port: envConfig.redis.port,
+        connection: getBullMQConnection({
           enableOfflineQueue: false,
           lazyConnect: true,
-        },
+        }),
         defaultJobOptions: {
           attempts: 3,
           backoff: { type: "exponential", delay: 5000 },
