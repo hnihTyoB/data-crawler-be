@@ -52,9 +52,12 @@ export const envConfig = {
     ),
   },
   redis: {
+    url: process.env.REDIS_URL || "",
     host: process.env.REDIS_HOST || "127.0.0.1",
     port: parseInt(process.env.REDIS_PORT || "6379", 10),
-    enabled: process.env.REDIS_ENABLED === "true",
+    password: process.env.REDIS_PASSWORD || undefined,
+    enabled:
+      process.env.REDIS_ENABLED === "true" || Boolean(process.env.REDIS_URL),
   },
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || "900000", 10),

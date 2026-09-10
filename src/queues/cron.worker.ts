@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { Worker } from "bullmq";
 import { envConfig } from "../config/env.config";
+import { getBullMQConnection } from "../common/redis/redis-connection";
 import { cronService } from "../modules/cron/cron.service";
 import {
   CRON_QUEUE_NAME,
@@ -55,11 +56,9 @@ export const cronWorker = new Worker(
     }
   },
   {
-    connection: {
-      host: envConfig.redis.host,
-      port: envConfig.redis.port,
+    connection: getBullMQConnection({
       maxRetriesPerRequest: null,
-    },
+    }),
     concurrency: 2,
   },
 );

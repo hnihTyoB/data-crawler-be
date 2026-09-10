@@ -70,6 +70,11 @@ async function bootstrap() {
 
     await import("./queues/cron.worker");
     console.log("[Server] Cron worker initialized in background.");
+
+    if (process.env.START_CRAWL_WORKER !== "false") {
+      await import("./queues/crawl.worker");
+      console.log("[Server] Crawl worker initialized in background.");
+    }
   }
 
   app.listen(envConfig.port, () => {

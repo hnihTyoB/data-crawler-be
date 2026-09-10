@@ -1,5 +1,6 @@
 import Redis from "ioredis";
 import { envConfig } from "../../config/env.config";
+import { getRedisClientOptions } from "./redis-connection";
 
 let generalClient: Redis | null = null;
 
@@ -25,15 +26,10 @@ export function getRedisClient(): Redis | null {
 
   if (!generalClient) {
     try {
-      generalClient = new Redis({
-        host: envConfig.redis.host,
-        port: envConfig.redis.port,
-        maxRetriesPerRequest: 1,
-        lazyConnect: true,
-        connectTimeout: 2000,
-        retryStrategy: () => null,
-        enableOfflineQueue: false,
-      });
+      const conn = getRedisClientOptions();
+      generalClient = conn.url
+        ? new Redis(conn.url, conn.options)
+        : new Redis(conn.options);
 
       generalClient.on("error", () => {
         // Suppress unhandled crash logs on reconnect/timeout

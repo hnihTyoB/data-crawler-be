@@ -1,5 +1,6 @@
 import Redis from "ioredis";
 import { envConfig } from "../../config/env.config";
+import { getRedisClientOptions } from "./redis-connection";
 
 let publisherClient: Redis | null = null;
 let subscriberClient: Redis | null = null;
@@ -9,15 +10,10 @@ export function getRedisPublisher(): Redis | null {
 
   if (!publisherClient) {
     try {
-      publisherClient = new Redis({
-        host: envConfig.redis.host,
-        port: envConfig.redis.port,
-        maxRetriesPerRequest: 1,
-        lazyConnect: true,
-        connectTimeout: 2000,
-        retryStrategy: () => null,
-        enableOfflineQueue: false,
-      });
+      const conn = getRedisClientOptions();
+      publisherClient = conn.url
+        ? new Redis(conn.url, conn.options)
+        : new Redis(conn.options);
 
       publisherClient.on("error", () => {
         // Suppress unhandled redis error crashes
@@ -35,15 +31,10 @@ export function getRedisSubscriber(): Redis | null {
 
   if (!subscriberClient) {
     try {
-      subscriberClient = new Redis({
-        host: envConfig.redis.host,
-        port: envConfig.redis.port,
-        maxRetriesPerRequest: 1,
-        lazyConnect: true,
-        connectTimeout: 2000,
-        retryStrategy: () => null,
-        enableOfflineQueue: false,
-      });
+      const conn = getRedisClientOptions();
+      subscriberClient = conn.url
+        ? new Redis(conn.url, conn.options)
+        : new Redis(conn.options);
 
       subscriberClient.on("error", () => {
         // Suppress unhandled redis error crashes
