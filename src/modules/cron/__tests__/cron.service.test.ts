@@ -16,8 +16,13 @@ describe("CronService", () => {
   let mockStorageService: jest.Mocked<IStorageService>;
   let mockMailService: jest.Mocked<MailService>;
   let mockQueueService: jest.Mocked<CronQueueService>;
+  let mockConfigService: { get: jest.Mock };
 
   beforeEach(() => {
+    mockConfigService = {
+      get: jest.fn().mockImplementation((_key: string, defaultVal: unknown) => Promise.resolve(defaultVal)),
+    };
+
     mockRepository = {
       getJobStatuses: jest.fn().mockResolvedValue({
         [CRON_JOB_NAMES.CLEANUP_AUDIT_LOGS]: true,
@@ -42,6 +47,10 @@ describe("CronService", () => {
       cleanupExpiredExports: jest.fn().mockResolvedValue({
         deletedCount: 2,
         filePaths: ["exports/test1.zip", "exports/test2.zip"],
+      }),
+      cleanupOldExports: jest.fn().mockResolvedValue({
+        deletedCount: 3,
+        filePaths: ["exports/old1.zip", "exports/old2.zip", "exports/old3.zip"],
       }),
       getActiveAvatarUrls: jest.fn().mockResolvedValue([]),
       getDigestStats: jest.fn().mockResolvedValue({
@@ -85,6 +94,7 @@ describe("CronService", () => {
       mockStorageService,
       mockMailService,
       mockQueueService,
+      mockConfigService as any,
     );
   });
 
@@ -176,6 +186,25 @@ describe("CronService", () => {
       expect(mockRepository.createAuditLog).toHaveBeenCalledWith(
         expect.objectContaining({
           action: AUDIT_ACTIONS.CRON_JOB_TRIGGERED,
+        }),
+      );
+    });
+
+    it("should execute cleanup-exports and delete old export files", async () => {
+      const result = await cronService.triggerJob(
+        CRON_JOB_NAMES.CLEANUP_EXPORTS,
+        { retentionDays: 7 },
+      );
+
+      expect(result.success).toBe(true);
+      expect(mockRepository.cleanupOldExports).toHaveBeenCalled();
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith("exports/old1.zip");
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith("exports/old2.zip");
+      expect(mockStorageService.deleteFile).toHaveBeenCalledWith("exports/old3.zip");
+      expect(result.data).toEqual(
+        expect.objectContaining({
+          cleanedExportsCount: 3,
+          retentionDays: 7,
         }),
       );
     });

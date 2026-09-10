@@ -14,6 +14,8 @@ import {
   ExportType,
 } from "../../common/constants/export-type.constant";
 import { JOB_STATUS } from "../../common/constants/job-status.constant";
+import { DEFAULT_EXPORT_RETENTION_DAYS } from "../../common/constants/cron.constant";
+import { systemConfigService } from "../system-config/system-config.service";
 
 const EXPORT_SERVICES: Record<ExportType, new () => IExportService> = {
   [EXPORT_TYPE.JSON]: JsonExportService,
@@ -46,6 +48,15 @@ export class ExportService {
     const service = new ServiceClass();
     const result = await service.export(fullJob);
 
+    const retentionDays = await systemConfigService.get<number>(
+      "retention.exports_days",
+      DEFAULT_EXPORT_RETENTION_DAYS,
+    );
+
+    const expiredAt = new Date(
+      Date.now() + retentionDays * 24 * 60 * 60 * 1000,
+    );
+
     const exportRecord = await this.exportRepository.create({
       jobId: job.id,
       exportType,
@@ -53,6 +64,7 @@ export class ExportService {
       filePath: result.filePath,
       fileSize: result.fileSize,
       mimeType: result.mimeType,
+      expiredAt,
     });
 
     const completedExportRecord = await this.exportRepository.update(

@@ -12,6 +12,7 @@ async function main() {
     await prisma.systemConfig.upsert({
       where: { key: item.key },
       update: {
+        value: item.value as any,
         description: item.description ?? null,
         category: item.category,
         isPublic: item.isPublic,

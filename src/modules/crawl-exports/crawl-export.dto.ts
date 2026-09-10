@@ -10,6 +10,7 @@ export interface CreateCrawlExportDto {
   filePath: string;
   fileSize?: number;
   mimeType?: string;
+  expiredAt?: Date | null;
 }
 
 export interface UpdateCrawlExportDto {

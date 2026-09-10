@@ -195,6 +195,57 @@ export class CronRepository {
   }
 
   /**
+   * Dọn dẹp các tệp xuất dữ liệu CrawlExport cũ hơn số ngày quy định (createdAt < cutoffDate)
+   * hoặc đã hết hạn (expiredAt < now)
+   */
+  async cleanupOldExports(
+    cutoffDate: Date,
+    now: Date = new Date(),
+  ): Promise<{ deletedCount: number; filePaths: string[] }> {
+    const expiredExports = await prisma.crawlExport.findMany({
+      where: {
+        OR: [
+          {
+            expiredAt: {
+              not: null,
+              lt: now,
+            },
+          },
+          {
+            createdAt: {
+              lt: cutoffDate,
+            },
+          },
+        ],
+      },
+      select: {
+        id: true,
+        filePath: true,
+      },
+    });
+
+    if (expiredExports.length === 0) {
+      return { deletedCount: 0, filePaths: [] };
+    }
+
+    const ids = expiredExports.map((e) => e.id);
+    const filePaths = expiredExports.map((e) => e.filePath).filter(Boolean);
+
+    await prisma.crawlExport.deleteMany({
+      where: {
+        id: {
+          in: ids,
+        },
+      },
+    });
+
+    return {
+      deletedCount: ids.length,
+      filePaths,
+    };
+  }
+
+  /**
    * Lấy danh sách đường dẫn avatar đang được người dùng sử dụng
    */
   async getActiveAvatarUrls(): Promise<string[]> {

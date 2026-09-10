@@ -146,4 +146,21 @@ export class SystemConfigController {
       next(error);
     }
   };
+
+  syncFromEnv = async (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> => {
+    try {
+      const result = await this.service.syncFromEnv();
+      res.json({
+        success: true,
+        data: result,
+        message: "Đã đồng bộ toàn bộ giá trị cấu hình từ .env thành công",
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

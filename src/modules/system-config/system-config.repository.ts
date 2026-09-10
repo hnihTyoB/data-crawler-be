@@ -104,14 +104,20 @@ export class SystemConfigRepository {
     });
   }
 
-  async ensureDefault(item: DefaultSystemConfigItem) {
+  async ensureDefault(item: DefaultSystemConfigItem, syncValue = true) {
+    const updatePayload: Prisma.SystemConfigUpdateInput = {
+      description: item.description ?? null,
+      category: item.category,
+      isPublic: item.isPublic,
+    };
+
+    if (syncValue) {
+      updatePayload.value = item.value as Prisma.InputJsonValue;
+    }
+
     return prisma.systemConfig.upsert({
       where: { key: item.key },
-      update: {
-        description: item.description ?? null,
-        category: item.category,
-        isPublic: item.isPublic,
-      },
+      update: updatePayload,
       create: {
         key: item.key,
         value: item.value as Prisma.InputJsonValue,
