@@ -155,19 +155,7 @@ export class CrawlJobRepository {
     const job = await prisma.crawlJob.findUnique({
       where: { id },
       include: {
-        pages: {
-          select: {
-            id: true,
-            url: true,
-            normalizedUrl: true,
-            contentHash: true,
-            wordCount: true,
-            status: true,
-            statusCode: true,
-            title: true,
-            crawledAt: true,
-          },
-        },
+        pages: true,
       },
     });
     if (!job || job.deletedAt) {
