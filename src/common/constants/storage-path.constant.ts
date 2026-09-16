@@ -42,3 +42,15 @@ export function buildCrawlResultZipKey(jobId: string): string {
 export function buildMarkdownZipName(jobId: string): string {
   return "markdown.zip";
 }
+
+export function buildCsvZipName(jobId: string): string {
+  return "csv.zip";
+}
+
+export function buildXlsxZipName(jobId: string): string {
+  return "xlsx.zip";
+}
+
+export function buildJsonZipName(jobId: string): string {
+  return "json.zip";
+}

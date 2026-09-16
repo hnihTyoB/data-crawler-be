@@ -75,11 +75,14 @@ export class ZipExportService extends BaseExportService {
         url: p.url,
         structuredData: p.structuredData,
       }));
-    fs.writeFileSync(
-      filePath,
-      JSON.stringify({ jobId: job.id, records }, null, 2),
-      "utf-8",
-    );
+
+    if (records.length > 0) {
+      fs.writeFileSync(
+        filePath,
+        JSON.stringify({ jobId: job.id, records }, null, 2),
+        "utf-8",
+      );
+    }
   }
 
   private writeMetadata(job: CrawlJob): void {

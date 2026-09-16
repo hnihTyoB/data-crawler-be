@@ -338,15 +338,37 @@ Khi xuất file gói ZIP, hệ thống phân chia rõ ràng thư mục clean/raw
 export-job-c4b8e21a.zip
 ├── data/
 │   ├── raw/pages.raw.json       # Dữ liệu JSON thô (chứa rawMarkdown)
-│   └── clean/pages.clean.json   # Dữ liệu JSON sạch (chứa mainContent & cleanText)
+│   ├── clean/pages.clean.json   # Dữ liệu JSON sạch (chứa mainContent & cleanText)
+│   ├── pages.json               # Envelope JSON tổng thể
+│   ├── pages.csv                # Bảng CSV danh sách trang kèm chỉ số chất lượng & pageId
+│   ├── links.csv                # Danh sách liên kết nội/ngoại bộ (CSV)
+│   ├── images.csv               # Danh sách hình ảnh (CSV)
+│   ├── pages.xlsx               # Bảng tính Excel danh sách trang
+│   └── tables.xlsx              # Dữ liệu các bảng HTML dưới dạng Excel
 ├── markdown/
 │   ├── raw/*.md                 # Các file .md thô nguyên bản
 │   └── clean/*.md               # Các file .md sạch đã lọc bỏ nav/footer
-├── tables.xlsx                  # Dữ liệu các bảng HTML dưới dạng Excel
-├── links.csv                    # Danh sách liên kết nội/ngoại bộ
-├── images.csv                   # Danh sách thông tin hình ảnh
+├── logs/
+│   ├── errors.json              # Báo cáo các trang bị lỗi
+│   └── crawl-log.txt            # Nhật ký chi tiết tiến trình crawl
 ├── metadata.json                # Tổng quan thông số job
-└── errors.json                  # Báo cáo các trang bị lỗi
+├── summary.json                 # Thống kê tổng hợp số lượng trang
+├── data_quality.json            # Báo cáo điểm chất lượng & cảnh báo
+└── diff_report.json             # Báo cáo thay đổi nội dung (Change Detection)
 ```
+
+### 8.5 Các Gói Xuất Riêng Lẻ (Individual Export Formats)
+
+Ngoài gói ZIP tổng thể (`exportType: "ZIP"`), hệ thống hỗ trợ xuất độc lập từng định dạng:
+- **`exportType: "XLSX"`**: Tự động đóng gói thành **`xlsx.zip`** chứa:
+  - `pages.xlsx`: Danh sách trang với Page ID, Word Count, Data Quality Score, Content Preview.
+  - `tables.xlsx`: Trích xuất toàn bộ bảng HTML thành các Sheet kèm trang `Summary` (có Page ID đối chiếu).
+- **`exportType: "CSV"`**: Tự động đóng gói thành **`csv.zip`** chứa: `pages.csv`, `links.csv`, `images.csv`.
+- **`exportType: "MARKDOWN"`**: Tự động đóng gói thành **`markdown.zip`** chứa: `clean/*.md` và `raw/*.md`.
+- **`exportType: "JSON"`**: Tự động đóng gói thành **`json.zip`** chứa:
+  - `pages.json`: Master envelope đầy đủ nhất theo chuẩn Data Contract v1.
+  - `clean/pages.clean.json`: Dữ liệu sạch cho AI/LLM Prompt Context.
+  - `raw/pages.raw.json`: Dữ liệu thô nguyên bản phục vụ audit.
+  - `structured.json`: Dữ liệu có cấu trúc schema.org (nếu có).
 
 Xem chi tiết Data Contract đầy đủ tại [DATA_CONTRACT_V1.md](docs/DATA_CONTRACT_V1.md).

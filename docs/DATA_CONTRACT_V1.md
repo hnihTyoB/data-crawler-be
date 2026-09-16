@@ -201,81 +201,88 @@ Khi người dùng khởi tạo yêu cầu xuất dữ liệu (`POST /crawl-jobs
 
 Chứa Envelope tổng thể như đã trình bày ở Mục 2.
 
-### 4.2 `links.csv`
+### 4.2 `pages.csv`
+
+File bảng CSV tổng hợp danh sách các trang đã thu thập, tối ưu cho việc mở xem nhanh bằng Excel / Google Sheets hoặc nhập liệu vào database:
+
+- **Headers**: `pageId,url,title,description,status,statusCode,errorMessage,wordCount,dataQualityScore,mainContent,crawledAt`
+- Cột `pageId` là khóa ngoại (foreign key) map trực tiếp với `links.csv` và `images.csv`.
+- Nội dung văn bản chỉ giữ trường sạch `mainContent` để tránh phình dung lượng và tránh lỗi giới hạn ký tự ô của Excel (32,767 ký tự).
+
+### 4.3 `links.csv`
 
 Chứa tất cả các liên kết thu thập được từ toàn bộ các trang trong job.
 
 - **Headers**: `pageId,sourceUrl,url,type`
 
-### 4.3 `images.csv`
+### 4.4 `images.csv`
 
 Chứa thông tin tất cả hình ảnh thu thập được trong job.
 
 - **Headers**: `pageId,sourceUrl,altText,orderIndex,type`
 
-### 4.4 `tables.xlsx`
+### 4.5 `tables.xlsx` & `pages.xlsx`
 
-File bảng tính Excel tổng hợp toàn bộ các bảng HTML được phát hiện trong các trang:
+- **`tables.xlsx`**: File bảng tính Excel tổng hợp toàn bộ các bảng HTML được phát hiện trong các trang (Sheet "Summary" và các sheet chi tiết của từng bảng).
+- **`pages.xlsx`**: File bảng tính Excel dành cho người dùng xem nhanh danh sách các trang đã crawl kèm định dạng màu trạng thái.
 
-- **Sheet "Summary"**: Tổng hợp danh sách các bảng, URL trang chứa, số hàng, số cột và tên worksheet chi tiết.
-- **Các Sheet "Table-P<ShortPath>-<Index>"**: Chứa dữ liệu chi tiết dạng lưới ô (cells) của từng bảng.
+### 4.6 `metadata.json`, `summary.json`, `data_quality.json`, `diff_report.json`
 
-### 4.5 `pages.xlsx`
+- **`metadata.json`**: Tóm tắt tổng quan thông số và cấu hình chạy của Crawl Job.
+- **`summary.json`**: Thống kê số lượng trang thành công/thất bại và thời gian hoàn thành.
+- **`data_quality.json`**: Báo cáo tổng hợp điểm chất lượng dữ liệu, tỷ lệ nội dung sạch, các cảnh báo (nav noise, trùng lặp, bài viết quá ngắn).
+- **`diff_report.json`**: Báo cáo phát hiện thay đổi nội dung (Change Detection) giữa các lần crawl.
 
-File Excel bảng tính dành cho người dùng xem nhanh danh sách các trang đã crawl, trạng thái, mã HTTP, tiêu đề, mô tả, điểm chất lượng và số từ.
+### 4.7 `logs/errors.json` & `logs/crawl-log.txt`
 
-### 4.6 `metadata.json`
+- **`errors.json`**: Báo cáo riêng các trang bị lỗi (`status !== 'SUCCESS'`) kèm mã lỗi và nguyên nhân chi tiết.
+- **`crawl-log.txt`**: Toàn bộ nhật ký chạy tiến trình crawl.
 
-Tóm tắt tổng quan tiến trình chạy của Crawl Job:
+### 4.8 Gói Xuất CSV Riêng Lẻ (`exportType: "CSV"`)
 
-```json
-{
-  "jobId": "c4b8e21a-4d3f-4e89-9a1b-2c3d4e5f6a7b",
-  "userId": "9f8e7d6c-5b4a-3f2e-1d0c-9b8a7f6e5d4c",
-  "startUrl": "https://example.com",
-  "domain": "example.com",
-  "mode": "CRAWL",
-  "status": "COMPLETED",
-  "maxPages": 100,
-  "maxDepth": 3,
-  "totalPages": 50,
-  "successPages": 48,
-  "failedPages": 2,
-  "timeoutMs": 30000,
-  "retryCount": 3,
-  "startedAt": "2026-07-21T13:20:00.000Z",
-  "finishedAt": "2026-07-21T13:28:00.000Z",
-  "exportedAt": "2026-07-21T13:30:00.000Z"
-}
-```
+Khi chọn xuất định dạng `CSV`, hệ thống tự động đóng gói toàn bộ các bảng CSV thành tệp **`csv.zip`** chứa:
+- `pages.csv`: Bảng tổng hợp trang kèm chỉ số chất lượng và ID.
+- `links.csv`: Bảng liên kết nội/ngoại bộ.
+- `images.csv`: Bảng danh sách hình ảnh trích xuất.
 
-### 4.7 `errors.json`
+### 4.9 Gói Xuất Markdown Riêng Lẻ (`exportType: "MARKDOWN"`)
 
-Báo cáo riêng các trang bị lỗi (`status !== 'SUCCESS'`):
+Hệ thống đóng gói toàn bộ tài liệu Markdown thành **`markdown.zip`** gồm 2 thư mục:
+- `clean/*.md`: File Markdown sạch đã bóc tách nav/footer dành cho AI Prompt Context.
+- `raw/*.md`: File Markdown thô nguyên bản phục vụ kiểm tra/đối chiếu.
 
-```json
-[
-  {
-    "url": "https://example.com/protected-page",
-    "status": "REQUIRES_LOGIN",
-    "statusCode": 401,
-    "errorMessage": "Page requires authentication credentials",
-    "crawledAt": "2026-07-21T13:26:00.000Z"
-  }
-]
-```
+### 4.10 Gói Xuất XLSX Riêng Lẻ (`exportType: "XLSX"`)
 
-### 4.8 Cấu trúc File ZIP Export (`exportType: "ZIP"`)
+Khi chọn xuất định dạng `XLSX`, hệ thống tự động đóng gói toàn bộ bảng tính Excel vào tệp **`xlsx.zip`** chứa:
+- `pages.xlsx`: Danh sách toàn bộ các trang crawl kèm Page ID, Word Count, Data Quality Score, Content Preview và metadata.
+- `tables.xlsx`: Tập hợp toàn bộ bảng HTML trích xuất được từ website, bao gồm trang `Summary` (liệt kê danh sách bảng kèm Page ID và URL để đối chiếu chéo) và từng Sheet cho từng bảng dữ liệu riêng biệt.
 
-Khi chọn export định dạng `ZIP`, gói lưu trữ sẽ tự động cấu trúc phân cấp dữ liệu clean/raw thành các thư mục riêng biệt:
+### 4.11 Gói Xuất JSON Riêng Lẻ (`exportType: "JSON"`)
+
+Khi chọn xuất định dạng `JSON`, hệ thống tự động đóng gói toàn bộ các file JSON dữ liệu vào tệp **`json.zip`** chứa:
+- `pages.json`: Master Envelope đầy đủ nhất theo chuẩn Data Contract v1.
+- `clean/pages.clean.json`: Dữ liệu sạch đã lọc bỏ `rawMarkdown`, tối ưu hóa token cho AI Prompt Context và RAG Indexing.
+- `raw/pages.raw.json`: Dữ liệu thô nguyên bản phục vụ audit / debug.
+- `structured.json`: Dữ liệu có cấu trúc (schema.org JSON-LD / OpenGraph), chỉ xuất hiện khi có ít nhất một trang có dữ liệu này.
+
+### 4.12 Cấu trúc File ZIP Xuất Toàn Bộ (`exportType: "ZIP"`)
+
+Khi chọn export định dạng `ZIP`, gói lưu trữ chứa toàn bộ dữ liệu phân cấp theo đúng cấu trúc tiêu chuẩn:
 
 ```
 export-job-c4b8e21a.zip
 ├── data/
 │   ├── raw/
 │   │   └── pages.raw.json      # Danh sách trang thô (chứa rawMarkdown)
-│   └── clean/
-│       └── pages.clean.json    # Danh sách trang sạch (chứa mainContent & cleanText)
+│   ├── clean/
+│   │   └── pages.clean.json    # Danh sách trang sạch (chứa mainContent & cleanText)
+│   ├── pages.json              # Dữ liệu Envelope đầy đủ
+│   ├── structured.json         # Dữ liệu trích xuất có cấu trúc
+│   ├── pages.csv               # Bảng CSV danh sách trang kèm chỉ số chất lượng
+│   ├── links.csv               # Danh sách liên kết nội/ngoại bộ (CSV)
+│   ├── images.csv              # Danh sách hình ảnh (CSV)
+│   ├── pages.xlsx              # Bảng tính Excel danh sách trang
+│   └── tables.xlsx             # Bảng tính Excel chi tiết các HTML tables
 ├── markdown/
 │   ├── raw/
 │   │   ├── page-1.md           # Tệp markdown thô nguyên bản của từng trang
@@ -283,11 +290,13 @@ export-job-c4b8e21a.zip
 │   └── clean/
 │       ├── page-1.md           # Tệp markdown sạch đã lọc nav/footer
 │       └── page-2.md
-├── tables.xlsx                 # Bảng tính chứa dữ liệu các HTML tables
-├── links.csv                   # Danh sách liên kết nội/ngoại bộ
-├── images.csv                  # Danh sách thông tin hình ảnh
+├── logs/
+│   ├── errors.json             # Nhật ký lỗi các trang thất bại
+│   └── crawl-log.txt           # Nhật ký tiến trình crawl
 ├── metadata.json               # Tổng quan thông số job
-└── errors.json                 # Nhật ký lỗi trang thất bại
+├── summary.json                # Thống kê tổng hợp kết quả
+├── data_quality.json           # Báo cáo điểm chất lượng & cảnh báo
+└── diff_report.json            # Báo cáo thay đổi nội dung (nếu có)
 ```
 
 ---
