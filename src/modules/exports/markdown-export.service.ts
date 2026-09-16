@@ -4,7 +4,6 @@ import { CrawlJob, CrawlPage } from "../../common/types/database.types";
 import { JOB_EXPORT_SUBDIRS } from "../../common/constants/storage-path.constant";
 import { EXPORT_MIME_TYPES } from "../../common/constants/export-type.constant";
 import {
-  buildJobMarkdownFilePath,
   buildJobMarkdownRawFilePath,
   buildJobMarkdownCleanFilePath,
   buildJobMarkdownZipPath,
@@ -36,22 +35,13 @@ export class MarkdownExportService extends BaseExportService {
         page.markdownContent ??
         `# ${page.title ?? page.url}\n\n**URL:** ${page.url}\n\nNo content available.`;
 
-      // 1. Tương thích ngược: ghi ở markdown/
-      const { fileName, filePath } = buildJobMarkdownFilePath(
-        job.id,
-        idx,
-        page.url,
-      );
-      fs.writeFileSync(filePath, rawContent, "utf-8");
-      results.push({ fileName, filePath });
-
-      // 2. Ghi bản raw ở markdown/raw/
+      // 1. Ghi bản raw ở markdown/raw/
       const { fileName: rawName, filePath: rawPath } =
         buildJobMarkdownRawFilePath(job.id, idx, page.url);
       fs.writeFileSync(rawPath, rawContent, "utf-8");
       results.push({ fileName: rawName, filePath: rawPath });
 
-      // 3. Ghi bản clean ở markdown/clean/
+      // 2. Ghi bản clean ở markdown/clean/
       const { fileName: cleanName, filePath: cleanPath } =
         buildJobMarkdownCleanFilePath(job.id, idx, page.url);
       const cleanContent =

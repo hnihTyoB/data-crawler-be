@@ -1,4 +1,5 @@
 import fs from "fs";
+import archiver from "archiver";
 import {
   CrawlAsset,
   CrawlJob,
@@ -9,14 +10,12 @@ import { JOB_EXPORT_FILES } from "../../common/constants/storage-path.constant";
 import { EXPORT_MIME_TYPES } from "../../common/constants/export-type.constant";
 import {
   buildJobDataFilePath,
+  buildJobCsvZipPath,
   ensureJobExportStructure,
 } from "../../common/helpers/file.helper";
 import { BaseExportService } from "./base-export.service";
 import { extractDomain } from "../../common/helpers/url.helper";
-import {
-  extractMainContent,
-  stripMarkdown,
-} from "../../common/helpers/data-contract.helper";
+import { extractMainContent } from "../../common/helpers/data-contract.helper";
 
 export class CsvExportService extends BaseExportService {
   readonly mimeType = EXPORT_MIME_TYPES.CSV;
@@ -25,39 +24,57 @@ export class CsvExportService extends BaseExportService {
   protected async executeExport(
     job: CrawlJob & { pages: CrawlPage[] },
   ): Promise<{ fileName: string; filePath: string }> {
-    // Fetch assets once — reused for links.csv and images.csv
     const assets = await this.crawlAssetRepository.findByJobId(job.id);
 
     // 1. pages.csv
+    await this.exportPages(job);
+
+    // 2. links.csv
+    await this.exportLinks(job, assets);
+
+    // 3. images.csv
+    await this.exportImages(job, assets);
+
+    // 4. Bundle all CSVs into csv.zip
+    return this.zipCsvFolder(job.id);
+  }
+
+  async exportPages(
+    job: CrawlJob & { pages: CrawlPage[] },
+  ): Promise<{ fileName: string; filePath: string }> {
+    ensureJobExportStructure(job.id);
     const { fileName, filePath } = buildJobDataFilePath(
       job.id,
       JOB_EXPORT_FILES.PAGES_CSV,
     );
 
     const headers = [
+      "pageId",
       "url",
       "title",
       "description",
       "status",
       "statusCode",
-      "rawMarkdown",
-      "cleanText",
+      "errorMessage",
+      "wordCount",
+      "dataQualityScore",
       "mainContent",
       "crawledAt",
     ];
     const rows = job.pages.map((page) => {
       const rawMarkdown = page.markdownContent ?? "";
       const mainContent = extractMainContent(rawMarkdown);
-      const cleanText = mainContent ? stripMarkdown(mainContent) : "";
 
       return [
+        page.id,
         this.escapeCsv(page.url),
         this.escapeCsv(page.title ?? ""),
         this.escapeCsv(page.description ?? ""),
         this.escapeCsv(page.status),
         page.statusCode ?? "",
-        this.escapeCsv(rawMarkdown),
-        this.escapeCsv(cleanText),
+        this.escapeCsv(page.errorMessage ?? ""),
+        page.wordCount ?? 0,
+        page.dataQualityScore ?? "",
         this.escapeCsv(mainContent),
         page.crawledAt?.toISOString() ?? "",
       ];
@@ -66,11 +83,37 @@ export class CsvExportService extends BaseExportService {
     const csv = [headers, ...rows].map((r) => r.join(",")).join("\n");
     fs.writeFileSync(filePath, csv, "utf-8");
 
-    // 2. links.csv
-    await this.exportLinks(job, assets);
+    return { fileName, filePath };
+  }
 
-    // 3. images.csv
-    await this.exportImages(job, assets);
+  private async zipCsvFolder(
+    jobId: string,
+  ): Promise<{ fileName: string; filePath: string }> {
+    const { fileName, filePath } = buildJobCsvZipPath(jobId);
+
+    const filesToZip = [
+      JOB_EXPORT_FILES.PAGES_CSV,
+      JOB_EXPORT_FILES.LINKS_CSV,
+      JOB_EXPORT_FILES.IMAGES_CSV,
+    ];
+
+    await new Promise<void>((resolve, reject) => {
+      const output = fs.createWriteStream(filePath);
+      const archive = archiver("zip", { zlib: { level: 9 } });
+
+      output.on("close", resolve);
+      archive.on("error", reject);
+      archive.pipe(output);
+
+      for (const file of filesToZip) {
+        const { filePath: srcPath } = buildJobDataFilePath(jobId, file);
+        if (fs.existsSync(srcPath)) {
+          archive.file(srcPath, { name: file });
+        }
+      }
+
+      archive.finalize();
+    });
 
     return { fileName, filePath };
   }

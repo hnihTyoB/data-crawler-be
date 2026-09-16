@@ -5,6 +5,9 @@ import {
   JOB_EXPORT_SUBDIRS,
   buildCrawlResultZipName,
   buildMarkdownZipName,
+  buildCsvZipName,
+  buildXlsxZipName,
+  buildJsonZipName,
 } from "../constants/storage-path.constant";
 import { generatePageFileName } from "./slug.helper";
 
@@ -138,6 +141,33 @@ export function buildJobMarkdownZipPath(jobId: string): {
   filePath: string;
 } {
   const fileName = buildMarkdownZipName(jobId);
+  const rootDir = buildJobRootDir(jobId);
+  return { fileName, filePath: path.join(rootDir, fileName) };
+}
+
+export function buildJobCsvZipPath(jobId: string): {
+  fileName: string;
+  filePath: string;
+} {
+  const fileName = buildCsvZipName(jobId);
+  const rootDir = buildJobRootDir(jobId);
+  return { fileName, filePath: path.join(rootDir, fileName) };
+}
+
+export function buildJobXlsxZipPath(jobId: string): {
+  fileName: string;
+  filePath: string;
+} {
+  const fileName = buildXlsxZipName(jobId);
+  const rootDir = buildJobRootDir(jobId);
+  return { fileName, filePath: path.join(rootDir, fileName) };
+}
+
+export function buildJobJsonZipPath(jobId: string): {
+  fileName: string;
+  filePath: string;
+} {
+  const fileName = buildJsonZipName(jobId);
   const rootDir = buildJobRootDir(jobId);
   return { fileName, filePath: path.join(rootDir, fileName) };
 }

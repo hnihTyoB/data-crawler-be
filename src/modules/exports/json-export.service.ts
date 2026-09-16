@@ -1,4 +1,5 @@
 import fs from "fs";
+import archiver from "archiver";
 import { parse as parseHtml } from "node-html-parser";
 import {
   CrawlJob,
@@ -12,6 +13,7 @@ import {
   buildJobDataFilePath,
   buildJobDataRawFilePath,
   buildJobDataCleanFilePath,
+  buildJobJsonZipPath,
 } from "../../common/helpers/file.helper";
 import { BaseExportService } from "./base-export.service";
 import { extractDomain } from "../../common/helpers/url.helper";
@@ -116,7 +118,84 @@ export class JsonExportService extends BaseExportService {
       "utf-8",
     );
 
-    return { fileName, filePath };
+    this.writeStructuredJson(job);
+
+    return this.zipJsonFolder(job.id);
+  }
+
+  public writeStructuredJson(job: CrawlJob & { pages: CrawlPage[] }): void {
+    const { filePath } = buildJobDataFilePath(
+      job.id,
+      JOB_EXPORT_FILES.STRUCTURED_JSON,
+    );
+    const records = job.pages
+      .filter((p) => p.structuredData != null)
+      .map((p) => ({
+        pageId: p.id,
+        url: p.url,
+        structuredData: p.structuredData,
+      }));
+
+    if (records.length > 0) {
+      fs.writeFileSync(
+        filePath,
+        JSON.stringify({ jobId: job.id, records }, null, 2),
+        "utf-8",
+      );
+    }
+  }
+
+  public async zipJsonFolder(
+    jobId: string,
+  ): Promise<{ fileName: string; filePath: string }> {
+    const { fileName, filePath: zipPath } = buildJobJsonZipPath(jobId);
+    const { filePath: pagesJsonPath } = buildJobDataFilePath(
+      jobId,
+      JOB_EXPORT_FILES.PAGES_JSON,
+    );
+    const { filePath: rawJsonPath } = buildJobDataRawFilePath(
+      jobId,
+      JOB_EXPORT_FILES.PAGES_RAW_JSON,
+    );
+    const { filePath: cleanJsonPath } = buildJobDataCleanFilePath(
+      jobId,
+      JOB_EXPORT_FILES.PAGES_CLEAN_JSON,
+    );
+    const { filePath: structuredJsonPath } = buildJobDataFilePath(
+      jobId,
+      JOB_EXPORT_FILES.STRUCTURED_JSON,
+    );
+
+    return new Promise((resolve, reject) => {
+      const output = fs.createWriteStream(zipPath);
+      const archive = archiver("zip", { zlib: { level: 9 } });
+
+      output.on("close", () => resolve({ fileName, filePath: zipPath }));
+      archive.on("error", (err) => reject(err));
+
+      archive.pipe(output);
+
+      if (fs.existsSync(pagesJsonPath)) {
+        archive.file(pagesJsonPath, { name: JOB_EXPORT_FILES.PAGES_JSON });
+      }
+      if (fs.existsSync(cleanJsonPath)) {
+        archive.file(cleanJsonPath, {
+          name: `clean/${JOB_EXPORT_FILES.PAGES_CLEAN_JSON}`,
+        });
+      }
+      if (fs.existsSync(rawJsonPath)) {
+        archive.file(rawJsonPath, {
+          name: `raw/${JOB_EXPORT_FILES.PAGES_RAW_JSON}`,
+        });
+      }
+      if (fs.existsSync(structuredJsonPath)) {
+        archive.file(structuredJsonPath, {
+          name: JOB_EXPORT_FILES.STRUCTURED_JSON,
+        });
+      }
+
+      archive.finalize();
+    });
   }
 
   private parsePageTables(
