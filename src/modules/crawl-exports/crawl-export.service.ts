@@ -49,6 +49,7 @@ export class CrawlExportService {
     jobId: string,
     exportType: ExportType,
     roles?: string[],
+    customFileName?: string,
   ) {
     const job = await this.jobRepository.findById(jobId);
 
@@ -113,7 +114,7 @@ export class CrawlExportService {
     const { ExportService } = await import("../exports/export.service");
     const exportService = new ExportService();
 
-    return exportService.generate(job, exportType);
+    return exportService.generate(job, exportType, customFileName);
   }
 
   async findAllByUser(userId: string, page = 1, limit = 20) {
