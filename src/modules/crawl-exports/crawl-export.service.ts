@@ -119,11 +119,42 @@ export class CrawlExportService {
 
   async findAllByUser(
     userId: string,
+    page?: number,
+    limit?: number,
     role?: string,
     roles?: string[],
-    page = 1,
-    limit = 20,
+  ): Promise<any>;
+  async findAllByUser(
+    userId: string,
+    role?: string,
+    roles?: string[],
+    page?: number,
+    limit?: number,
+  ): Promise<any>;
+  async findAllByUser(
+    userId: string,
+    arg2?: number | string,
+    arg3?: number | string[],
+    arg4?: string | number,
+    arg5?: string[] | number,
   ) {
+    let page = 1;
+    let limit = 20;
+    let role: string | undefined;
+    let roles: string[] | undefined;
+
+    if (typeof arg2 === "number") {
+      page = arg2;
+      limit = typeof arg3 === "number" ? arg3 : 20;
+      role = typeof arg4 === "string" ? arg4 : undefined;
+      roles = Array.isArray(arg5) ? arg5 : undefined;
+    } else {
+      role = typeof arg2 === "string" ? arg2 : undefined;
+      roles = Array.isArray(arg3) ? arg3 : undefined;
+      page = typeof arg4 === "number" ? arg4 : 1;
+      limit = typeof arg5 === "number" ? arg5 : 20;
+    }
+
     return this.repository.findAllByUser(userId, page, limit, role, roles);
   }
 
