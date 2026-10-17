@@ -48,6 +48,8 @@ export const createCrawlJobSchema = z
 
 export const createExportSchema = z.object({
   exportType: z.nativeEnum(EXPORT_TYPE),
+  fileName: z.string().trim().optional(),
+  customFileName: z.string().trim().optional(),
 });
 
 export const listCrawlJobsQuerySchema = z.object({

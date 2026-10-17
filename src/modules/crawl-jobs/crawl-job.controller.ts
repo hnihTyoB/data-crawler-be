@@ -248,7 +248,7 @@ export class CrawlJobController {
         req.params.id,
         req.body.exportType,
         req.user?.roles,
-        req.body.fileName,
+        req.body.fileName || req.body.customFileName,
       );
 
       res.status(201).json({

@@ -1,5 +1,6 @@
 import { prisma } from "../../database/prisma.client";
 import { CreateCrawlExportDto, UpdateCrawlExportDto } from "./crawl-export.dto";
+import { hasAdminPrivilege } from "../../common/helpers/rbac.helper";
 
 export class CrawlExportRepository {
   create(data: CreateCrawlExportDto) {
@@ -26,15 +27,24 @@ export class CrawlExportRepository {
     });
   }
 
-  async findAllByUser(userId: string, page = 1, limit = 20) {
+  async findAllByUser(
+    userId: string,
+    page = 1,
+    limit = 20,
+    role?: string,
+    roles?: string[],
+  ) {
     const safePage = Math.max(1, page);
     const safeLimit = Math.min(Math.max(1, limit), 100);
     const skip = (safePage - 1) * safeLimit;
-    const where = {
-      job: {
-        userId,
-      },
-    };
+    const isAdmin = hasAdminPrivilege(role || "", roles);
+    const where = isAdmin
+      ? {}
+      : {
+          job: {
+            userId,
+          },
+        };
 
     const [items, total] = await Promise.all([
       prisma.crawlExport.findMany({
