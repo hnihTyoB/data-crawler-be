@@ -29,7 +29,7 @@ export class ExportService {
   private readonly exportRepository = new CrawlExportRepository();
   private readonly crawlJobRepository = new CrawlJobRepository();
 
-  async generate(job: CrawlJob, exportType: ExportType) {
+  async generate(job: CrawlJob, exportType: ExportType, customFileName?: string) {
     const jobWithPages = await this.crawlJobRepository.findByIdWithPages(
       job.id,
     );
@@ -57,10 +57,22 @@ export class ExportService {
       Date.now() + retentionDays * 24 * 60 * 60 * 1000,
     );
 
+    // Use custom file name if provided, preserving original extension
+    let finalFileName = result.fileName;
+    if (customFileName && customFileName.trim()) {
+      const originalExt = result.fileName.includes(".")
+        ? result.fileName.substring(result.fileName.lastIndexOf("."))
+        : "";
+      const sanitized = customFileName.trim().replace(/[<>:"/\\|?*]/g, "_");
+      finalFileName = sanitized.endsWith(originalExt)
+        ? sanitized
+        : sanitized + originalExt;
+    }
+
     const exportRecord = await this.exportRepository.create({
       jobId: job.id,
       exportType,
-      fileName: result.fileName,
+      fileName: finalFileName,
       filePath: result.filePath,
       fileSize: result.fileSize,
       mimeType: result.mimeType,

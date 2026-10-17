@@ -87,7 +87,7 @@ enum WebhookDeliveryStatus {
 }
 
 model User {
-  id           String   @id @default(uuid()) @db.Uuid
+  id           String   @id @default(uuid(7)) @db.Uuid
   email        String   @unique
   passwordHash String   @map("password_hash")
   fullName     String?  @map("full_name")
@@ -120,7 +120,7 @@ model User {
 }
 
 model CrawlJob {
-  id     String @id @default(uuid()) @db.Uuid
+  id     String @id @default(uuid(7)) @db.Uuid
   userId String @map("user_id") @db.Uuid
 
   startUrl String         @map("start_url")
@@ -172,7 +172,7 @@ model CrawlJob {
 }
 
 model CrawlPage {
-  id    String @id @default(uuid()) @db.Uuid
+  id    String @id @default(uuid(7)) @db.Uuid
   jobId String @map("job_id") @db.Uuid
 
   url             String
@@ -207,7 +207,7 @@ model CrawlPage {
 }
 
 model CrawlAsset {
-  id     String  @id @default(uuid()) @db.Uuid
+  id     String  @id @default(uuid(7)) @db.Uuid
   pageId String? @map("page_id") @db.Uuid
 
   assetType   AssetType @map("asset_type")
@@ -232,7 +232,7 @@ model CrawlAsset {
 }
 
 model CrawlExport {
-  id    String @id @default(uuid()) @db.Uuid
+  id    String @id @default(uuid(7)) @db.Uuid
   jobId String @map("job_id") @db.Uuid
 
   exportType ExportType   @map("export_type")
@@ -258,7 +258,7 @@ model CrawlExport {
 }
 
 model CrawlJobLog {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String   @id @default(uuid(7)) @db.Uuid
   jobId     String   @map("job_id") @db.Uuid
   level     LogLevel
   step      String
@@ -273,7 +273,7 @@ model CrawlJobLog {
 }
 
 model RefreshToken {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String   @id @default(uuid(7)) @db.Uuid
   token     String   @unique
   userId    String   @map("user_id") @db.Uuid
   userAgent String?  @map("user_agent")
@@ -289,7 +289,7 @@ model RefreshToken {
 }
 
 model AuditLog {
-  id        String   @id @default(uuid()) @db.Uuid
+  id        String   @id @default(uuid(7)) @db.Uuid
   userId    String?  @map("user_id") @db.Uuid
   action    String
   details   Json?
@@ -307,7 +307,7 @@ model AuditLog {
 }
 
 model ApiKey {
-  id         String    @id @default(uuid()) @db.Uuid
+  id         String    @id @default(uuid(7)) @db.Uuid
   userId     String    @map("user_id") @db.Uuid
   name       String
   keyHash    String    @unique @map("key_hash")
@@ -326,7 +326,7 @@ model ApiKey {
 }
 
 model WebhookConfig {
-  id              String   @id @default(uuid()) @db.Uuid
+  id              String   @id @default(uuid(7)) @db.Uuid
   userId          String   @map("user_id") @db.Uuid
   url             String
   encryptedSecret String   @map("encrypted_secret")
@@ -343,7 +343,7 @@ model WebhookConfig {
 }
 
 model WebhookDelivery {
-  id              String    @id @default(uuid()) @db.Uuid
+  id              String    @id @default(uuid(7)) @db.Uuid
   webhookConfigId String    @map("webhook_config_id") @db.Uuid
   crawlJobId      String    @map("crawl_job_id") @db.Uuid
   event           String
@@ -365,7 +365,7 @@ model WebhookDelivery {
 }
 
 model ExtractionTemplate {
-  id     String @id @default(uuid()) @db.Uuid
+  id     String @id @default(uuid(7)) @db.Uuid
   userId String @map("user_id") @db.Uuid
   name   String
   domain String
@@ -382,7 +382,7 @@ model ExtractionTemplate {
 }
 
 model CrawlSchedule {
-  id             String            @id @default(uuid()) @db.Uuid
+  id             String            @id @default(uuid(7)) @db.Uuid
   userId         String            @map("user_id") @db.Uuid
   name           String
   startUrl       String            @map("start_url")
@@ -414,7 +414,7 @@ model CrawlSchedule {
 }
 
 model Role {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String   @id @default(uuid(7)) @db.Uuid
   name        String
   slug        String   @unique
   description String?
@@ -439,7 +439,7 @@ model Role {
 }
 
 model Permission {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String   @id @default(uuid(7)) @db.Uuid
   name        String
   slug        String   @unique
   description String?
@@ -457,7 +457,7 @@ model Permission {
 }
 
 model UserRoleAssignment {
-  id         String   @id @default(uuid()) @db.Uuid
+  id         String   @id @default(uuid(7)) @db.Uuid
   userId     String   @map("user_id") @db.Uuid
   roleId     String   @map("role_id") @db.Uuid
   assignedAt DateTime @default(now()) @map("assigned_at")
@@ -473,7 +473,7 @@ model UserRoleAssignment {
 }
 
 model RolePermission {
-  id           String   @id @default(uuid()) @db.Uuid
+  id           String   @id @default(uuid(7)) @db.Uuid
   roleId       String   @map("role_id") @db.Uuid
   permissionId String   @map("permission_id") @db.Uuid
   assignedAt   DateTime @default(now()) @map("assigned_at")
@@ -488,7 +488,7 @@ model RolePermission {
 }
 
 model SystemConfig {
-  id          String   @id @default(uuid()) @db.Uuid
+  id          String   @id @default(uuid(7)) @db.Uuid
   key         String   @unique
   value       Json
   description String?

@@ -39,7 +39,13 @@ export class CrawlExportController {
     try {
       const page = Number(req.query.page) || 1;
       const limit = Number(req.query.limit) || 20;
-      const result = await this.service.findAllByUser(req.user.id, page, limit);
+      const result = await this.service.findAllByUser(
+        req.user.id,
+        req.user.role,
+        req.user?.roles,
+        page,
+        limit,
+      );
       res.json({
         success: true,
         data: {
