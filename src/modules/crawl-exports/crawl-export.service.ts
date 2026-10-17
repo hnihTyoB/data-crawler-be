@@ -117,8 +117,14 @@ export class CrawlExportService {
     return exportService.generate(job, exportType, customFileName);
   }
 
-  async findAllByUser(userId: string, page = 1, limit = 20) {
-    return this.repository.findAllByUser(userId, page, limit);
+  async findAllByUser(
+    userId: string,
+    role?: string,
+    roles?: string[],
+    page = 1,
+    limit = 20,
+  ) {
+    return this.repository.findAllByUser(userId, page, limit, role, roles);
   }
 
   async delete(userId: string, role: string, id: string, roles?: string[]) {
