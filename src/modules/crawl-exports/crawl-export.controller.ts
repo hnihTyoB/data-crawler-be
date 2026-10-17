@@ -41,10 +41,10 @@ export class CrawlExportController {
       const limit = Number(req.query.limit) || 20;
       const result = await this.service.findAllByUser(
         req.user.id,
-        req.user.role,
-        req.user?.roles,
         page,
         limit,
+        req.user.role,
+        req.user?.roles,
       );
       res.json({
         success: true,
