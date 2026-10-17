@@ -90,6 +90,29 @@ describe("CrawlExportService", () => {
       expect(mockExportService.generate).toHaveBeenCalledWith(
         expect.objectContaining({ id: "job-1" }),
         "JSON",
+        undefined,
+      );
+      expect(result).toEqual(exportRecord);
+    });
+
+    it("passes customFileName to exportService.generate", async () => {
+      (prisma.crawlJob.findUnique as jest.Mock).mockResolvedValue(makeJob());
+      const exportRecord = makeExport({ fileName: "my_custom_data.json" });
+      mockExportService.generate.mockResolvedValue(exportRecord as any);
+
+      const result = await service.createExport(
+        "user-1",
+        "CRAWLER_USER",
+        "job-1",
+        "JSON",
+        undefined,
+        "my_custom_data",
+      );
+
+      expect(mockExportService.generate).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "job-1" }),
+        "JSON",
+        "my_custom_data",
       );
       expect(result).toEqual(exportRecord);
     });
@@ -121,6 +144,7 @@ describe("CrawlExportService", () => {
       expect(mockExportService.generate).toHaveBeenCalledWith(
         expect.objectContaining({ id: "job-1" }),
         "JSON",
+        undefined,
       );
       expect(result).toEqual(exportRecord);
     });
@@ -152,6 +176,7 @@ describe("CrawlExportService", () => {
       expect(mockExportService.generate).toHaveBeenCalledWith(
         expect.objectContaining({ id: "job-1" }),
         "CSV",
+        undefined,
       );
       expect(result).toEqual(exportRecord);
     });
