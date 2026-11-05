@@ -20,7 +20,11 @@ jest.mock("../../modules/system-config/system-config.service", () => ({
   },
 }));
 
-import { processCrawlJob, withTimeout } from "../crawl.worker.processor";
+import {
+  processCrawlJob,
+  withTimeout,
+  persistSinglePage,
+} from "../crawl.worker.processor";
 
 // ── Factories ──────────────────────────────────────────────────────────────
 
@@ -512,7 +516,7 @@ describe("processCrawlJob — URL_LIST mode", () => {
     );
   });
 
-  it("skips URL validation for URL_LIST mode", async () => {
+  it("validates URLs in URL_LIST mode before calling batchScrapePages (SEC-13)", async () => {
     mockFirecrawl.batchScrapePages = jest.fn().mockResolvedValue({
       success: true,
       pages: [],
@@ -523,7 +527,25 @@ describe("processCrawlJob — URL_LIST mode", () => {
 
     await processCrawlJob(makeBullJob("job-1"));
 
-    expect(urlHelper.validateUrlAsync).not.toHaveBeenCalled();
+    expect(urlHelper.validateUrlAsync).toHaveBeenCalledWith("https://example.com/a");
+    expect(urlHelper.validateUrlAsync).toHaveBeenCalledWith("https://example.com/b");
+  });
+
+  it("discards private URLs in URL_LIST mode and fails if all URLs fail SSRF check (SEC-13)", async () => {
+    (urlHelper.validateUrlAsync as jest.Mock).mockRejectedValue(
+      new Error("Target IP is private"),
+    );
+
+    await processCrawlJob(makeBullJob("job-1"));
+
+    expect(mockJobRepo.updateStatus).toHaveBeenCalledWith(
+      "job-1",
+      "FAILED",
+      expect.objectContaining({
+        errorMessage: expect.stringContaining("failed security validation"),
+      }),
+    );
+    expect(mockFirecrawl.batchScrapePages).not.toHaveBeenCalled();
   });
 
   it("marks job FAILED when urls array is empty", async () => {
@@ -720,6 +742,42 @@ describe("withTimeout & Task Abort Supervision (SEC-10)", () => {
 
     // If signal was already aborted, processCrawlJob returns early
     expect(mockFirecrawl.crawlSite).not.toHaveBeenCalled();
+  });
+
+  describe("persistSinglePage — Post-crawl SSRF & DNS rebinding check (SEC-12)", () => {
+    it("discards page and does not persist when returned URL fails validateUrlAsync", async () => {
+      (urlHelper.validateUrlAsync as jest.Mock).mockRejectedValueOnce(
+        new Error("Resolved IP 169.254.169.254 is in private/cloud metadata range"),
+      );
+
+      const result = await persistSinglePage("job-1", {
+        url: "http://rebind.attacker.com/latest/meta-data/",
+        success: true,
+        markdown: "AMI credentials",
+      });
+
+      expect(result).toEqual({ success: false, saved: false });
+      expect(mockPageRepo.upsert).not.toHaveBeenCalled();
+      expect(mockAssetRepo.createMany).not.toHaveBeenCalled();
+    });
+
+    it("persists page when returned URL is public and valid", async () => {
+      (urlHelper.validateUrlAsync as jest.Mock).mockResolvedValueOnce(undefined);
+      mockPageProcessor.normalize.mockReturnValue({
+        jobId: "job-1",
+        url: "https://example.com/page",
+      } as any);
+      mockPageRepo.upsert.mockResolvedValue({ id: "p-safe" } as any);
+
+      const result = await persistSinglePage("job-1", {
+        url: "https://example.com/page",
+        success: true,
+        markdown: "# Public Content",
+      });
+
+      expect(result).toEqual({ success: true, saved: true });
+      expect(mockPageRepo.upsert).toHaveBeenCalled();
+    });
   });
 });
 

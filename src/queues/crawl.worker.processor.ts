@@ -157,6 +157,18 @@ export async function persistSinglePage(
   userId?: string,
 ): Promise<{ success: boolean; saved: boolean }> {
   try {
+    // SEC-12: Post-crawl SSRF & DNS rebinding validation on returned page URL
+    if (item.url) {
+      try {
+        await validateUrlAsync(item.url);
+      } catch (err: unknown) {
+        console.warn(
+          `[Worker] Job ${jobId} discarded crawled page with private/rebound URL: ${item.url} (SEC-12)`,
+        );
+        return { success: false, saved: false };
+      }
+    }
+
     const normalized = getPageProcessor().normalize(item, jobId);
 
     // Quét nhạy cảm in-memory trước khi ghi DB (loại bỏ 1 lệnh update riêng)
@@ -363,6 +375,55 @@ export async function processCrawlJob(
         );
         return;
       }
+    } else {
+      // SEC-13: Validate URLs in worker right before crawling for URL_LIST mode to eliminate DNS rebinding window
+      if (!crawlJob.urls || crawlJob.urls.length === 0) {
+        await getJobRepository().updateStatus(jobId, JOB_STATUS.FAILED, {
+          finishedAt: new Date(),
+          errorMessage: "URL_LIST mode requires at least one URL",
+          totalPages: 0,
+          successPages: 0,
+          failedPages: 0,
+        });
+        return;
+      }
+
+      const chunkSize = 10;
+      const validatedUrls: string[] = [];
+      for (let i = 0; i < crawlJob.urls.length; i += chunkSize) {
+        const chunk = crawlJob.urls.slice(i, i + chunkSize);
+        const results = await Promise.all(
+          chunk.map(async (u) => {
+            try {
+              await validateUrlAsync(u);
+              return u;
+            } catch (err: unknown) {
+              console.warn(
+                `[Worker] Job ${jobId} discarded blocked/private URL in URL_LIST: ${u} (SEC-13)`,
+              );
+              return null;
+            }
+          }),
+        );
+        validatedUrls.push(...results.filter((u): u is string => u !== null));
+      }
+
+      if (validatedUrls.length === 0) {
+        const message =
+          "All URLs in URL_LIST failed security validation (SSRF / private IP)";
+        await getJobRepository().updateStatus(jobId, JOB_STATUS.FAILED, {
+          finishedAt: new Date(),
+          errorMessage: message,
+          totalPages: 0,
+          successPages: 0,
+          failedPages: crawlJob.urls.length,
+        });
+        console.error(
+          `[Worker] Job ${jobId} blocked by pre-crawl URL validation: ${message}`,
+        );
+        return;
+      }
+      crawlJob.urls = validatedUrls;
     }
 
     try {
