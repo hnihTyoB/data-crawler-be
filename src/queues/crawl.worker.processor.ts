@@ -35,20 +35,36 @@ const getFirecrawlService = () => new FirecrawlService();
 const getPageProcessor = () => new CrawlPageProcessorService();
 const getSensitiveScanner = () => new SensitiveScanService();
 
-export function withTimeout<T>(
-  promise: Promise<T>,
+export async function withTimeout<T>(
+  taskOrPromise: ((signal: AbortSignal) => Promise<T>) | Promise<T>,
   ms: number,
   jobId: string,
 ): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(
-        () => reject(new Error(`Job ${jobId} timed out after ${ms}ms`)),
-        ms,
-      ),
-    ),
-  ]);
+  const controller = new AbortController();
+  const timeoutError = new Error(`Job ${jobId} timed out after ${ms}ms`);
+
+  let timer: NodeJS.Timeout | null = null;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort(timeoutError);
+      reject(timeoutError);
+    }, ms);
+    if (timer.unref) {
+      timer.unref();
+    }
+  });
+
+  try {
+    const promise =
+      typeof taskOrPromise === "function"
+        ? taskOrPromise(controller.signal)
+        : taskOrPromise;
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
 }
 
 /** Saves IMAGE, LINK, and PDF assets for a single scraped page in one batch. */
@@ -301,7 +317,10 @@ async function logStep(
   }
 }
 
-export async function processCrawlJob(job: Job): Promise<void> {
+export async function processCrawlJob(
+  job: Job,
+  signal?: AbortSignal,
+): Promise<void> {
   const { jobId } = job.data;
   const crawlJob = await getJobRepository().findById(jobId);
 
@@ -309,7 +328,7 @@ export async function processCrawlJob(job: Job): Promise<void> {
     throw new Error(`CrawlJob ${jobId} not found`);
   }
 
-  if (crawlJob.status === JOB_STATUS.CANCELED) {
+  if (crawlJob.status === JOB_STATUS.CANCELED || signal?.aborted) {
     return;
   }
 
@@ -348,6 +367,7 @@ export async function processCrawlJob(job: Job): Promise<void> {
 
     try {
       if (crawlJob.mode === CRAWL_MODE.SCRAPE) {
+        if (signal?.aborted) return;
         console.log(
           `[Worker] Job ${jobId} started, mode=SCRAPE, url=${crawlJob.startUrl}`,
         );
@@ -355,6 +375,8 @@ export async function processCrawlJob(job: Job): Promise<void> {
         const result = await getFirecrawlService().scrapePage(
           crawlJob.startUrl,
         );
+
+        if (signal?.aborted) return;
 
         if (!result.success) {
           const normalized = getPageProcessor().normalize(result, jobId);
@@ -495,6 +517,7 @@ export async function processCrawlJob(job: Job): Promise<void> {
           validSitemapUrls,
           crawlJob.maxPages,
           async (completed, total, currentPages) => {
+            if (signal?.aborted) return;
             if (currentPages && currentPages.length > 0) {
               const { newSuccess, newFailed } = await persistIncrementalPages(
                 jobId,
@@ -524,12 +547,15 @@ export async function processCrawlJob(job: Job): Promise<void> {
             ]);
           },
           async () => {
+            if (signal?.aborted) return true;
             pollCount++;
             if (pollCount % 5 !== 0) return false;
             const current = await getJobRepository().findById(jobId);
             return current?.status === JOB_STATUS.CANCELED;
           },
         );
+
+        if (signal?.aborted) return;
 
         if (!result.success) {
           if (result.status === "cancelled") {
@@ -593,6 +619,7 @@ export async function processCrawlJob(job: Job): Promise<void> {
           crawlJob.urls,
           crawlJob.maxPages,
           async (completed, total, currentPages) => {
+            if (signal?.aborted) return;
             if (currentPages && currentPages.length > 0) {
               const { newSuccess, newFailed } = await persistIncrementalPages(
                 jobId,
@@ -622,12 +649,15 @@ export async function processCrawlJob(job: Job): Promise<void> {
             ]);
           },
           async () => {
+            if (signal?.aborted) return true;
             pollCount++;
             if (pollCount % 5 !== 0) return false;
             const current = await getJobRepository().findById(jobId);
             return current?.status === JOB_STATUS.CANCELED;
           },
         );
+
+        if (signal?.aborted) return;
 
         if (!result.success) {
           if (result.status === "cancelled") {
@@ -680,6 +710,7 @@ export async function processCrawlJob(job: Job): Promise<void> {
           crawlJob.maxPages,
           crawlJob.maxDepth,
           async (completed, total, currentPages) => {
+            if (signal?.aborted) return;
             if (currentPages && currentPages.length > 0) {
               const { newSuccess, newFailed } = await persistIncrementalPages(
                 jobId,
@@ -709,6 +740,7 @@ export async function processCrawlJob(job: Job): Promise<void> {
             ]);
           },
           async () => {
+            if (signal?.aborted) return true;
             pollCount++;
 
             // On the very first poll, crawlSite has already started and we have
@@ -721,6 +753,8 @@ export async function processCrawlJob(job: Job): Promise<void> {
             return current?.status === JOB_STATUS.CANCELED;
           },
         );
+
+        if (signal?.aborted) return;
 
         // Persist the Firecrawl job ID as soon as we have it, so a subsequent
         // cancel request can call cancelCrawl() even if the job is still running.

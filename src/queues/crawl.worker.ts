@@ -11,7 +11,7 @@ if (envConfig.redis.enabled) {
     "crawl-jobs",
     (job) =>
       withTimeout(
-        processCrawlJob(job),
+        (signal) => processCrawlJob(job, signal),
         envConfig.worker.jobTimeoutMs,
         job.data.jobId,
       ),

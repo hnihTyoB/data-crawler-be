@@ -20,7 +20,7 @@ jest.mock("../../modules/system-config/system-config.service", () => ({
   },
 }));
 
-import { processCrawlJob } from "../crawl.worker.processor";
+import { processCrawlJob, withTimeout } from "../crawl.worker.processor";
 
 // ── Factories ──────────────────────────────────────────────────────────────
 
@@ -659,6 +659,67 @@ describe("processCrawlJob — Real-time persistence & Cancel preservation", () =
         successPages: 1,
       }),
     );
+  });
+});
+
+// ── withTimeout & Task Abort Supervision (SEC-10) ──────────────────────────
+
+describe("withTimeout & Task Abort Supervision (SEC-10)", () => {
+  it("resolves normally when task completes before timeout", async () => {
+    const res = await withTimeout(
+      async (signal) => {
+        expect(signal.aborted).toBe(false);
+        return "success";
+      },
+      1000,
+      "job-test-1",
+    );
+    expect(res).toBe("success");
+  });
+
+  it("aborts signal and rejects when task exceeds timeout", async () => {
+    let capturedSignal: AbortSignal | null = null;
+    await expect(
+      withTimeout(
+        async (signal) => {
+          capturedSignal = signal;
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          return "slow-result";
+        },
+        10,
+        "job-test-timeout",
+      ),
+    ).rejects.toThrow("Job job-test-timeout timed out after 10ms");
+
+    expect((capturedSignal as AbortSignal | null)?.aborted).toBe(true);
+  });
+
+  it("supports legacy promise signature and cleans up timer", async () => {
+    const res = await withTimeout(
+      Promise.resolve("legacy-ok"),
+      1000,
+      "job-legacy",
+    );
+    expect(res).toBe("legacy-ok");
+  });
+
+  it("stops crawlSite polling immediately when abort signal fires (SEC-10)", async () => {
+    mockJobRepo.findById = jest.fn().mockResolvedValue(makeJob({ mode: "CRAWL" }));
+    mockFirecrawl.crawlSite = jest.fn().mockResolvedValue({
+      success: false,
+      status: "cancelled",
+      error: "Cancelled",
+      pages: [],
+      total: 0,
+    });
+
+    const controller = new AbortController();
+    controller.abort();
+
+    await processCrawlJob(makeBullJob("job-1"), controller.signal);
+
+    // If signal was already aborted, processCrawlJob returns early
+    expect(mockFirecrawl.crawlSite).not.toHaveBeenCalled();
   });
 });
 

@@ -227,7 +227,7 @@ export class XlsxExportService extends BaseExportService {
         // Caption row (nếu có)
         let headerRowIndex = 3;
         if (table.caption) {
-          tableSheet.getCell("A3").value = `Caption: ${table.caption}`;
+          tableSheet.getCell("A3").value = `Caption: ${sanitizeExcelValue(table.caption)}`;
           tableSheet.getCell("A3").font = { bold: true };
           tableSheet.mergeCells(3, 1, 3, Math.max(table.headers.length, 1));
           headerRowIndex = 4;
@@ -237,7 +237,7 @@ export class XlsxExportService extends BaseExportService {
         if (table.headers.length > 0) {
           const headerRow = tableSheet.getRow(headerRowIndex);
           table.headers.forEach((h, i) => {
-            headerRow.getCell(i + 1).value = h;
+            headerRow.getCell(i + 1).value = sanitizeExcelValue(h);
           });
           headerRow.font = { bold: true, color: { argb: "FFFFFFFF" } };
           headerRow.fill = {
@@ -253,7 +253,7 @@ export class XlsxExportService extends BaseExportService {
         for (const dataRow of table.rows) {
           const row = tableSheet.getRow(headerRowIndex);
           dataRow.forEach((cell, i) => {
-            row.getCell(i + 1).value = cell;
+            row.getCell(i + 1).value = sanitizeExcelValue(cell);
           });
           headerRowIndex++;
         }
@@ -268,11 +268,11 @@ export class XlsxExportService extends BaseExportService {
             hyperlink: `#'${sheetName}'!A1`,
           },
           pageId: table.pageId || "",
-          url: table.pageUrl,
+          url: sanitizeExcelValue(table.pageUrl),
           index: table.tableIndex + 1,
           rows: table.rows.length,
           cols: table.headers.length || (table.rows[0]?.length ?? 0),
-          caption: table.caption || "",
+          caption: sanitizeExcelValue(table.caption || ""),
         });
 
         summaryRow.getCell("sheet").font = {
