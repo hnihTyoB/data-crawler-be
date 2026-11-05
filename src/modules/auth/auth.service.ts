@@ -34,6 +34,10 @@ import {
 } from "../../common/helpers/schedule-calculator.helper";
 import { PermissionService } from "../permissions/permission.service";
 import { systemConfigService } from "../system-config/system-config.service";
+import {
+  revokeToken,
+  revokeUserTokens,
+} from "../../common/helpers/token-blocklist.helper";
 
 interface AuthJwtPayload {
   id: string;
@@ -272,8 +276,29 @@ export class AuthService {
     };
   }
 
-  async logout(token: string) {
-    await this.repository.deleteRefreshToken(this.hashToken(token));
+  async logout(token?: string, accessToken?: string) {
+    if (token) {
+      await this.repository.deleteRefreshToken(this.hashToken(token));
+      try {
+        const decoded = jwt.decode(token) as { id?: string } | null;
+        if (decoded?.id) {
+          await revokeUserTokens(decoded.id);
+        }
+      } catch {
+        // ignore decode failure
+      }
+    }
+    if (accessToken) {
+      await revokeToken(accessToken);
+      try {
+        const decoded = jwt.decode(accessToken) as { id?: string } | null;
+        if (decoded?.id) {
+          await revokeUserTokens(decoded.id);
+        }
+      } catch {
+        // ignore decode failure
+      }
+    }
   }
 
   private createEmailVerificationToken(email: string): string {
@@ -670,6 +695,12 @@ export class AuthService {
     // Revoke all existing refresh tokens
     await this.repository.deleteUserRefreshTokens(userId);
 
+    // SEC-16: Deactivate all active API keys for this user
+    await this.repository.deactivateUserApiKeys(userId);
+
+    // SEC-04: Revoke all prior access tokens issued up to now
+    await revokeUserTokens(userId);
+
     // Generate new tokens for the current session
     const payload: AuthJwtPayload = {
       id: user.id,
@@ -794,6 +825,8 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(password, 10);
     await this.repository.updateUser(user.id, { passwordHash });
     await this.repository.deleteUserRefreshTokens(user.id);
+    await this.repository.deactivateUserApiKeys(user.id);
+    await revokeUserTokens(user.id, 86400, Math.floor(Date.now() / 1000) + 1);
 
     return { success: true, userId: user.id };
   }

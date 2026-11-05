@@ -5,6 +5,7 @@ import { AppError } from "../common/errors/app-error";
 import { ERROR_CODE } from "../common/errors/error-code";
 import { UserRepository } from "../modules/users/user.repository";
 import { PermissionService } from "../modules/permissions/permission.service";
+import { isTokenRevoked } from "../common/helpers/token-blocklist.helper";
 
 const userRepository = new UserRepository();
 const permissionService = new PermissionService();
@@ -33,7 +34,20 @@ export async function authMiddleware(
       id: string;
       email: string;
       role: string;
+      iat?: number;
     };
+
+    const isRevoked = await isTokenRevoked(token, payload.id, payload.iat);
+    if (isRevoked) {
+      next(
+        new AppError(
+          "Token has been revoked",
+          401,
+          ERROR_CODE.TOKEN_INVALID,
+        ),
+      );
+      return;
+    }
 
     const user = await userRepository.findById(payload.id);
 

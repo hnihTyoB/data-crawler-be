@@ -1,4 +1,11 @@
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 import { AuthService } from "../auth.service";
+import { jwtConfig } from "../../../config/jwt.config";
+import {
+  isTokenRevoked,
+  clearLocalTokenBlocklist,
+} from "../../../common/helpers/token-blocklist.helper";
 
 jest.mock("../../system-config/system-config.service", () => ({
   systemConfigService: {
@@ -291,6 +298,140 @@ describe("AuthService registration mail failures", () => {
 
       expect(result).toEqual({ success: true });
       expect(mailService.sendPasswordResetEmail).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("AuthService credential lifecycle (SEC-04, SEC-16)", () => {
+    beforeEach(() => {
+      clearLocalTokenBlocklist();
+    });
+
+    it("deactivates user API keys and revokes prior tokens upon changePassword", async () => {
+      const service = new AuthService();
+      const initialPasswordHash = await bcrypt.hash("OldPass@123", 10);
+      const user = {
+        id: "user-change-pwd",
+        email: "changepwd@example.com",
+        role: "CRAWLER_USER",
+        isActive: true,
+        passwordHash: initialPasswordHash,
+      };
+
+      const nowSeconds = Math.floor(Date.now() / 1000);
+      // Simulate an access token issued before password change (e.g. 10s ago)
+      const oldAccessToken = jwt.sign(
+        { id: user.id, email: user.email, role: user.role, iat: nowSeconds - 10 },
+        jwtConfig.accessSecret,
+        { expiresIn: "15m" },
+      );
+
+      const repository = {
+        findById: jest.fn().mockResolvedValue(user),
+        updateUser: jest.fn().mockResolvedValue({ ...user }),
+        deleteUserRefreshTokens: jest.fn().mockResolvedValue(undefined),
+        deactivateUserApiKeys: jest.fn().mockResolvedValue(undefined),
+        saveRefreshToken: jest.fn().mockResolvedValue(undefined),
+      };
+
+      (service as any).repository = repository;
+
+      const result = await service.changePassword(user.id, {
+        currentPassword: "OldPass@123",
+        newPassword: "NewPass@123",
+        confirmPassword: "NewPass@123",
+      });
+
+      // SEC-16: API keys deactivated
+      expect(repository.deactivateUserApiKeys).toHaveBeenCalledWith(user.id);
+      expect(repository.deleteUserRefreshTokens).toHaveBeenCalledWith(user.id);
+
+      // SEC-04: Old access token is revoked
+      expect(await isTokenRevoked(oldAccessToken, user.id, nowSeconds - 10)).toBe(true);
+
+      // SEC-04: Newly issued access token is NOT revoked
+      const decodedNew = jwt.decode(result.accessToken) as { iat: number };
+      expect(await isTokenRevoked(result.accessToken, user.id, decodedNew.iat)).toBe(false);
+    });
+
+    it("deactivates user API keys and revokes prior tokens upon resetPassword", async () => {
+      const service = new AuthService();
+      const currentPasswordHash = await bcrypt.hash("CurrentPass@123", 10);
+      const user = {
+        id: "user-reset-pwd",
+        email: "resetpwd@example.com",
+        role: "CRAWLER_USER",
+        isActive: true,
+        passwordHash: currentPasswordHash,
+      };
+
+      const resetSecret = `${jwtConfig.accessSecret}-${user.passwordHash}`;
+      const resetToken = jwt.sign({ id: user.id, email: user.email }, resetSecret, {
+        expiresIn: "15m",
+      });
+
+      const nowSeconds = Math.floor(Date.now() / 1000);
+      const priorAccessToken = jwt.sign(
+        { id: user.id, email: user.email, role: user.role, iat: nowSeconds - 5 },
+        jwtConfig.accessSecret,
+        { expiresIn: "15m" },
+      );
+
+      const repository = {
+        findById: jest.fn().mockResolvedValue(user),
+        updateUser: jest.fn().mockResolvedValue({ ...user }),
+        deleteUserRefreshTokens: jest.fn().mockResolvedValue(undefined),
+        deactivateUserApiKeys: jest.fn().mockResolvedValue(undefined),
+      };
+
+      (service as any).repository = repository;
+
+      const result = await service.resetPassword({
+        token: resetToken,
+        password: "NewPasswordFromReset@123",
+      });
+
+      expect(result).toEqual({ success: true, userId: user.id });
+
+      // SEC-16: API keys deactivated
+      expect(repository.deactivateUserApiKeys).toHaveBeenCalledWith(user.id);
+      expect(repository.deleteUserRefreshTokens).toHaveBeenCalledWith(user.id);
+
+      // SEC-04: Prior access token revoked
+      expect(await isTokenRevoked(priorAccessToken, user.id, nowSeconds - 5)).toBe(true);
+    });
+
+    it("revokes access token and user tokens upon logout", async () => {
+      const service = new AuthService();
+      const user = {
+        id: "user-logout",
+        email: "logout@example.com",
+        role: "CRAWLER_USER",
+      };
+
+      const accessToken = jwt.sign(
+        { id: user.id, email: user.email, role: user.role },
+        jwtConfig.accessSecret,
+        { expiresIn: "15m" },
+      );
+      const refreshToken = jwt.sign(
+        { id: user.id, email: user.email, role: user.role },
+        jwtConfig.refreshSecret,
+        { expiresIn: "7d" },
+      );
+
+      const repository = {
+        deleteRefreshToken: jest.fn().mockResolvedValue(undefined),
+      };
+
+      (service as any).repository = repository;
+
+      await service.logout(refreshToken, accessToken);
+
+      expect(repository.deleteRefreshToken).toHaveBeenCalledTimes(1);
+
+      // SEC-04: Access token is blocked
+      const decoded = jwt.decode(accessToken) as { iat: number };
+      expect(await isTokenRevoked(accessToken, user.id, decoded.iat)).toBe(true);
     });
   });
 });
