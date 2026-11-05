@@ -13,17 +13,21 @@ describe("AuthService - Avatar Upload & Streaming", () => {
     createdAt: new Date(),
   };
 
+  const pngMagicBytes = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+  ]);
+
   const mockFile: Express.Multer.File = {
     fieldname: "avatar",
     originalname: "profile.png",
     encoding: "7bit",
     mimetype: "image/png",
-    buffer: Buffer.from("fake-png-content"),
-    size: 16,
+    buffer: pngMagicBytes,
+    size: pngMagicBytes.length,
     destination: "",
     filename: "",
     path: "",
-    stream: Readable.from(Buffer.from("fake-png-content")),
+    stream: Readable.from(pngMagicBytes),
   };
 
   it("rejects when no file is provided", async () => {
@@ -194,6 +198,53 @@ describe("AuthService - Avatar Upload & Streaming", () => {
       // With no boundary data, multer will finish or pass error
       expect(typeof middleware).toBe("function");
       done();
+    });
+  });
+
+  describe("SEC-18: Arbitrary Extension & Magic Bytes Validation", () => {
+    it("rejects avatar upload when original filename has disallowed extension (.svg, .html)", async () => {
+      const service = new AuthService();
+      const repository = {
+        findById: jest.fn().mockResolvedValue(mockUser),
+      };
+      (service as any).repository = repository;
+
+      const maliciousFile: Express.Multer.File = {
+        ...mockFile,
+        originalname: "payload.svg",
+        mimetype: "image/png",
+      };
+
+      await expect(
+        service.uploadAvatar(mockUser.id, maliciousFile),
+      ).rejects.toMatchObject({
+        statusCode: 422,
+        code: "VALIDATION_ERROR",
+        message: expect.stringContaining(".svg"),
+      });
+    });
+
+    it("rejects avatar upload when buffer content does not match image magic bytes", async () => {
+      const service = new AuthService();
+      const repository = {
+        findById: jest.fn().mockResolvedValue(mockUser),
+      };
+      (service as any).repository = repository;
+
+      const spoofedFile: Express.Multer.File = {
+        ...mockFile,
+        originalname: "fake.png",
+        mimetype: "image/png",
+        buffer: Buffer.from("<svg onload=alert(1)>"),
+      };
+
+      await expect(
+        service.uploadAvatar(mockUser.id, spoofedFile),
+      ).rejects.toMatchObject({
+        statusCode: 422,
+        code: "VALIDATION_ERROR",
+        message: expect.stringContaining("magic bytes"),
+      });
     });
   });
 });

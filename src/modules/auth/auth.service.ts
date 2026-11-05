@@ -46,6 +46,58 @@ interface AuthJwtPayload {
   purpose?: string;
 }
 
+const ALLOWED_AVATAR_EXT_MAP: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "image/gif": ".gif",
+};
+
+const ALLOWED_AVATAR_EXTENSIONS = new Set([
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+  ".gif",
+]);
+
+export function isValidImageMagicBytes(buffer: Buffer): boolean {
+  if (!buffer || buffer.length < 4) return false;
+  // JPEG: FF D8 FF
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return true;
+  // PNG: 89 50 4E 47
+  if (
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47
+  )
+    return true;
+  // GIF: 47 49 46 38 ("GIF8")
+  if (
+    buffer[0] === 0x47 &&
+    buffer[1] === 0x49 &&
+    buffer[2] === 0x46 &&
+    buffer[3] === 0x38
+  )
+    return true;
+  // WebP: RIFF .... WEBP
+  if (
+    buffer.length >= 12 &&
+    buffer[0] === 0x52 &&
+    buffer[1] === 0x49 &&
+    buffer[2] === 0x46 &&
+    buffer[3] === 0x46 &&
+    buffer[8] === 0x57 &&
+    buffer[9] === 0x45 &&
+    buffer[10] === 0x42 &&
+    buffer[11] === 0x50
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export class AuthService {
   private readonly repository = new AuthRepository();
   private readonly mailService = new MailService();
@@ -446,15 +498,41 @@ export class AuthService {
       throw new AppError("User not found", 404, ERROR_CODE.NOT_FOUND);
     }
 
+    const extensionFromMime = ALLOWED_AVATAR_EXT_MAP[file.mimetype];
+    if (!extensionFromMime) {
+      throw new AppError(
+        "Định dạng tệp không được hỗ trợ. Chỉ chấp nhận JPEG, PNG, WebP, GIF.",
+        422,
+        ERROR_CODE.VALIDATION_ERROR,
+      );
+    }
+
+    const originalExt = path.extname(file.originalname).toLowerCase();
+    if (originalExt && !ALLOWED_AVATAR_EXTENSIONS.has(originalExt)) {
+      throw new AppError(
+        `Phần mở rộng tệp không hợp lệ: "${originalExt}". Chỉ chấp nhận .jpg, .jpeg, .png, .webp, .gif`,
+        422,
+        ERROR_CODE.VALIDATION_ERROR,
+      );
+    }
+
+    // Inspect magic bytes if buffer is present (SEC-18)
+    if (file.buffer && file.buffer.length >= 4) {
+      if (!isValidImageMagicBytes(file.buffer)) {
+        throw new AppError(
+          "Nội dung tệp không khớp với định dạng hình ảnh hợp lệ (magic bytes check failed).",
+          422,
+          ERROR_CODE.VALIDATION_ERROR,
+        );
+      }
+    }
+
     const extension =
-      path.extname(file.originalname).toLowerCase() ||
-      (file.mimetype === "image/png"
-        ? ".png"
-        : file.mimetype === "image/webp"
-          ? ".webp"
-          : file.mimetype === "image/gif"
-            ? ".gif"
-            : ".jpg");
+      originalExt && ALLOWED_AVATAR_EXTENSIONS.has(originalExt)
+        ? originalExt === ".jpeg"
+          ? ".jpg"
+          : originalExt
+        : extensionFromMime;
 
     const fileName = `${userId}-${Date.now()}${extension}`;
     const destinationKey = `${UPLOAD_SUBDIRS.AVATARS}/${fileName}`;

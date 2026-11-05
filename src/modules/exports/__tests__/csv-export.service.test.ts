@@ -153,4 +153,73 @@ describe("CsvExportService", () => {
     expect(result.fileName).toBe("csv.zip");
     expect(result.filePath).toContain("csv.zip");
   });
+
+  describe("SEC-20: Leading Whitespace & Image Extension Formula Neutralization", () => {
+    it("neutralizes formulas preceded by leading whitespace", async () => {
+      const writtenFiles: Record<string, string> = {};
+      (fs.writeFileSync as jest.Mock).mockImplementation((filePath, content) => {
+        writtenFiles[filePath] = content;
+      });
+
+      const mockJob: any = {
+        id: "job-1",
+        startUrl: "https://example.com",
+        domain: "example.com",
+        pages: [
+          {
+            id: "page-1",
+            url: "https://example.com/test",
+            title: "   =cmd|'/C calc'!A0",
+            description: "  @SUM(1,2)",
+            status: "COMPLETED",
+            statusCode: 200,
+            errorMessage: null,
+            wordCount: 150,
+            dataQualityScore: 90,
+            markdownContent: " |pipeCommand",
+            crawledAt: new Date("2026-09-02T12:00:00Z"),
+          },
+        ],
+      };
+
+      await service.exportPages(mockJob);
+
+      const pagesCsv = writtenFiles["test/pages.csv"];
+      expect(pagesCsv).toContain("'   =cmd|'/C calc'!A0");
+      expect(pagesCsv).toContain("'  @SUM(1,2)");
+      expect(pagesCsv).toContain("'|pipeCommand");
+    });
+
+    it("escapes formula payload in the ext column of images.csv", async () => {
+      const writtenFiles: Record<string, string> = {};
+      (fs.writeFileSync as jest.Mock).mockImplementation((filePath, content) => {
+        writtenFiles[filePath] = content;
+      });
+
+      const mockJob: any = {
+        id: "job-1",
+        startUrl: "https://example.com",
+        domain: "example.com",
+        pages: [{ id: "page-1", url: "https://example.com" }],
+      };
+
+      const maliciousAssets: any[] = [
+        {
+          id: "asset-malicious",
+          pageId: "page-1",
+          assetType: "IMAGE",
+          url: "https://example.com/image.png",
+          altText: "Malicious Image",
+          mimeType: "=cmd|'/C calc'!A0",
+          orderIndex: 1,
+        },
+      ];
+
+      await service.exportImages(mockJob, maliciousAssets);
+
+      const imagesCsv = writtenFiles["test/images.csv"];
+      expect(imagesCsv).toBeDefined();
+      expect(imagesCsv).toContain("'=cmd|'/C calc'!A0");
+    });
+  });
 });
