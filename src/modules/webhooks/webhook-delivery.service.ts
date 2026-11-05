@@ -2,7 +2,10 @@ import { WebhookDelivery, Prisma } from "../../common/types/database.types";
 import { WebhookRepository } from "./webhook.repository";
 import { decrypt, signPayload } from "./webhook-crypto.helper";
 import { webhookQueue } from "../../queues/webhook.queue";
-import { getSecureAxios } from "../../common/helpers/url.helper";
+import {
+  getSecureAxios,
+  validateUrlAsync,
+} from "../../common/helpers/url.helper";
 import { getErrorMessage } from "../../common/helpers/error-mapping.helper";
 
 import { AppError } from "../../common/errors/app-error";
@@ -88,6 +91,8 @@ export class WebhookDeliveryService {
     const signature = signPayload(secret, payloadStr);
 
     try {
+      await validateUrlAsync(config.url);
+
       const response = await getSecureAxios().post(config.url, payloadStr, {
         headers: {
           "Content-Type": "application/json",

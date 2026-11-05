@@ -3,6 +3,7 @@ import { WebhookRepository } from "./webhook.repository";
 import { encrypt } from "./webhook-crypto.helper";
 import { AppError } from "../../common/errors/app-error";
 import { ERROR_CODE } from "../../common/errors/error-code";
+import { validateUrlAsync } from "../../common/helpers/url.helper";
 
 export class WebhookConfigService {
   private readonly repository = new WebhookRepository();
@@ -13,6 +14,8 @@ export class WebhookConfigService {
     plainSecret: string,
     events: string[],
   ): Promise<Omit<WebhookConfig, "encryptedSecret">> {
+    await validateUrlAsync(url);
+
     const encryptedSecret = encrypt(plainSecret);
 
     const config = await this.repository.createConfig({
@@ -79,7 +82,10 @@ export class WebhookConfigService {
       isActive?: boolean;
     } = {};
 
-    if (data.url !== undefined) updatePayload.url = data.url;
+    if (data.url !== undefined) {
+      await validateUrlAsync(data.url);
+      updatePayload.url = data.url;
+    }
     if (data.secret !== undefined)
       updatePayload.encryptedSecret = encrypt(data.secret);
     if (data.events !== undefined) updatePayload.events = data.events;
@@ -127,6 +133,13 @@ export class WebhookConfigService {
       // delivery status & error recorded in DB by send()
     }
 
-    return this.repository.findDeliveryById(delivery.id);
+    const result = await this.repository.findDeliveryById(delivery.id);
+    if (result && result.responseBody) {
+      return {
+        ...result,
+        responseBody: "[REDACTED]",
+      };
+    }
+    return result;
   }
 }

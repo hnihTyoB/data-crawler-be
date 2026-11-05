@@ -443,13 +443,56 @@ export async function processCrawlJob(job: Job): Promise<void> {
           `[Worker] Job ${jobId} sitemap parsed: ${sitemapUrls.length} URLs`,
         );
 
+        // SSRF validation with bounded concurrency for extracted sitemap URLs (SEC-01)
+        const validSitemapUrls: string[] = [];
+        const sitemapValidationChunkSize = 10;
+        for (
+          let i = 0;
+          i < sitemapUrls.length;
+          i += sitemapValidationChunkSize
+        ) {
+          const chunk = sitemapUrls.slice(i, i + sitemapValidationChunkSize);
+          const results = await Promise.all(
+            chunk.map(async (targetUrl) => {
+              try {
+                await validateUrlAsync(targetUrl);
+                return targetUrl;
+              } catch (err: unknown) {
+                console.warn(
+                  `[Worker] Job ${jobId} discarded blocked/private sitemap URL: ${targetUrl}`,
+                );
+                return null;
+              }
+            }),
+          );
+          for (const targetUrl of results) {
+            if (targetUrl !== null) {
+              validSitemapUrls.push(targetUrl);
+            }
+          }
+        }
+
+        if (validSitemapUrls.length === 0) {
+          await getJobRepository().updateStatus(jobId, JOB_STATUS.FAILED, {
+            finishedAt: new Date(),
+            errorMessage: "Sitemap contains no valid public URLs to crawl.",
+            totalPages: 0,
+            successPages: 0,
+            failedPages: 0,
+          });
+          console.log(
+            `[Worker] Job ${jobId} sitemap contains no valid public URLs after SSRF validation`,
+          );
+          return;
+        }
+
         const persistedUrls = new Set<string>();
         let currentSuccessCount = 0;
         let currentFailedCount = 0;
         let pollCount = 0;
 
         const result = await getFirecrawlService().batchScrapePages(
-          sitemapUrls,
+          validSitemapUrls,
           crawlJob.maxPages,
           async (completed, total, currentPages) => {
             if (currentPages && currentPages.length > 0) {

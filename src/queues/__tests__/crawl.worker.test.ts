@@ -422,6 +422,82 @@ describe("processCrawlJob — SITEMAP mode", () => {
       expect.objectContaining({ successPages: 1, failedPages: 1 }),
     );
   });
+
+  it("filters out private/SSRF URLs extracted from sitemap before batch scraping (SEC-01)", async () => {
+    mockFirecrawl.parseSitemapUrls = jest
+      .fn()
+      .mockResolvedValue([
+        "http://169.254.169.254/latest/meta-data/",
+        "https://example.com/page1",
+      ]);
+    (urlHelper.validateUrlAsync as jest.Mock).mockImplementation(
+      async (url: string) => {
+        if (url.includes("169.254")) {
+          throw new Error("Private IP blocked");
+        }
+        return new URL(url);
+      },
+    );
+    mockFirecrawl.batchScrapePages = jest.fn().mockResolvedValue({
+      success: true,
+      pages: [
+        {
+          url: "https://example.com/page1",
+          success: true,
+          markdown: "# Valid",
+          metadata: { statusCode: 200 },
+        },
+      ],
+      failedUrls: [],
+      robotsBlockedUrls: [],
+      total: 1,
+    });
+    mockPageRepo.upsert.mockResolvedValue(
+      makePage({ id: "p-1", url: "https://example.com/page1" }),
+    );
+
+    await processCrawlJob(makeBullJob("job-1"));
+
+    expect(mockFirecrawl.batchScrapePages).toHaveBeenCalledWith(
+      ["https://example.com/page1"],
+      expect.any(Number),
+      expect.any(Function),
+      expect.any(Function),
+    );
+    expect(mockJobRepo.updateStatus).toHaveBeenCalledWith(
+      "job-1",
+      "COMPLETED",
+      expect.objectContaining({ successPages: 1 }),
+    );
+  });
+
+  it("marks job FAILED when all sitemap URLs are blocked by SSRF validation (SEC-01)", async () => {
+    mockFirecrawl.parseSitemapUrls = jest
+      .fn()
+      .mockResolvedValue([
+        "http://169.254.169.254/latest/meta-data/",
+        "http://127.0.0.1/admin",
+      ]);
+    (urlHelper.validateUrlAsync as jest.Mock).mockImplementation(
+      async (url: string) => {
+        if (url.includes("169.254") || url.includes("127.0.0.1")) {
+          throw new Error("Private IP blocked");
+        }
+        return new URL(url);
+      },
+    );
+
+    await processCrawlJob(makeBullJob("job-1"));
+
+    expect(mockFirecrawl.batchScrapePages).not.toHaveBeenCalled();
+    expect(mockJobRepo.updateStatus).toHaveBeenCalledWith(
+      "job-1",
+      "FAILED",
+      expect.objectContaining({
+        errorMessage: expect.stringContaining("no valid public URLs"),
+      }),
+    );
+  });
 });
 
 // ── URL_LIST mode ──────────────────────────────────────────────────────────
