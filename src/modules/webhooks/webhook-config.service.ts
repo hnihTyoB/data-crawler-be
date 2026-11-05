@@ -4,6 +4,7 @@ import { encrypt } from "./webhook-crypto.helper";
 import { AppError } from "../../common/errors/app-error";
 import { ERROR_CODE } from "../../common/errors/error-code";
 import { validateUrlAsync } from "../../common/helpers/url.helper";
+import { isHttpsAllowedInEnvironment } from "./webhook.validation";
 
 export class WebhookConfigService {
   private readonly repository = new WebhookRepository();
@@ -14,6 +15,13 @@ export class WebhookConfigService {
     plainSecret: string,
     events: string[],
   ): Promise<Omit<WebhookConfig, "encryptedSecret">> {
+    if (!isHttpsAllowedInEnvironment(url)) {
+      throw new AppError(
+        "Webhook URL must use HTTPS protocol to protect sensitive data and HMAC signatures in transit",
+        400,
+        ERROR_CODE.VALIDATION_ERROR,
+      );
+    }
     await validateUrlAsync(url);
 
     const encryptedSecret = encrypt(plainSecret);
@@ -83,6 +91,13 @@ export class WebhookConfigService {
     } = {};
 
     if (data.url !== undefined) {
+      if (!isHttpsAllowedInEnvironment(data.url)) {
+        throw new AppError(
+          "Webhook URL must use HTTPS protocol to protect sensitive data and HMAC signatures in transit",
+          400,
+          ERROR_CODE.VALIDATION_ERROR,
+        );
+      }
       await validateUrlAsync(data.url);
       updatePayload.url = data.url;
     }
@@ -134,10 +149,14 @@ export class WebhookConfigService {
     }
 
     const result = await this.repository.findDeliveryById(delivery.id);
-    if (result && result.responseBody) {
+    if (result) {
+      const sanitizedErrorMessage = result.errorMessage
+        ? "Delivery failed: Target server unreachable or rejected connection"
+        : null;
       return {
         ...result,
-        responseBody: "[REDACTED]",
+        responseBody: result.responseBody ? "[REDACTED]" : null,
+        errorMessage: sanitizedErrorMessage,
       };
     }
     return result;

@@ -14,12 +14,27 @@ const webhookUrlValidator = (val: string): boolean => {
   }
 };
 
+export const isHttpsAllowedInEnvironment = (url: string): boolean => {
+  if (url.startsWith("https://")) {
+    return true;
+  }
+  return (
+    (process.env.NODE_ENV === "test" &&
+      process.env.ENFORCE_HTTPS_WEBHOOKS !== "true") ||
+    process.env.ALLOW_HTTP_WEBHOOKS === "true"
+  );
+};
+
 export const createWebhookConfigSchema = z.object({
   url: z
     .string({
       required_error: "Webhook URL is required",
     })
     .url("Invalid Webhook URL format")
+    .refine(
+      isHttpsAllowedInEnvironment,
+      "Webhook URL must use HTTPS protocol to protect sensitive data and HMAC signatures in transit",
+    )
     .refine(
       webhookUrlValidator,
       "Webhook URL must not point to private, loopback, or reserved IP addresses",
@@ -39,6 +54,10 @@ export const updateWebhookConfigSchema = z.object({
   url: z
     .string()
     .url("Invalid Webhook URL format")
+    .refine(
+      isHttpsAllowedInEnvironment,
+      "Webhook URL must use HTTPS protocol to protect sensitive data and HMAC signatures in transit",
+    )
     .refine(
       webhookUrlValidator,
       "Webhook URL must not point to private, loopback, or reserved IP addresses",

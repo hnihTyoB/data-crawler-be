@@ -88,7 +88,8 @@ export class WebhookDeliveryService {
     const config = delivery.webhookConfig;
     const secret = decrypt(config.encryptedSecret);
     const payloadStr = JSON.stringify(delivery.payload);
-    const signature = signPayload(secret, payloadStr);
+    const timestamp = Math.floor(Date.now() / 1000);
+    const signature = signPayload(secret, payloadStr, timestamp);
 
     try {
       await validateUrlAsync(config.url);
@@ -97,6 +98,7 @@ export class WebhookDeliveryService {
         headers: {
           "Content-Type": "application/json",
           "X-Webhook-Signature": `sha256=${signature}`,
+          "X-Webhook-Timestamp": String(timestamp),
           "X-Webhook-Event": delivery.event,
           "X-Webhook-Delivery": delivery.id,
         },
@@ -118,7 +120,7 @@ export class WebhookDeliveryService {
     } catch (error: unknown) {
       let statusCode: number | null = null;
       let responseBody: string | null = null;
-      const errorMessage = getErrorMessage(error);
+      const rawErrorMessage = getErrorMessage(error);
 
       if (error && typeof error === "object" && "response" in error) {
         const resp = (
@@ -132,6 +134,19 @@ export class WebhookDeliveryService {
               : JSON.stringify(resp.data);
         }
       }
+
+      const isNetworkSocketError =
+        rawErrorMessage.includes("ECONNREFUSED") ||
+        rawErrorMessage.includes("ETIMEDOUT") ||
+        rawErrorMessage.includes("ENOTFOUND") ||
+        rawErrorMessage.includes("EHOSTUNREACH") ||
+        rawErrorMessage.includes("ECONNRESET") ||
+        rawErrorMessage.includes("Parse Error") ||
+        rawErrorMessage.includes("socket hang up");
+
+      const errorMessage = isNetworkSocketError
+        ? "Delivery failed: Target server unreachable or rejected connection"
+        : rawErrorMessage;
 
       await this.repository.updateDelivery(deliveryId, {
         statusCode,
