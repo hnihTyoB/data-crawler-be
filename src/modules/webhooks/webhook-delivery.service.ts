@@ -103,6 +103,8 @@ export class WebhookDeliveryService {
           "X-Webhook-Delivery": delivery.id,
         },
         timeout: 10000, // 10s timeout
+        maxContentLength: 1024 * 1024, // 1MB limit for webhook response payload (SEC-29)
+        maxBodyLength: 1024 * 1024,
       });
 
       const responseBody =

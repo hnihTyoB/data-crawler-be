@@ -400,4 +400,12 @@ describe("secureAxios SSRF & Redirect validation", () => {
       resolvedConfig.beforeRedirect({ hostname: "example.com" });
     }).not.toThrow();
   });
+
+  it("configures bounded maxContentLength and maxBodyLength to prevent memory DoS (SEC-29)", () => {
+    const axiosInstance = getSecureAxios();
+    expect(axiosInstance.defaults.maxContentLength).toBeDefined();
+    expect(axiosInstance.defaults.maxContentLength).toBeLessThanOrEqual(10 * 1024 * 1024);
+    expect(axiosInstance.defaults.maxBodyLength).toBeDefined();
+    expect(axiosInstance.defaults.maxBodyLength).toBeLessThanOrEqual(10 * 1024 * 1024);
+  });
 });

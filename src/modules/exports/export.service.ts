@@ -63,7 +63,10 @@ export class ExportService {
       const originalExt = result.fileName.includes(".")
         ? result.fileName.substring(result.fileName.lastIndexOf("."))
         : "";
-      const sanitized = customFileName.trim().replace(/[<>:"/\\|?*]/g, "_");
+      // Sanitize custom filename: strip semicolons, commas, quotes, brackets, control chars to prevent Content-Disposition injection (SEC-28)
+      const sanitized = customFileName
+        .trim()
+        .replace(/[<>:"/\\|?*;,\r\n\x00-\x1f\x7f]/g, "_");
       finalFileName = sanitized.endsWith(originalExt)
         ? sanitized
         : sanitized + originalExt;

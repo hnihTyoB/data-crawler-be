@@ -257,6 +257,8 @@ export function getSecureAxios(): AxiosInstance {
     const instance = axios.create({
       httpAgent: secureHttpAgent,
       httpsAgent: secureHttpsAgent,
+      maxContentLength: 10 * 1024 * 1024, // 10MB limit to prevent unbounded memory allocation / OOM DoS (SEC-29)
+      maxBodyLength: 10 * 1024 * 1024,
     });
 
     if (!instance || !instance.interceptors) {
