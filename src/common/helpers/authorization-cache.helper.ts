@@ -1,4 +1,6 @@
 import { getRedisPublisher, getRedisSubscriber } from "../redis/redis-pubsub";
+import { isRedisConnected } from "../redis/redis-client";
+import { envConfig } from "../../config/env.config";
 
 interface CacheEntry<T> {
   data: T;
@@ -12,7 +14,23 @@ class AuthorizationCache {
   private readonly roleCache = new Map<string, CacheEntry<string[]>>();
   private readonly defaultTtlMs = 30 * 1000; // 30 seconds
 
+  /**
+   * In production, if Redis is disabled or disconnected, local process caching is bypassed
+   * to prevent multi-node / multi-container authorization desynchronization (SEC-27).
+   */
+  private shouldBypassCache(): boolean {
+    if (process.env.NODE_ENV === "production") {
+      if (!envConfig.redis.enabled || !isRedisConnected()) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   getCachedPermissions(userId: string): string[] | null {
+    if (this.shouldBypassCache()) {
+      return null;
+    }
     const entry = this.permissionCache.get(userId);
     if (!entry) return null;
     if (Date.now() > entry.expiresAt) {
@@ -27,6 +45,9 @@ class AuthorizationCache {
     permissions: string[],
     ttlMs: number = this.defaultTtlMs,
   ): void {
+    if (this.shouldBypassCache()) {
+      return;
+    }
     this.permissionCache.set(userId, {
       data: permissions,
       expiresAt: Date.now() + ttlMs,
@@ -34,6 +55,9 @@ class AuthorizationCache {
   }
 
   getCachedRoles(userId: string): string[] | null {
+    if (this.shouldBypassCache()) {
+      return null;
+    }
     const entry = this.roleCache.get(userId);
     if (!entry) return null;
     if (Date.now() > entry.expiresAt) {
@@ -48,6 +72,9 @@ class AuthorizationCache {
     roles: string[],
     ttlMs: number = this.defaultTtlMs,
   ): void {
+    if (this.shouldBypassCache()) {
+      return;
+    }
     this.roleCache.set(userId, {
       data: roles,
       expiresAt: Date.now() + ttlMs,

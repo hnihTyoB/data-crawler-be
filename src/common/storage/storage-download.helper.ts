@@ -26,7 +26,11 @@ export async function streamStorageDownload(
   }
 
   const source = await storage.getReadStream(file.filePath);
-  const safeFileName = file.fileName.replace(/[\r\n"]/g, "_");
+  // Sanitize safeFileName: strip quotes, semicolons, commas, brackets, and control chars to prevent parameter injection (SEC-28)
+  const safeFileName = file.fileName.replace(
+    /[\r\n";,<>\\|?*\x00-\x1f\x7f]/g,
+    "_",
+  );
   const encodedFileName = encodeURIComponent(file.fileName);
 
   response.setHeader(

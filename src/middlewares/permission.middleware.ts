@@ -33,20 +33,8 @@ async function resolveUserPermissions(req: Request): Promise<string[]> {
     return allPerms;
   }
 
-  // Admin automatically inherits all default admin permissions merged with any assigned permissions
-  const isAdmin =
-    req.user.role === "ADMIN" ||
-    String(req.user.role).toLowerCase() === "admin" ||
-    req.user.roles?.includes(SYSTEM_ROLE_SLUGS.ADMIN);
-
-  if (isAdmin) {
-    const adminDefaults =
-      SYSTEM_ROLE_DEFAULT_PERMISSIONS[SYSTEM_ROLE_SLUGS.ADMIN] || [];
-    const merged = Array.from(new Set([...permissions, ...adminDefaults]));
-    req.user.permissions = merged;
-    return merged;
-  }
-
+  // Fallback to role defaults ONLY when user has no explicit permissions array assigned (SEC-15)
+  // Dynamic permissions from DB/cache are authoritative and must not be forcefully overridden.
   if (permissions.length === 0 && req.user.role) {
     const normalizedRole = String(req.user.role).toLowerCase() as SystemRoleSlug;
     const defaultPerms =

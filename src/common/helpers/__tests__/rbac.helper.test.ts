@@ -7,6 +7,17 @@ describe("rbac.helper - hasAdminPrivilege", () => {
     expect(hasAdminPrivilege(ROLES.ADMIN)).toBe(true);
   });
 
+  it("returns true for lowercase string roles 'admin' and 'super_admin' (SEC-17)", () => {
+    expect(hasAdminPrivilege("admin")).toBe(true);
+    expect(hasAdminPrivilege("super_admin")).toBe(true);
+    expect(hasAdminPrivilege("ADMIN")).toBe(true);
+  });
+
+  it("returns true for user context object with lowercase role 'admin' or 'super_admin' (SEC-17)", () => {
+    expect(hasAdminPrivilege({ role: "admin" })).toBe(true);
+    expect(hasAdminPrivilege({ role: "super_admin" })).toBe(true);
+  });
+
   it("returns false for legacy string role VIEWER or CRAWLER_USER without admin dynamic roles", () => {
     expect(hasAdminPrivilege(ROLES.VIEWER)).toBe(false);
     expect(hasAdminPrivilege(ROLES.CRAWLER_USER)).toBe(false);

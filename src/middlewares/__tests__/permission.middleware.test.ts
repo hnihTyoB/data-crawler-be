@@ -132,13 +132,33 @@ describe("Permission Middleware", () => {
       expect(mockNext).toHaveBeenCalledWith();
     });
 
-    it("should grant CRON_JOB_READ to ADMIN role even if permissions array was missing it", async () => {
+    it("should respect revoked permissions for ADMIN role and block access without injecting defaults (SEC-15)", async () => {
       mockReq.user = {
         id: "admin-1",
         email: "admin@example.com",
         role: "ADMIN",
         roles: ["admin"],
-        permissions: [PERMISSIONS.USERS_READ], // Missing CRON_JOB_READ in DB array
+        permissions: [PERMISSIONS.USERS_READ], // CRON_JOB_READ was revoked in DB
+      } as any;
+
+      const middleware = requirePermission(PERMISSIONS.CRON_JOB_READ);
+      await middleware(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 403,
+          code: "FORBIDDEN",
+        }),
+      );
+    });
+
+    it("should fall back to admin defaults if permissions array is empty (unseeded role)", async () => {
+      mockReq.user = {
+        id: "admin-2",
+        email: "admin2@example.com",
+        role: "ADMIN",
+        roles: ["admin"],
+        permissions: [],
       } as any;
 
       const middleware = requirePermission(PERMISSIONS.CRON_JOB_READ);

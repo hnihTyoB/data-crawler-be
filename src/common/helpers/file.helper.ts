@@ -190,8 +190,9 @@ export function getFileSizeBytes(filePath: string): number {
 
 export function deleteFile(filePath: string): void {
   try {
-    if (fs.existsSync(filePath)) {
-      fs.unlinkSync(filePath);
+    const normalized = path.normalize(filePath);
+    if (fs.existsSync(normalized) && fs.statSync(normalized).isFile()) {
+      fs.unlinkSync(normalized);
     }
   } catch {
     // ignore

@@ -190,7 +190,7 @@ export class CsvExportService extends BaseExportService {
         this.escapeCsv(imgSourceUrl),
         this.escapeCsv(img.altText ?? ""),
         img.orderIndex || index + 1,
-        ext,
+        this.escapeCsv(ext),
       ];
     });
 
@@ -202,7 +202,9 @@ export class CsvExportService extends BaseExportService {
 
   private escapeCsv(value: string): string {
     let sanitized = value;
-    if (/^[=+\-@\t\r]/.test(sanitized)) {
+    // SEC-20: Trim leading whitespace before testing formula injection characters
+    const trimmed = sanitized.trimStart();
+    if (/^[=+\-@\t\r|%]/.test(trimmed)) {
       sanitized = `'${sanitized}`;
     }
     if (

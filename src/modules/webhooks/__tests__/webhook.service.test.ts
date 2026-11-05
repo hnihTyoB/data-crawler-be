@@ -93,6 +93,21 @@ describe("Webhook Services", () => {
         "Webhook configuration not found",
       );
     });
+
+    it("validates url via validateUrlAsync on create (SEC-07)", async () => {
+      (urlHelper.validateUrlAsync as jest.Mock).mockRejectedValueOnce(
+        new Error("Private IP blocked"),
+      );
+
+      await expect(
+        configService.create(
+          "user-1",
+          "http://169.254.169.254/",
+          "plain-secret-123",
+          ["job.completed"],
+        ),
+      ).rejects.toThrow("Private IP blocked");
+    });
   });
 
   describe("WebhookDeliveryService", () => {
@@ -152,6 +167,27 @@ describe("Webhook Services", () => {
           statusCode: 200,
         }),
       );
+    });
+
+    it("validates url via validateUrlAsync before sending delivery and blocks SSRF (SEC-07)", async () => {
+      mockWebhookRepo.findDeliveryById.mockResolvedValue({
+        id: "delivery-1",
+        event: "job.completed",
+        payload: { test: true },
+        webhookConfig: {
+          url: "http://169.254.169.254/latest/meta-data/",
+          encryptedSecret: encrypt("my-secret-123"),
+        },
+      } as any);
+
+      (urlHelper.validateUrlAsync as jest.Mock).mockRejectedValueOnce(
+        new Error("Private IP blocked"),
+      );
+
+      await expect(deliveryService.send("delivery-1", 1)).rejects.toThrow(
+        "Private IP blocked",
+      );
+      expect(mockSecureAxiosPost).not.toHaveBeenCalled();
     });
 
     it("redelivers a failed webhook and enqueues to queue", async () => {

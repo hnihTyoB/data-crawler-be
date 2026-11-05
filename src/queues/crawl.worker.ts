@@ -3,15 +3,17 @@ import { Worker } from "bullmq";
 import { envConfig } from "../config/env.config";
 import { getBullMQConnection } from "../common/redis/redis-connection";
 import { processCrawlJob, withTimeout } from "./crawl.worker.processor";
+import { initTemplateCacheSubscriber } from "../modules/extraction-templates/extraction-runner";
 
 export let crawlWorker: Worker | null = null;
 
 if (envConfig.redis.enabled) {
+  initTemplateCacheSubscriber();
   crawlWorker = new Worker(
     "crawl-jobs",
     (job) =>
       withTimeout(
-        processCrawlJob(job),
+        (signal) => processCrawlJob(job, signal),
         envConfig.worker.jobTimeoutMs,
         job.data.jobId,
       ),

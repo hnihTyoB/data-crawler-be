@@ -59,7 +59,7 @@ export const envConfig = {
         );
       return s;
     })(),
-    accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN || "1d",
+    accessExpiresIn: process.env.JWT_ACCESS_EXPIRES_IN || "15m",
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
     emailVerificationSecret:
       process.env.JWT_EMAIL_VERIFICATION_SECRET ||

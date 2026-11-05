@@ -46,7 +46,17 @@ export class CrawlJobService {
       ? new URL(deduplicatedUrls[0]).hostname
       : extractDomain(payload.startUrl!);
 
-    const user = await this.userRepository.findById(userId);
+    const user =
+      typeof (this.userRepository as any).findByIdWithRoles === "function"
+        ? (await (this.userRepository as any).findByIdWithRoles(userId)) ??
+          (await this.userRepository.findById(userId))
+        : await this.userRepository.findById(userId);
+
+    if (user && (user as any).userRoles) {
+      (user as any).roles = (user as any).userRoles.map(
+        (ur: any) => ur.role?.slug ?? ur.role,
+      );
+    }
 
     if (!user) {
       throw new AppError("User not found", 404, ERROR_CODE.NOT_FOUND);
@@ -463,8 +473,9 @@ export class CrawlJobService {
     jobId: string,
     page = 1,
     limit = 50,
+    roles?: string[],
   ) {
-    await this.findById(userId, role, jobId);
+    await this.findById(userId, role, jobId, roles);
     return this.repository.findLogsByJobId(jobId, page, limit);
   }
 }

@@ -13,7 +13,7 @@ export class ExtractionTemplateService {
   async create(userId: string, payload: CreateExtractionTemplateDto) {
     try {
       const result = await this.repository.create(userId, payload);
-      clearTemplateCache();
+      clearTemplateCache(payload.domain, userId);
       return result;
     } catch (err: unknown) {
       if (
@@ -53,16 +53,16 @@ export class ExtractionTemplateService {
     id: string,
     payload: UpdateExtractionTemplateDto,
   ) {
-    await this.findById(userId, id);
+    const existing = await this.findById(userId, id);
     const result = await this.repository.update(id, payload);
-    clearTemplateCache();
+    clearTemplateCache(existing.domain, userId);
     return result;
   }
 
   async delete(userId: string, id: string) {
-    await this.findById(userId, id);
+    const existing = await this.findById(userId, id);
     const result = await this.repository.delete(id);
-    clearTemplateCache();
+    clearTemplateCache(existing.domain, userId);
     return result;
   }
 }

@@ -17,7 +17,7 @@ const PRIVATE_IP_PATTERNS: RegExp[] = [
   /^172\.(1[6-9]|2\d|3[01])\./, // 172.16.0.0/12
   /^192\.168\./, // 192.168.0.0/16
   /^169\.254\./, // link-local + AWS metadata
-  /^0\.0\.0\.0$/, // maps to localhost on most systems
+  /^0\./, // 0.0.0.0/8 — maps to localhost on Linux and Unix systems
   /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./, // 100.64.0.0/10 — CGNAT (RFC 6598)
   /^192\.0\.2\./, // 192.0.2.0/24 — TEST-NET-1 (RFC 5737)
   /^198\.51\.100\./, // 198.51.100.0/24 — TEST-NET-2 (RFC 5737)
@@ -50,19 +50,47 @@ function isIPv6Literal(hostname: string): boolean {
   return /^\[?[0-9a-f:]+\]?$/i.test(hostname);
 }
 
-export function checkAgainstPrivatePatterns(address: string): boolean {
-  const stripped = address.replace(/^\[|\]$/g, ""); // remove brackets
+function extractIpv4FromIpv6(stripped: string): string | null {
+  // Dotted notation: ::ffff:192.168.1.1 or ::192.168.1.1
+  const dotted = stripped.match(
+    /^(?:0*:)*?(?:ffff:)?(\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})$/i,
+  );
+  if (dotted) return dotted[1];
 
-  // IPv4-mapped IPv6: ::ffff:x.x.x.x or compressed hex form
-  // Extract embedded IPv4 if present in dotted form
-  const ipv4MappedDotted = stripped.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/i);
-  if (ipv4MappedDotted) {
-    return PRIVATE_IP_PATTERNS.some((p) => p.test(ipv4MappedDotted[1]));
+  // Colon-hex notation: ::a9fe:a9fe or ::ffff:a9fe:a9fe or 0:0:0:0:0:0:a9fe:a9fe
+  const hex = stripped.match(
+    /^(?:0*:)*?(?:ffff:)?([0-9a-f]{1,4}):([0-9a-f]{1,4})$/i,
+  );
+  if (hex) {
+    const p1 = parseInt(hex[1], 16);
+    const p2 = parseInt(hex[2], 16);
+    const o1 = (p1 >> 8) & 0xff;
+    const o2 = p1 & 0xff;
+    const o3 = (p2 >> 8) & 0xff;
+    const o4 = p2 & 0xff;
+    return `${o1}.${o2}.${o3}.${o4}`;
   }
-  // IPv4-mapped in compressed hex: ::ffff:7f00:1 etc — block all ::ffff: mapped
-  // Rather than decode hex octets, block the entire ::ffff: space since
-  // legitimate public traffic doesn't use IPv4-mapped IPv6 addressing.
-  if (/^::ffff:/i.test(stripped)) {
+  return null;
+}
+
+export function checkAgainstPrivatePatterns(address: string): boolean {
+  const stripped = address.replace(/^\[|\]$/g, "").toLowerCase();
+
+  // 1. Extract embedded IPv4 from IPv4-mapped or IPv4-compatible IPv6
+  const embeddedIpv4 = extractIpv4FromIpv6(stripped);
+  if (embeddedIpv4) {
+    if (PRIVATE_IP_PATTERNS.some((p) => p.test(embeddedIpv4))) {
+      return true;
+    }
+  }
+
+  // 2. Block all ::ffff: mapped space regardless
+  if (stripped.startsWith("::ffff:")) {
+    return true;
+  }
+
+  // 3. Block all IPv4-compatible IPv6 (::/96) space (deprecated & unused on public internet)
+  if (/^::[0-9a-f.:]+$/i.test(stripped)) {
     return true;
   }
 
@@ -229,6 +257,8 @@ export function getSecureAxios(): AxiosInstance {
     const instance = axios.create({
       httpAgent: secureHttpAgent,
       httpsAgent: secureHttpsAgent,
+      maxContentLength: 10 * 1024 * 1024, // 10MB limit to prevent unbounded memory allocation / OOM DoS (SEC-29)
+      maxBodyLength: 10 * 1024 * 1024,
     });
 
     if (!instance || !instance.interceptors) {
@@ -236,6 +266,21 @@ export function getSecureAxios(): AxiosInstance {
     }
 
     instance.interceptors.request.use((config) => {
+      if (config.url) {
+        try {
+          const parsed = new URL(config.url, config.baseURL);
+          if (checkAgainstPrivatePatterns(parsed.hostname)) {
+            throw new Error(
+              `Access to private/local IP address ${parsed.hostname} is blocked`,
+            );
+          }
+        } catch (err: unknown) {
+          if (err instanceof Error && err.message.includes("blocked")) {
+            throw err;
+          }
+        }
+      }
+
       (
         config as unknown as {
           beforeRedirect?: (opts: { hostname?: string }) => void;

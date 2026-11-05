@@ -3,13 +3,42 @@ import {
   WEBHOOK_DELIVERY_STATUS,
   WEBHOOK_EVENT,
 } from "../../common/constants/webhook.constant";
+import { validateUrl } from "../../common/helpers/url.helper";
+
+const webhookUrlValidator = (val: string): boolean => {
+  try {
+    validateUrl(val);
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+export const isHttpsAllowedInEnvironment = (url: string): boolean => {
+  if (url.startsWith("https://")) {
+    return true;
+  }
+  return (
+    (process.env.NODE_ENV === "test" &&
+      process.env.ENFORCE_HTTPS_WEBHOOKS !== "true") ||
+    process.env.ALLOW_HTTP_WEBHOOKS === "true"
+  );
+};
 
 export const createWebhookConfigSchema = z.object({
   url: z
     .string({
       required_error: "Webhook URL is required",
     })
-    .url("Invalid Webhook URL format"),
+    .url("Invalid Webhook URL format")
+    .refine(
+      isHttpsAllowedInEnvironment,
+      "Webhook URL must use HTTPS protocol to protect sensitive data and HMAC signatures in transit",
+    )
+    .refine(
+      webhookUrlValidator,
+      "Webhook URL must not point to private, loopback, or reserved IP addresses",
+    ),
   secret: z
     .string({
       required_error: "Webhook HMAC signing secret is required",
@@ -22,7 +51,18 @@ export const createWebhookConfigSchema = z.object({
 });
 
 export const updateWebhookConfigSchema = z.object({
-  url: z.string().url("Invalid Webhook URL format").optional(),
+  url: z
+    .string()
+    .url("Invalid Webhook URL format")
+    .refine(
+      isHttpsAllowedInEnvironment,
+      "Webhook URL must use HTTPS protocol to protect sensitive data and HMAC signatures in transit",
+    )
+    .refine(
+      webhookUrlValidator,
+      "Webhook URL must not point to private, loopback, or reserved IP addresses",
+    )
+    .optional(),
   secret: z
     .string()
     .min(16, "Signing secret must be at least 16 characters long for security")

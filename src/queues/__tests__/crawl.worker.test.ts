@@ -20,7 +20,11 @@ jest.mock("../../modules/system-config/system-config.service", () => ({
   },
 }));
 
-import { processCrawlJob } from "../crawl.worker.processor";
+import {
+  processCrawlJob,
+  withTimeout,
+  persistSinglePage,
+} from "../crawl.worker.processor";
 
 // ── Factories ──────────────────────────────────────────────────────────────
 
@@ -422,6 +426,82 @@ describe("processCrawlJob — SITEMAP mode", () => {
       expect.objectContaining({ successPages: 1, failedPages: 1 }),
     );
   });
+
+  it("filters out private/SSRF URLs extracted from sitemap before batch scraping (SEC-01)", async () => {
+    mockFirecrawl.parseSitemapUrls = jest
+      .fn()
+      .mockResolvedValue([
+        "http://169.254.169.254/latest/meta-data/",
+        "https://example.com/page1",
+      ]);
+    (urlHelper.validateUrlAsync as jest.Mock).mockImplementation(
+      async (url: string) => {
+        if (url.includes("169.254")) {
+          throw new Error("Private IP blocked");
+        }
+        return new URL(url);
+      },
+    );
+    mockFirecrawl.batchScrapePages = jest.fn().mockResolvedValue({
+      success: true,
+      pages: [
+        {
+          url: "https://example.com/page1",
+          success: true,
+          markdown: "# Valid",
+          metadata: { statusCode: 200 },
+        },
+      ],
+      failedUrls: [],
+      robotsBlockedUrls: [],
+      total: 1,
+    });
+    mockPageRepo.upsert.mockResolvedValue(
+      makePage({ id: "p-1", url: "https://example.com/page1" }),
+    );
+
+    await processCrawlJob(makeBullJob("job-1"));
+
+    expect(mockFirecrawl.batchScrapePages).toHaveBeenCalledWith(
+      ["https://example.com/page1"],
+      expect.any(Number),
+      expect.any(Function),
+      expect.any(Function),
+    );
+    expect(mockJobRepo.updateStatus).toHaveBeenCalledWith(
+      "job-1",
+      "COMPLETED",
+      expect.objectContaining({ successPages: 1 }),
+    );
+  });
+
+  it("marks job FAILED when all sitemap URLs are blocked by SSRF validation (SEC-01)", async () => {
+    mockFirecrawl.parseSitemapUrls = jest
+      .fn()
+      .mockResolvedValue([
+        "http://169.254.169.254/latest/meta-data/",
+        "http://127.0.0.1/admin",
+      ]);
+    (urlHelper.validateUrlAsync as jest.Mock).mockImplementation(
+      async (url: string) => {
+        if (url.includes("169.254") || url.includes("127.0.0.1")) {
+          throw new Error("Private IP blocked");
+        }
+        return new URL(url);
+      },
+    );
+
+    await processCrawlJob(makeBullJob("job-1"));
+
+    expect(mockFirecrawl.batchScrapePages).not.toHaveBeenCalled();
+    expect(mockJobRepo.updateStatus).toHaveBeenCalledWith(
+      "job-1",
+      "FAILED",
+      expect.objectContaining({
+        errorMessage: expect.stringContaining("no valid public URLs"),
+      }),
+    );
+  });
 });
 
 // ── URL_LIST mode ──────────────────────────────────────────────────────────
@@ -436,7 +516,7 @@ describe("processCrawlJob — URL_LIST mode", () => {
     );
   });
 
-  it("skips URL validation for URL_LIST mode", async () => {
+  it("validates URLs in URL_LIST mode before calling batchScrapePages (SEC-13)", async () => {
     mockFirecrawl.batchScrapePages = jest.fn().mockResolvedValue({
       success: true,
       pages: [],
@@ -447,7 +527,25 @@ describe("processCrawlJob — URL_LIST mode", () => {
 
     await processCrawlJob(makeBullJob("job-1"));
 
-    expect(urlHelper.validateUrlAsync).not.toHaveBeenCalled();
+    expect(urlHelper.validateUrlAsync).toHaveBeenCalledWith("https://example.com/a");
+    expect(urlHelper.validateUrlAsync).toHaveBeenCalledWith("https://example.com/b");
+  });
+
+  it("discards private URLs in URL_LIST mode and fails if all URLs fail SSRF check (SEC-13)", async () => {
+    (urlHelper.validateUrlAsync as jest.Mock).mockRejectedValue(
+      new Error("Target IP is private"),
+    );
+
+    await processCrawlJob(makeBullJob("job-1"));
+
+    expect(mockJobRepo.updateStatus).toHaveBeenCalledWith(
+      "job-1",
+      "FAILED",
+      expect.objectContaining({
+        errorMessage: expect.stringContaining("failed security validation"),
+      }),
+    );
+    expect(mockFirecrawl.batchScrapePages).not.toHaveBeenCalled();
   });
 
   it("marks job FAILED when urls array is empty", async () => {
@@ -583,6 +681,103 @@ describe("processCrawlJob — Real-time persistence & Cancel preservation", () =
         successPages: 1,
       }),
     );
+  });
+});
+
+// ── withTimeout & Task Abort Supervision (SEC-10) ──────────────────────────
+
+describe("withTimeout & Task Abort Supervision (SEC-10)", () => {
+  it("resolves normally when task completes before timeout", async () => {
+    const res = await withTimeout(
+      async (signal) => {
+        expect(signal.aborted).toBe(false);
+        return "success";
+      },
+      1000,
+      "job-test-1",
+    );
+    expect(res).toBe("success");
+  });
+
+  it("aborts signal and rejects when task exceeds timeout", async () => {
+    let capturedSignal: AbortSignal | null = null;
+    await expect(
+      withTimeout(
+        async (signal) => {
+          capturedSignal = signal;
+          await new Promise((resolve) => setTimeout(resolve, 50));
+          return "slow-result";
+        },
+        10,
+        "job-test-timeout",
+      ),
+    ).rejects.toThrow("Job job-test-timeout timed out after 10ms");
+
+    expect((capturedSignal as AbortSignal | null)?.aborted).toBe(true);
+  });
+
+  it("supports legacy promise signature and cleans up timer", async () => {
+    const res = await withTimeout(
+      Promise.resolve("legacy-ok"),
+      1000,
+      "job-legacy",
+    );
+    expect(res).toBe("legacy-ok");
+  });
+
+  it("stops crawlSite polling immediately when abort signal fires (SEC-10)", async () => {
+    mockJobRepo.findById = jest.fn().mockResolvedValue(makeJob({ mode: "CRAWL" }));
+    mockFirecrawl.crawlSite = jest.fn().mockResolvedValue({
+      success: false,
+      status: "cancelled",
+      error: "Cancelled",
+      pages: [],
+      total: 0,
+    });
+
+    const controller = new AbortController();
+    controller.abort();
+
+    await processCrawlJob(makeBullJob("job-1"), controller.signal);
+
+    // If signal was already aborted, processCrawlJob returns early
+    expect(mockFirecrawl.crawlSite).not.toHaveBeenCalled();
+  });
+
+  describe("persistSinglePage — Post-crawl SSRF & DNS rebinding check (SEC-12)", () => {
+    it("discards page and does not persist when returned URL fails validateUrlAsync", async () => {
+      (urlHelper.validateUrlAsync as jest.Mock).mockRejectedValueOnce(
+        new Error("Resolved IP 169.254.169.254 is in private/cloud metadata range"),
+      );
+
+      const result = await persistSinglePage("job-1", {
+        url: "http://rebind.attacker.com/latest/meta-data/",
+        success: true,
+        markdown: "AMI credentials",
+      });
+
+      expect(result).toEqual({ success: false, saved: false });
+      expect(mockPageRepo.upsert).not.toHaveBeenCalled();
+      expect(mockAssetRepo.createMany).not.toHaveBeenCalled();
+    });
+
+    it("persists page when returned URL is public and valid", async () => {
+      (urlHelper.validateUrlAsync as jest.Mock).mockResolvedValueOnce(undefined);
+      mockPageProcessor.normalize.mockReturnValue({
+        jobId: "job-1",
+        url: "https://example.com/page",
+      } as any);
+      mockPageRepo.upsert.mockResolvedValue({ id: "p-safe" } as any);
+
+      const result = await persistSinglePage("job-1", {
+        url: "https://example.com/page",
+        success: true,
+        markdown: "# Public Content",
+      });
+
+      expect(result).toEqual({ success: true, saved: true });
+      expect(mockPageRepo.upsert).toHaveBeenCalled();
+    });
   });
 });
 

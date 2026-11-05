@@ -13,17 +13,21 @@ describe("AuthService - Avatar Upload & Streaming", () => {
     createdAt: new Date(),
   };
 
+  const pngMagicBytes = Buffer.from([
+    0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d,
+  ]);
+
   const mockFile: Express.Multer.File = {
     fieldname: "avatar",
     originalname: "profile.png",
     encoding: "7bit",
     mimetype: "image/png",
-    buffer: Buffer.from("fake-png-content"),
-    size: 16,
+    buffer: pngMagicBytes,
+    size: pngMagicBytes.length,
     destination: "",
     filename: "",
     path: "",
-    stream: Readable.from(Buffer.from("fake-png-content")),
+    stream: Readable.from(pngMagicBytes),
   };
 
   it("rejects when no file is provided", async () => {
@@ -87,6 +91,67 @@ describe("AuthService - Avatar Upload & Streaming", () => {
     );
   });
 
+  it("prevents arbitrary file deletion when old avatarUrl contains Windows path traversal (SEC-06)", async () => {
+    const service = new AuthService();
+    const maliciousUser = {
+      ...mockUser,
+      avatarUrl: "http://attacker.com/avatars/..\\..\\package.json",
+    };
+    const repository = {
+      findById: jest.fn().mockResolvedValue(maliciousUser),
+      updateUser: jest.fn().mockImplementation((_id, data) => ({
+        ...maliciousUser,
+        ...data,
+      })),
+    };
+    const storageService = {
+      uploadStream: jest.fn().mockResolvedValue({
+        fileName: "user-avatar-1-99999.png",
+        filePath: "avatars/user-avatar-1-99999.png",
+        url: "/api/v1/auth/avatar/user-avatar-1-99999.png",
+      }),
+      deleteFile: jest.fn().mockResolvedValue(undefined),
+    };
+
+    (service as any).repository = repository;
+    (service as any).storageService = storageService;
+
+    const result = await service.uploadAvatar(mockUser.id, mockFile);
+
+    expect(storageService.deleteFile).not.toHaveBeenCalled();
+    expect(result.avatarUrl).toBe("/api/v1/auth/avatar/user-avatar-1-99999.png");
+  });
+
+  it("prevents arbitrary file deletion when old avatarUrl contains Unix path traversal (SEC-06)", async () => {
+    const service = new AuthService();
+    const maliciousUser = {
+      ...mockUser,
+      avatarUrl: "/api/v1/auth/avatar/../../etc/passwd",
+    };
+    const repository = {
+      findById: jest.fn().mockResolvedValue(maliciousUser),
+      updateUser: jest.fn().mockImplementation((_id, data) => ({
+        ...maliciousUser,
+        ...data,
+      })),
+    };
+    const storageService = {
+      uploadStream: jest.fn().mockResolvedValue({
+        fileName: "user-avatar-1-88888.png",
+        filePath: "avatars/user-avatar-1-88888.png",
+        url: "/api/v1/auth/avatar/user-avatar-1-88888.png",
+      }),
+      deleteFile: jest.fn().mockResolvedValue(undefined),
+    };
+
+    (service as any).repository = repository;
+    (service as any).storageService = storageService;
+
+    await service.uploadAvatar(mockUser.id, mockFile);
+
+    expect(storageService.deleteFile).not.toHaveBeenCalled();
+  });
+
   it("getAvatarStream throws 404 if file does not exist", async () => {
     const service = new AuthService();
     const storageService = {
@@ -133,6 +198,53 @@ describe("AuthService - Avatar Upload & Streaming", () => {
       // With no boundary data, multer will finish or pass error
       expect(typeof middleware).toBe("function");
       done();
+    });
+  });
+
+  describe("SEC-18: Arbitrary Extension & Magic Bytes Validation", () => {
+    it("rejects avatar upload when original filename has disallowed extension (.svg, .html)", async () => {
+      const service = new AuthService();
+      const repository = {
+        findById: jest.fn().mockResolvedValue(mockUser),
+      };
+      (service as any).repository = repository;
+
+      const maliciousFile: Express.Multer.File = {
+        ...mockFile,
+        originalname: "payload.svg",
+        mimetype: "image/png",
+      };
+
+      await expect(
+        service.uploadAvatar(mockUser.id, maliciousFile),
+      ).rejects.toMatchObject({
+        statusCode: 422,
+        code: "VALIDATION_ERROR",
+        message: expect.stringContaining(".svg"),
+      });
+    });
+
+    it("rejects avatar upload when buffer content does not match image magic bytes", async () => {
+      const service = new AuthService();
+      const repository = {
+        findById: jest.fn().mockResolvedValue(mockUser),
+      };
+      (service as any).repository = repository;
+
+      const spoofedFile: Express.Multer.File = {
+        ...mockFile,
+        originalname: "fake.png",
+        mimetype: "image/png",
+        buffer: Buffer.from("<svg onload=alert(1)>"),
+      };
+
+      await expect(
+        service.uploadAvatar(mockUser.id, spoofedFile),
+      ).rejects.toMatchObject({
+        statusCode: 422,
+        code: "VALIDATION_ERROR",
+        message: expect.stringContaining("magic bytes"),
+      });
     });
   });
 });

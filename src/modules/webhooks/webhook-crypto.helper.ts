@@ -67,23 +67,42 @@ export function decrypt(encryptedText: string): string {
   return decrypted.toString("utf8");
 }
 
-export function signPayload(secret: string, body: string): string {
-  return crypto.createHmac("sha256", secret).update(body).digest("hex");
+export function signPayload(
+  secret: string,
+  body: string,
+  timestamp?: number,
+): string {
+  const dataToSign =
+    typeof timestamp === "number" ? `${timestamp}.${body}` : body;
+  return crypto.createHmac("sha256", secret).update(dataToSign).digest("hex");
 }
 
 export function verifySignature(
   secret: string,
   body: string,
   signature: string,
+  timestamp?: number,
+  tolerance = 300,
 ): boolean {
-  const expectedSignature = signPayload(secret, body);
+  if (typeof timestamp === "number") {
+    const now = Math.floor(Date.now() / 1000);
+    if (Math.abs(now - timestamp) > tolerance) {
+      return false;
+    }
+  }
 
-  if (signature.length !== expectedSignature.length) {
+  const cleanSignature = signature.startsWith("sha256=")
+    ? signature.slice(7)
+    : signature;
+
+  const expectedSignature = signPayload(secret, body, timestamp);
+
+  if (cleanSignature.length !== expectedSignature.length) {
     return false;
   }
 
   return crypto.timingSafeEqual(
-    Buffer.from(signature, "utf8"),
+    Buffer.from(cleanSignature, "utf8"),
     Buffer.from(expectedSignature, "utf8"),
   );
 }
