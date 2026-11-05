@@ -8,6 +8,9 @@ export const createUserSchema = z.object({
   avatarUrl: z
     .string()
     .url("Avatar URL không đúng định dạng.")
+    .refine((url) => !url.includes("..") && !url.includes("\\"), {
+      message: "Avatar URL không được chứa ký tự path traversal.",
+    })
     .or(z.literal(""))
     .optional(),
   role: z.nativeEnum(ROLES).optional(),
@@ -24,6 +27,9 @@ export const updateUserSchema = z.object({
   avatarUrl: z
     .string()
     .url("Avatar URL không đúng định dạng.")
+    .refine((url) => !url.includes("..") && !url.includes("\\"), {
+      message: "Avatar URL không được chứa ký tự path traversal.",
+    })
     .or(z.literal(""))
     .nullable()
     .optional(),

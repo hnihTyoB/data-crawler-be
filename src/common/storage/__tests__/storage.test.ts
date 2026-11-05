@@ -53,6 +53,16 @@ describe("Storage providers", () => {
     expect(result.sizeBytes).toBe(Buffer.byteLength("large-zip-content"));
   });
 
+  it("throws an error when key attempts path traversal outside export directory (SEC-06)", async () => {
+    const service = new LocalStorageService();
+    await expect(service.deleteFile("avatars/../../package.json")).rejects.toThrow(
+      "Path traversal detected",
+    );
+    await expect(service.deleteFile("..\\..\\secret.env")).rejects.toThrow(
+      "Path traversal detected",
+    );
+  });
+
   it("uses a bounded multipart upload with a Readable body for S3/MinIO", async () => {
     const mockClient = { send: jest.fn() };
     const service = new S3StorageService(mockClient as unknown as S3Client);

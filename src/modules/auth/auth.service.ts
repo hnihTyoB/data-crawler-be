@@ -472,9 +472,14 @@ export class AuthService {
 
   private extractAvatarFileName(avatarUrl: string): string | null {
     const match =
-      avatarUrl.match(/\/avatars\/([^/?#]+)$/i) ||
-      avatarUrl.match(/\/api\/v1\/auth\/avatar\/([^/?#]+)$/i);
-    return match ? match[1] : null;
+      avatarUrl.match(/\/avatars\/([a-zA-Z0-9_.-]+)$/i) ||
+      avatarUrl.match(/\/api\/v1\/auth\/avatar\/([a-zA-Z0-9_.-]+)$/i);
+    if (!match) return null;
+    const base = path.basename(match[1]);
+    if (base.includes("..") || base.includes("/") || base.includes("\\")) {
+      return null;
+    }
+    return base;
   }
 
   async getAvatarStream(
