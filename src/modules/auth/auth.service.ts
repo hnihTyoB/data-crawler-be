@@ -34,12 +34,68 @@ import {
 } from "../../common/helpers/schedule-calculator.helper";
 import { PermissionService } from "../permissions/permission.service";
 import { systemConfigService } from "../system-config/system-config.service";
+import {
+  revokeToken,
+  revokeUserTokens,
+} from "../../common/helpers/token-blocklist.helper";
 
 interface AuthJwtPayload {
   id: string;
   email: string;
   role: string;
   purpose?: string;
+}
+
+const ALLOWED_AVATAR_EXT_MAP: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/webp": ".webp",
+  "image/gif": ".gif",
+};
+
+const ALLOWED_AVATAR_EXTENSIONS = new Set([
+  ".jpg",
+  ".jpeg",
+  ".png",
+  ".webp",
+  ".gif",
+]);
+
+export function isValidImageMagicBytes(buffer: Buffer): boolean {
+  if (!buffer || buffer.length < 4) return false;
+  // JPEG: FF D8 FF
+  if (buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff) return true;
+  // PNG: 89 50 4E 47
+  if (
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47
+  )
+    return true;
+  // GIF: 47 49 46 38 ("GIF8")
+  if (
+    buffer[0] === 0x47 &&
+    buffer[1] === 0x49 &&
+    buffer[2] === 0x46 &&
+    buffer[3] === 0x38
+  )
+    return true;
+  // WebP: RIFF .... WEBP
+  if (
+    buffer.length >= 12 &&
+    buffer[0] === 0x52 &&
+    buffer[1] === 0x49 &&
+    buffer[2] === 0x46 &&
+    buffer[3] === 0x46 &&
+    buffer[8] === 0x57 &&
+    buffer[9] === 0x45 &&
+    buffer[10] === 0x42 &&
+    buffer[11] === 0x50
+  ) {
+    return true;
+  }
+  return false;
 }
 
 export class AuthService {
@@ -272,8 +328,29 @@ export class AuthService {
     };
   }
 
-  async logout(token: string) {
-    await this.repository.deleteRefreshToken(this.hashToken(token));
+  async logout(token?: string, accessToken?: string) {
+    if (token) {
+      await this.repository.deleteRefreshToken(this.hashToken(token));
+      try {
+        const decoded = jwt.decode(token) as { id?: string } | null;
+        if (decoded?.id) {
+          await revokeUserTokens(decoded.id);
+        }
+      } catch {
+        // ignore decode failure
+      }
+    }
+    if (accessToken) {
+      await revokeToken(accessToken);
+      try {
+        const decoded = jwt.decode(accessToken) as { id?: string } | null;
+        if (decoded?.id) {
+          await revokeUserTokens(decoded.id);
+        }
+      } catch {
+        // ignore decode failure
+      }
+    }
   }
 
   private createEmailVerificationToken(email: string): string {
@@ -421,15 +498,41 @@ export class AuthService {
       throw new AppError("User not found", 404, ERROR_CODE.NOT_FOUND);
     }
 
+    const extensionFromMime = ALLOWED_AVATAR_EXT_MAP[file.mimetype];
+    if (!extensionFromMime) {
+      throw new AppError(
+        "Định dạng tệp không được hỗ trợ. Chỉ chấp nhận JPEG, PNG, WebP, GIF.",
+        422,
+        ERROR_CODE.VALIDATION_ERROR,
+      );
+    }
+
+    const originalExt = path.extname(file.originalname).toLowerCase();
+    if (originalExt && !ALLOWED_AVATAR_EXTENSIONS.has(originalExt)) {
+      throw new AppError(
+        `Phần mở rộng tệp không hợp lệ: "${originalExt}". Chỉ chấp nhận .jpg, .jpeg, .png, .webp, .gif`,
+        422,
+        ERROR_CODE.VALIDATION_ERROR,
+      );
+    }
+
+    // Inspect magic bytes if buffer is present (SEC-18)
+    if (file.buffer && file.buffer.length >= 4) {
+      if (!isValidImageMagicBytes(file.buffer)) {
+        throw new AppError(
+          "Nội dung tệp không khớp với định dạng hình ảnh hợp lệ (magic bytes check failed).",
+          422,
+          ERROR_CODE.VALIDATION_ERROR,
+        );
+      }
+    }
+
     const extension =
-      path.extname(file.originalname).toLowerCase() ||
-      (file.mimetype === "image/png"
-        ? ".png"
-        : file.mimetype === "image/webp"
-          ? ".webp"
-          : file.mimetype === "image/gif"
-            ? ".gif"
-            : ".jpg");
+      originalExt && ALLOWED_AVATAR_EXTENSIONS.has(originalExt)
+        ? originalExt === ".jpeg"
+          ? ".jpg"
+          : originalExt
+        : extensionFromMime;
 
     const fileName = `${userId}-${Date.now()}${extension}`;
     const destinationKey = `${UPLOAD_SUBDIRS.AVATARS}/${fileName}`;
@@ -472,9 +575,14 @@ export class AuthService {
 
   private extractAvatarFileName(avatarUrl: string): string | null {
     const match =
-      avatarUrl.match(/\/avatars\/([^/?#]+)$/i) ||
-      avatarUrl.match(/\/api\/v1\/auth\/avatar\/([^/?#]+)$/i);
-    return match ? match[1] : null;
+      avatarUrl.match(/\/avatars\/([a-zA-Z0-9_.-]+)$/i) ||
+      avatarUrl.match(/\/api\/v1\/auth\/avatar\/([a-zA-Z0-9_.-]+)$/i);
+    if (!match) return null;
+    const base = path.basename(match[1]);
+    if (base.includes("..") || base.includes("/") || base.includes("\\")) {
+      return null;
+    }
+    return base;
   }
 
   async getAvatarStream(
@@ -665,6 +773,12 @@ export class AuthService {
     // Revoke all existing refresh tokens
     await this.repository.deleteUserRefreshTokens(userId);
 
+    // SEC-16: Deactivate all active API keys for this user
+    await this.repository.deactivateUserApiKeys(userId);
+
+    // SEC-04: Revoke all prior access tokens issued up to now
+    await revokeUserTokens(userId);
+
     // Generate new tokens for the current session
     const payload: AuthJwtPayload = {
       id: user.id,
@@ -789,6 +903,8 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(password, 10);
     await this.repository.updateUser(user.id, { passwordHash });
     await this.repository.deleteUserRefreshTokens(user.id);
+    await this.repository.deactivateUserApiKeys(user.id);
+    await revokeUserTokens(user.id, 86400, Math.floor(Date.now() / 1000) + 1);
 
     return { success: true, userId: user.id };
   }

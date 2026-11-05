@@ -76,7 +76,20 @@ export class LocalStorageService implements IStorageService {
   }
 
   async deleteFile(destinationKey: string): Promise<void> {
+    if (destinationKey.includes("..")) {
+      throw new Error(
+        `Path traversal detected: destination key '${destinationKey}' contains invalid traversal characters`,
+      );
+    }
     const filePath = this.getAbsolutePath(destinationKey);
+    const baseDir = path.resolve(storageConfig.exportDir);
+    const resolvedPath = path.resolve(filePath);
+    const relative = path.relative(baseDir, resolvedPath);
+    if (relative.startsWith("..") || path.isAbsolute(relative)) {
+      throw new Error(
+        `Path traversal detected: destination key '${destinationKey}' resolves outside storage directory`,
+      );
+    }
     if (fs.existsSync(filePath)) {
       fs.unlinkSync(filePath);
     }

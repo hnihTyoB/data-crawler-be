@@ -2,7 +2,10 @@ import { WebhookDelivery, Prisma } from "../../common/types/database.types";
 import { WebhookRepository } from "./webhook.repository";
 import { decrypt, signPayload } from "./webhook-crypto.helper";
 import { webhookQueue } from "../../queues/webhook.queue";
-import { getSecureAxios } from "../../common/helpers/url.helper";
+import {
+  getSecureAxios,
+  validateUrlAsync,
+} from "../../common/helpers/url.helper";
 import { getErrorMessage } from "../../common/helpers/error-mapping.helper";
 
 import { AppError } from "../../common/errors/app-error";
@@ -85,17 +88,23 @@ export class WebhookDeliveryService {
     const config = delivery.webhookConfig;
     const secret = decrypt(config.encryptedSecret);
     const payloadStr = JSON.stringify(delivery.payload);
-    const signature = signPayload(secret, payloadStr);
+    const timestamp = Math.floor(Date.now() / 1000);
+    const signature = signPayload(secret, payloadStr, timestamp);
 
     try {
+      await validateUrlAsync(config.url);
+
       const response = await getSecureAxios().post(config.url, payloadStr, {
         headers: {
           "Content-Type": "application/json",
           "X-Webhook-Signature": `sha256=${signature}`,
+          "X-Webhook-Timestamp": String(timestamp),
           "X-Webhook-Event": delivery.event,
           "X-Webhook-Delivery": delivery.id,
         },
         timeout: 10000, // 10s timeout
+        maxContentLength: 1024 * 1024, // 1MB limit for webhook response payload (SEC-29)
+        maxBodyLength: 1024 * 1024,
       });
 
       const responseBody =
@@ -113,7 +122,7 @@ export class WebhookDeliveryService {
     } catch (error: unknown) {
       let statusCode: number | null = null;
       let responseBody: string | null = null;
-      const errorMessage = getErrorMessage(error);
+      const rawErrorMessage = getErrorMessage(error);
 
       if (error && typeof error === "object" && "response" in error) {
         const resp = (
@@ -127,6 +136,19 @@ export class WebhookDeliveryService {
               : JSON.stringify(resp.data);
         }
       }
+
+      const isNetworkSocketError =
+        rawErrorMessage.includes("ECONNREFUSED") ||
+        rawErrorMessage.includes("ETIMEDOUT") ||
+        rawErrorMessage.includes("ENOTFOUND") ||
+        rawErrorMessage.includes("EHOSTUNREACH") ||
+        rawErrorMessage.includes("ECONNRESET") ||
+        rawErrorMessage.includes("Parse Error") ||
+        rawErrorMessage.includes("socket hang up");
+
+      const errorMessage = isNetworkSocketError
+        ? "Delivery failed: Target server unreachable or rejected connection"
+        : rawErrorMessage;
 
       await this.repository.updateDelivery(deliveryId, {
         statusCode,

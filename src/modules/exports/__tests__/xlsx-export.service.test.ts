@@ -138,6 +138,58 @@ describe("XlsxExportService", () => {
     expect(dataRow).toContain("page-1");
   });
 
+  it("sanitizes spreadsheet formula injection payloads in HTML table headers, cells, and captions (SEC-05)", async () => {
+    const addWorksheetSpy = jest.spyOn(ExcelJS.Workbook.prototype, "addWorksheet");
+    jest.spyOn(ExcelJS.Workbook.prototype.xlsx, "writeFile").mockResolvedValue(undefined as any);
+
+    const mockJob: any = {
+      id: "job-1",
+      startUrl: "https://example.com",
+      domain: "example.com",
+      pages: [
+        {
+          id: "page-1",
+          url: "https://example.com/vuln",
+          content: `
+            <div>
+              <table>
+                <caption>=cmd|'/C calc'!A0</caption>
+                <thead><tr><th>@SUM(1+1)</th><th>+12345</th><th>-67890</th></tr></thead>
+                <tbody><tr><td>=HYPERLINK("http://evil.com","Leak")</td><td>+malicious</td><td>-payload</td></tr></tbody>
+              </table>
+            </div>
+          `,
+          markdownContent: "",
+          status: "COMPLETED",
+        },
+      ],
+    };
+
+    await service.exportTables(mockJob);
+
+    // Find the table worksheet (not Summary)
+    const tableSheet = addWorksheetSpy.mock.results.find(
+      (r) => r.value.name !== "Summary",
+    )?.value as ExcelJS.Worksheet;
+    expect(tableSheet).toBeDefined();
+
+    // Check caption cell (A3)
+    const captionCell = tableSheet.getCell("A3").value as string;
+    expect(captionCell).toContain("'=cmd|'/C calc'!A0");
+
+    // Check header row (row 4)
+    const headerRow = tableSheet.getRow(4);
+    expect(headerRow.getCell(1).value).toBe("'@SUM(1+1)");
+    expect(headerRow.getCell(2).value).toBe("'+12345");
+    expect(headerRow.getCell(3).value).toBe("'-67890");
+
+    // Check data row (row 5)
+    const dataRow = tableSheet.getRow(5);
+    expect(dataRow.getCell(1).value).toBe("'=HYPERLINK(\"http://evil.com\",\"Leak\")");
+    expect(dataRow.getCell(2).value).toBe("'+malicious");
+    expect(dataRow.getCell(3).value).toBe("'-payload");
+  });
+
   it("bundles pages.xlsx and tables.xlsx into xlsx.zip upon export", async () => {
     jest.spyOn(ExcelJS.Workbook.prototype.xlsx, "writeFile").mockResolvedValue(undefined as any);
 

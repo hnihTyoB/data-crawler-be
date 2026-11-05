@@ -188,6 +188,31 @@ describe("validateUrl", () => {
   it("throws on ::ffff:100.64.0.1 (mapped CGNAT)", () => {
     expect(() => validateUrl("http://[::ffff:100.64.0.1]")).toThrow(AppError);
   });
+
+  // IPv4-compatible IPv6 & 0.0.0.0/8 (SEC-02)
+  it("throws on ::169.254.169.254 (IPv4-compatible AWS metadata)", () => {
+    expect(() => validateUrl("http://[::169.254.169.254]")).toThrow(AppError);
+  });
+
+  it("throws on ::a9fe:a9fe (hex form of AWS metadata)", () => {
+    expect(() => validateUrl("http://[::a9fe:a9fe]")).toThrow(AppError);
+  });
+
+  it("throws on ::127.0.0.1 (IPv4-compatible loopback)", () => {
+    expect(() => validateUrl("http://[::127.0.0.1]")).toThrow(AppError);
+  });
+
+  it("throws on ::7f00:1 (hex form of loopback)", () => {
+    expect(() => validateUrl("http://[::7f00:1]")).toThrow(AppError);
+  });
+
+  it("throws on 0.0.0.1 (0.0.0.0/8 loopback range)", () => {
+    expect(() => validateUrl("http://0.0.0.1")).toThrow(AppError);
+  });
+
+  it("throws on 0.255.255.255 (0.0.0.0/8 range end)", () => {
+    expect(() => validateUrl("http://0.255.255.255")).toThrow(AppError);
+  });
 });
 
 // validateUrlAsync — DNS rebinding protection
@@ -374,5 +399,13 @@ describe("secureAxios SSRF & Redirect validation", () => {
     expect(() => {
       resolvedConfig.beforeRedirect({ hostname: "example.com" });
     }).not.toThrow();
+  });
+
+  it("configures bounded maxContentLength and maxBodyLength to prevent memory DoS (SEC-29)", () => {
+    const axiosInstance = getSecureAxios();
+    expect(axiosInstance.defaults.maxContentLength).toBeDefined();
+    expect(axiosInstance.defaults.maxContentLength).toBeLessThanOrEqual(10 * 1024 * 1024);
+    expect(axiosInstance.defaults.maxBodyLength).toBeDefined();
+    expect(axiosInstance.defaults.maxBodyLength).toBeLessThanOrEqual(10 * 1024 * 1024);
   });
 });

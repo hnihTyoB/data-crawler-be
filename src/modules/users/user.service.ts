@@ -205,6 +205,56 @@ export class UserService {
       }
     }
 
+    // Defense: Privilege escalation barriers for role modifications
+    if (data.role !== undefined && data.role !== existingUser.role) {
+      // 1. Self-escalation barrier: A user cannot modify their own role
+      if (actorId && actorId === id) {
+        await this.auditLogService
+          .log({
+            userId: actorId,
+            action: AUDIT_ACTIONS.PRIVILEGE_ESCALATION_BLOCKED,
+            details: {
+              reason: "User attempted to modify own role (self-escalation blocked)",
+              targetUserId: id,
+              attemptedRole: data.role,
+            },
+          })
+          .catch(() => {});
+
+        throw new AppError(
+          "Forbidden: You cannot modify your own role.",
+          403,
+          ERROR_CODE.PRIVILEGE_ESCALATION_DENIED,
+        );
+      }
+
+      // 2. Privilege barrier: Only Administrators can modify user roles
+      const isActorAdmin =
+        actorRoles.includes(SYSTEM_ROLE_SLUGS.ADMIN) ||
+        actorRoles.includes(SYSTEM_ROLE_SLUGS.SUPER_ADMIN) ||
+        actorRoles.includes(ROLES.ADMIN);
+
+      if (actorId && !isActorAdmin) {
+        await this.auditLogService
+          .log({
+            userId: actorId,
+            action: AUDIT_ACTIONS.PRIVILEGE_ESCALATION_BLOCKED,
+            details: {
+              reason: "Non-admin attempted to modify user role",
+              targetUserId: id,
+              attemptedRole: data.role,
+            },
+          })
+          .catch(() => {});
+
+        throw new AppError(
+          "Forbidden: Only Administrators can modify user roles.",
+          403,
+          ERROR_CODE.PRIVILEGE_ESCALATION_DENIED,
+        );
+      }
+    }
+
     if (
       existingUser.role === ROLES.ADMIN &&
       data.role !== undefined &&
@@ -239,6 +289,20 @@ export class UserService {
       maxPagesPerMonthLimit: data.maxPagesPerMonthLimit,
       maxJobsPerMonthLimit: data.maxJobsPerMonthLimit,
     });
+
+    if (data.role !== undefined && data.role !== existingUser.role) {
+      const targetSlug =
+        data.role === ROLES.ADMIN
+          ? SYSTEM_ROLE_SLUGS.ADMIN
+          : data.role === ROLES.VIEWER
+            ? SYSTEM_ROLE_SLUGS.VIEWER
+            : SYSTEM_ROLE_SLUGS.CRAWLER_USER;
+
+      const role = await this.roleRepository.findBySlug(targetSlug);
+      if (role && typeof this.repository.assignSingleRole === "function") {
+        await this.repository.assignSingleRole(id, role.id, actorId);
+      }
+    }
 
     authorizationCache.invalidateUser(id);
     return this.formatUser(user);

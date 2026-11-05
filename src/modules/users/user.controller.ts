@@ -64,11 +64,18 @@ export class UserController {
   update = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const updateUserDto: UpdateUserDto = req.body;
+      const actorRoles = Array.isArray(req.user.roles) ? [...req.user.roles] : [];
+      if (req.user.role && !actorRoles.includes(req.user.role)) {
+        actorRoles.push(req.user.role);
+      }
+      if (req.user.role === "ADMIN" && !actorRoles.includes("admin")) {
+        actorRoles.push("admin");
+      }
       const result = await this.service.update(
         req.params.id,
         updateUserDto,
         req.user.id,
-        req.user.roles || [],
+        actorRoles,
       );
 
       await this.auditLogService.log({

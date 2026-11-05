@@ -66,4 +66,33 @@ describe("streamStorageDownload", () => {
     ).rejects.toMatchObject({ statusCode: 404 });
     expect(storage.getReadStream).not.toHaveBeenCalled();
   });
+
+  it("sanitizes semicolons and quotes in filename to prevent Content-Disposition parameter injection (SEC-28)", async () => {
+    const storage = {
+      exists: jest.fn().mockResolvedValue(true),
+      getReadStream: jest.fn().mockResolvedValue(Readable.from(["data"])),
+    };
+    jest
+      .spyOn(StorageFactory, "getStorageService")
+      .mockReturnValue(storage as unknown as IStorageService);
+
+    const response = new PassThrough() as PassThrough & {
+      setHeader: jest.Mock;
+    };
+    response.setHeader = jest.fn();
+
+    await streamStorageDownload(
+      {
+        fileName: 'export.zip; filename="malicious.bat"; dummy=.zip',
+        filePath: "job-1/export.zip",
+      },
+      response as unknown as Response,
+    );
+
+    // Verify Content-Disposition safeFileName has replaced semicolons and quotes with _
+    expect(response.setHeader).toHaveBeenCalledWith(
+      "Content-Disposition",
+      expect.stringContaining('attachment; filename="export.zip_ filename=_malicious.bat__ dummy=.zip"'),
+    );
+  });
 });

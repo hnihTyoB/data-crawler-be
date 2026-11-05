@@ -35,20 +35,36 @@ const getFirecrawlService = () => new FirecrawlService();
 const getPageProcessor = () => new CrawlPageProcessorService();
 const getSensitiveScanner = () => new SensitiveScanService();
 
-export function withTimeout<T>(
-  promise: Promise<T>,
+export async function withTimeout<T>(
+  taskOrPromise: ((signal: AbortSignal) => Promise<T>) | Promise<T>,
   ms: number,
   jobId: string,
 ): Promise<T> {
-  return Promise.race([
-    promise,
-    new Promise<never>((_, reject) =>
-      setTimeout(
-        () => reject(new Error(`Job ${jobId} timed out after ${ms}ms`)),
-        ms,
-      ),
-    ),
-  ]);
+  const controller = new AbortController();
+  const timeoutError = new Error(`Job ${jobId} timed out after ${ms}ms`);
+
+  let timer: NodeJS.Timeout | null = null;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort(timeoutError);
+      reject(timeoutError);
+    }, ms);
+    if (timer.unref) {
+      timer.unref();
+    }
+  });
+
+  try {
+    const promise =
+      typeof taskOrPromise === "function"
+        ? taskOrPromise(controller.signal)
+        : taskOrPromise;
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timer) {
+      clearTimeout(timer);
+    }
+  }
 }
 
 /** Saves IMAGE, LINK, and PDF assets for a single scraped page in one batch. */
@@ -141,6 +157,18 @@ export async function persistSinglePage(
   userId?: string,
 ): Promise<{ success: boolean; saved: boolean }> {
   try {
+    // SEC-12: Post-crawl SSRF & DNS rebinding validation on returned page URL
+    if (item.url) {
+      try {
+        await validateUrlAsync(item.url);
+      } catch (err: unknown) {
+        console.warn(
+          `[Worker] Job ${jobId} discarded crawled page with private/rebound URL: ${item.url} (SEC-12)`,
+        );
+        return { success: false, saved: false };
+      }
+    }
+
     const normalized = getPageProcessor().normalize(item, jobId);
 
     // Quét nhạy cảm in-memory trước khi ghi DB (loại bỏ 1 lệnh update riêng)
@@ -301,7 +329,10 @@ async function logStep(
   }
 }
 
-export async function processCrawlJob(job: Job): Promise<void> {
+export async function processCrawlJob(
+  job: Job,
+  signal?: AbortSignal,
+): Promise<void> {
   const { jobId } = job.data;
   const crawlJob = await getJobRepository().findById(jobId);
 
@@ -309,7 +340,7 @@ export async function processCrawlJob(job: Job): Promise<void> {
     throw new Error(`CrawlJob ${jobId} not found`);
   }
 
-  if (crawlJob.status === JOB_STATUS.CANCELED) {
+  if (crawlJob.status === JOB_STATUS.CANCELED || signal?.aborted) {
     return;
   }
 
@@ -344,10 +375,60 @@ export async function processCrawlJob(job: Job): Promise<void> {
         );
         return;
       }
+    } else {
+      // SEC-13: Validate URLs in worker right before crawling for URL_LIST mode to eliminate DNS rebinding window
+      if (!crawlJob.urls || crawlJob.urls.length === 0) {
+        await getJobRepository().updateStatus(jobId, JOB_STATUS.FAILED, {
+          finishedAt: new Date(),
+          errorMessage: "URL_LIST mode requires at least one URL",
+          totalPages: 0,
+          successPages: 0,
+          failedPages: 0,
+        });
+        return;
+      }
+
+      const chunkSize = 10;
+      const validatedUrls: string[] = [];
+      for (let i = 0; i < crawlJob.urls.length; i += chunkSize) {
+        const chunk = crawlJob.urls.slice(i, i + chunkSize);
+        const results = await Promise.all(
+          chunk.map(async (u) => {
+            try {
+              await validateUrlAsync(u);
+              return u;
+            } catch (err: unknown) {
+              console.warn(
+                `[Worker] Job ${jobId} discarded blocked/private URL in URL_LIST: ${u} (SEC-13)`,
+              );
+              return null;
+            }
+          }),
+        );
+        validatedUrls.push(...results.filter((u): u is string => u !== null));
+      }
+
+      if (validatedUrls.length === 0) {
+        const message =
+          "All URLs in URL_LIST failed security validation (SSRF / private IP)";
+        await getJobRepository().updateStatus(jobId, JOB_STATUS.FAILED, {
+          finishedAt: new Date(),
+          errorMessage: message,
+          totalPages: 0,
+          successPages: 0,
+          failedPages: crawlJob.urls.length,
+        });
+        console.error(
+          `[Worker] Job ${jobId} blocked by pre-crawl URL validation: ${message}`,
+        );
+        return;
+      }
+      crawlJob.urls = validatedUrls;
     }
 
     try {
       if (crawlJob.mode === CRAWL_MODE.SCRAPE) {
+        if (signal?.aborted) return;
         console.log(
           `[Worker] Job ${jobId} started, mode=SCRAPE, url=${crawlJob.startUrl}`,
         );
@@ -355,6 +436,8 @@ export async function processCrawlJob(job: Job): Promise<void> {
         const result = await getFirecrawlService().scrapePage(
           crawlJob.startUrl,
         );
+
+        if (signal?.aborted) return;
 
         if (!result.success) {
           const normalized = getPageProcessor().normalize(result, jobId);
@@ -443,15 +526,59 @@ export async function processCrawlJob(job: Job): Promise<void> {
           `[Worker] Job ${jobId} sitemap parsed: ${sitemapUrls.length} URLs`,
         );
 
+        // SSRF validation with bounded concurrency for extracted sitemap URLs (SEC-01)
+        const validSitemapUrls: string[] = [];
+        const sitemapValidationChunkSize = 10;
+        for (
+          let i = 0;
+          i < sitemapUrls.length;
+          i += sitemapValidationChunkSize
+        ) {
+          const chunk = sitemapUrls.slice(i, i + sitemapValidationChunkSize);
+          const results = await Promise.all(
+            chunk.map(async (targetUrl) => {
+              try {
+                await validateUrlAsync(targetUrl);
+                return targetUrl;
+              } catch (err: unknown) {
+                console.warn(
+                  `[Worker] Job ${jobId} discarded blocked/private sitemap URL: ${targetUrl}`,
+                );
+                return null;
+              }
+            }),
+          );
+          for (const targetUrl of results) {
+            if (targetUrl !== null) {
+              validSitemapUrls.push(targetUrl);
+            }
+          }
+        }
+
+        if (validSitemapUrls.length === 0) {
+          await getJobRepository().updateStatus(jobId, JOB_STATUS.FAILED, {
+            finishedAt: new Date(),
+            errorMessage: "Sitemap contains no valid public URLs to crawl.",
+            totalPages: 0,
+            successPages: 0,
+            failedPages: 0,
+          });
+          console.log(
+            `[Worker] Job ${jobId} sitemap contains no valid public URLs after SSRF validation`,
+          );
+          return;
+        }
+
         const persistedUrls = new Set<string>();
         let currentSuccessCount = 0;
         let currentFailedCount = 0;
         let pollCount = 0;
 
         const result = await getFirecrawlService().batchScrapePages(
-          sitemapUrls,
+          validSitemapUrls,
           crawlJob.maxPages,
           async (completed, total, currentPages) => {
+            if (signal?.aborted) return;
             if (currentPages && currentPages.length > 0) {
               const { newSuccess, newFailed } = await persistIncrementalPages(
                 jobId,
@@ -481,12 +608,15 @@ export async function processCrawlJob(job: Job): Promise<void> {
             ]);
           },
           async () => {
+            if (signal?.aborted) return true;
             pollCount++;
             if (pollCount % 5 !== 0) return false;
             const current = await getJobRepository().findById(jobId);
             return current?.status === JOB_STATUS.CANCELED;
           },
         );
+
+        if (signal?.aborted) return;
 
         if (!result.success) {
           if (result.status === "cancelled") {
@@ -550,6 +680,7 @@ export async function processCrawlJob(job: Job): Promise<void> {
           crawlJob.urls,
           crawlJob.maxPages,
           async (completed, total, currentPages) => {
+            if (signal?.aborted) return;
             if (currentPages && currentPages.length > 0) {
               const { newSuccess, newFailed } = await persistIncrementalPages(
                 jobId,
@@ -579,12 +710,15 @@ export async function processCrawlJob(job: Job): Promise<void> {
             ]);
           },
           async () => {
+            if (signal?.aborted) return true;
             pollCount++;
             if (pollCount % 5 !== 0) return false;
             const current = await getJobRepository().findById(jobId);
             return current?.status === JOB_STATUS.CANCELED;
           },
         );
+
+        if (signal?.aborted) return;
 
         if (!result.success) {
           if (result.status === "cancelled") {
@@ -637,6 +771,7 @@ export async function processCrawlJob(job: Job): Promise<void> {
           crawlJob.maxPages,
           crawlJob.maxDepth,
           async (completed, total, currentPages) => {
+            if (signal?.aborted) return;
             if (currentPages && currentPages.length > 0) {
               const { newSuccess, newFailed } = await persistIncrementalPages(
                 jobId,
@@ -666,6 +801,7 @@ export async function processCrawlJob(job: Job): Promise<void> {
             ]);
           },
           async () => {
+            if (signal?.aborted) return true;
             pollCount++;
 
             // On the very first poll, crawlSite has already started and we have
@@ -678,6 +814,8 @@ export async function processCrawlJob(job: Job): Promise<void> {
             return current?.status === JOB_STATUS.CANCELED;
           },
         );
+
+        if (signal?.aborted) return;
 
         // Persist the Firecrawl job ID as soon as we have it, so a subsequent
         // cancel request can call cancelCrawl() even if the job is still running.

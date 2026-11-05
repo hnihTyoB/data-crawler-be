@@ -48,8 +48,22 @@ export const createCrawlJobSchema = z
 
 export const createExportSchema = z.object({
   exportType: z.nativeEnum(EXPORT_TYPE),
-  fileName: z.string().trim().optional(),
-  customFileName: z.string().trim().optional(),
+  fileName: z
+    .string()
+    .trim()
+    .regex(
+      /^[^;,\r\n\x00-\x1f\x7f]*$/,
+      "Filename must not contain semicolons, commas, or control characters",
+    )
+    .optional(),
+  customFileName: z
+    .string()
+    .trim()
+    .regex(
+      /^[^;,\r\n\x00-\x1f\x7f]*$/,
+      "Custom filename must not contain semicolons, commas, or control characters",
+    )
+    .optional(),
 });
 
 export const listCrawlJobsQuerySchema = z.object({

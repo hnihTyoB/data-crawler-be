@@ -112,6 +112,13 @@ export class AuthRepository {
     });
   }
 
+  async deactivateUserApiKeys(userId: string): Promise<void> {
+    await prisma.apiKey.updateMany({
+      where: { userId, isActive: true },
+      data: { isActive: false },
+    });
+  }
+
   async countActiveAdmins(): Promise<number> {
     return prisma.user.count({
       where: {

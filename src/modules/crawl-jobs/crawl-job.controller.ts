@@ -496,6 +496,7 @@ export class CrawlJobController {
         req.params.id,
         page,
         limit,
+        req.user.roles,
       );
       res.json({
         success: true,

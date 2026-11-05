@@ -151,11 +151,19 @@ export class AuthController {
   logout = async (req: Request, res: Response, next: NextFunction) => {
     try {
       const { refreshToken } = req.body;
-      await this.service.logout(refreshToken);
+      const accessToken =
+        req.cookies?.accessToken ||
+        (req.headers.authorization?.startsWith("Bearer ")
+          ? req.headers.authorization.split(" ")[1]
+          : undefined);
+      await this.service.logout(refreshToken, accessToken);
 
       let userId: string | null = null;
       try {
-        const decoded = jwt.decode(refreshToken) as { id?: string } | null;
+        const decoded = (jwt.decode(refreshToken) ||
+          (accessToken ? jwt.decode(accessToken) : null)) as {
+          id?: string;
+        } | null;
         if (decoded && decoded.id) {
           userId = decoded.id;
         }

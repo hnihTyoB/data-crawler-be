@@ -19,23 +19,28 @@ export function hasAdminPrivilege(
   if (!userOrRole) return false;
 
   if (typeof userOrRole === "string") {
-    if (userOrRole === ROLES.ADMIN) {
+    const normalized = userOrRole.toLowerCase();
+    if (normalized === "admin" || normalized === "super_admin") {
       return true;
     }
+    const normalizedRoles = roles?.map((r) => r.toLowerCase());
     if (
-      roles?.includes(SYSTEM_ROLE_SLUGS.ADMIN) ||
-      roles?.includes(SYSTEM_ROLE_SLUGS.SUPER_ADMIN)
+      normalizedRoles?.includes(SYSTEM_ROLE_SLUGS.ADMIN) ||
+      normalizedRoles?.includes(SYSTEM_ROLE_SLUGS.SUPER_ADMIN)
     ) {
       return true;
     }
     return false;
   }
 
-  if (userOrRole.role === ROLES.ADMIN) {
+  const normalizedRole = userOrRole.role?.toLowerCase();
+  if (normalizedRole === "admin" || normalizedRole === "super_admin") {
     return true;
   }
 
-  const assignedRoles = userOrRole.roles ?? roles;
+  const assignedRoles = (userOrRole.roles ?? roles)?.map((r) =>
+    r.toLowerCase(),
+  );
   if (
     assignedRoles?.includes(SYSTEM_ROLE_SLUGS.ADMIN) ||
     assignedRoles?.includes(SYSTEM_ROLE_SLUGS.SUPER_ADMIN)
