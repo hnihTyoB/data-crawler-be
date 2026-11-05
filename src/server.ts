@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { envConfig } from "./config/env.config";
 import { authorizationCache } from "./common/helpers/authorization-cache.helper";
+import { initTemplateCacheSubscriber } from "./modules/extraction-templates/extraction-runner";
 
 async function bootstrap() {
   let isRedisAvailable = false;
@@ -50,6 +51,7 @@ async function bootstrap() {
   if (isRedisAvailable) {
     systemConfigService.initRedisSubscriber();
     authorizationCache.initRedisSubscriber();
+    initTemplateCacheSubscriber();
 
     await import("./queues/webhook.worker");
     console.log("[Server] Webhook worker initialized in background.");

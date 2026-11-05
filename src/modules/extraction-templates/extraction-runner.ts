@@ -3,6 +3,10 @@ import { ExtractionTemplateRepository } from "./extraction-template.repository";
 import { ExtractionFieldDto } from "./extraction-template.dto";
 import { CrawlPageRepository } from "../crawl-pages/crawl-page.repository";
 import { FirecrawlPageResult } from "../firecrawl/firecrawl.dto";
+import {
+  getRedisPublisher,
+  getRedisSubscriber,
+} from "../../common/redis/redis-pubsub";
 
 const getTemplateRepository = () => new ExtractionTemplateRepository();
 const getPageRepository = () => new CrawlPageRepository();
@@ -51,30 +55,97 @@ interface TemplateCacheEntry {
 const MAX_CACHE_SIZE = 1000;
 const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
 const templateCache = new Map<string, TemplateCacheEntry>();
+const TEMPLATE_CACHE_INVALIDATE_CHANNEL = "template:cache:invalidate";
 
 /**
- * Xóa cache template (dùng sau khi batch kết thúc hoặc khi cập nhật template).
+ * Xóa cache template cục bộ và đồng bộ tới toàn bộ worker/node qua Redis Pub/Sub (SEC-25).
  */
-export function clearTemplateCache(): void {
-  templateCache.clear();
+export function clearTemplateCache(
+  domain?: string,
+  userId?: string,
+  propagate = true,
+): void {
+  if (userId && domain) {
+    templateCache.delete(`${userId}:${domain}`);
+  } else if (domain) {
+    for (const key of templateCache.keys()) {
+      if (key.endsWith(`:${domain}`)) {
+        templateCache.delete(key);
+      }
+    }
+  } else if (userId) {
+    for (const key of templateCache.keys()) {
+      if (key.startsWith(`${userId}:`)) {
+        templateCache.delete(key);
+      }
+    }
+  } else {
+    templateCache.clear();
+  }
+
+  if (propagate) {
+    const publisher = getRedisPublisher();
+    if (publisher) {
+      publisher
+        .publish(
+          TEMPLATE_CACHE_INVALIDATE_CHANNEL,
+          JSON.stringify({ domain, userId }),
+        )
+        .catch(() => {});
+    }
+  }
+}
+
+let isSubscriberInitialized = false;
+
+export function initTemplateCacheSubscriber(): void {
+  if (isSubscriberInitialized) return;
+  const subscriber = getRedisSubscriber();
+  if (!subscriber) return;
+
+  try {
+    subscriber.subscribe(TEMPLATE_CACHE_INVALIDATE_CHANNEL, (err) => {
+      if (err) {
+        console.warn("[TemplateCache:RedisSub] Failed to subscribe:", err);
+      }
+    });
+
+    subscriber.on("message", (channel, message) => {
+      if (channel === TEMPLATE_CACHE_INVALIDATE_CHANNEL) {
+        try {
+          const data = JSON.parse(message);
+          clearTemplateCache(data.domain, data.userId, false);
+        } catch {
+          // Ignore malformed message
+        }
+      }
+    });
+    isSubscriberInitialized = true;
+  } catch {
+    // Fallback on degraded mode
+  }
 }
 
 /**
  * Lấy template theo domain có cache trong bộ nhớ để triệt tiêu N+1 queries khi crawl.
+ * Bắt buộc phải có userId để cách ly đa tenant (SEC-24).
  * Có cơ chế Bounded Cache (max 1000 domain) và TTL 10 phút chống Memory Leak (DoS/OOM).
  */
 export async function getCachedTemplate(domain: string, userId?: string) {
+  // SEC-24: Templates are strictly tenant-scoped. Reject unscoped fallback to prevent cross-tenant template pollution.
+  if (!userId) {
+    return null;
+  }
+
   const now = Date.now();
-  const cacheKey = `${userId || "global"}:${domain}`;
+  const cacheKey = `${userId}:${domain}`;
   const cached = templateCache.get(cacheKey);
   if (cached && cached.expiresAt > now) {
     return cached.value;
   }
 
   const repository = getTemplateRepository();
-  const template = userId
-    ? await repository.findByUserAndDomain(userId, domain)
-    : await repository.findByDomain(domain);
+  const template = await repository.findByUserAndDomain(userId, domain);
 
   // Evict oldest item if capacity reached
   if (templateCache.size >= MAX_CACHE_SIZE) {
